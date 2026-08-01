@@ -16,7 +16,14 @@ version: '3.4' # For compatibility with older Docker versions
 
 services:
   new-api:
-    image: calciumion/new-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: docker.1ms.run
+        BUN_REGISTRY: https://registry.npmmirror.com
+        GO_MODULE_PROXY: https://goproxy.cn,direct
+    image: new-api:local
     container_name: new-api
     restart: always
     command: --log-dir /app/logs

@@ -20,6 +20,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
+import { BrandContactLine } from '@/components/layout/components/brand-contact-line'
 import { useSystemConfig } from '@/hooks/use-system-config'
 
 type AuthLayoutProps = {
@@ -47,11 +48,16 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             />
           )}
         </div>
-        {loading ? (
-          <Skeleton className='h-6 w-24' />
-        ) : (
-          <h1 className='text-xl font-medium'>{systemName}</h1>
-        )}
+        <div className='flex min-w-0 flex-col justify-center'>
+          {loading ? (
+            <Skeleton className='h-6 w-24' />
+          ) : (
+            <>
+              <h1 className='text-xl leading-none font-medium'>{systemName}</h1>
+              <BrandContactLine className='mt-1 max-w-[calc(100vw-4.5rem)] overflow-hidden text-ellipsis sm:max-w-none' />
+            </>
+          )}
+        </div>
       </Link>
       <div className='container flex items-center pt-16 sm:pt-0'>
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 px-4 py-8 sm:w-[480px] sm:p-8'>
