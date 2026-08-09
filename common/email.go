@@ -3,7 +3,9 @@ package common
 import (
 	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"io"
 	"net/smtp"
 	"slices"
 	"strings"
@@ -100,37 +102,38 @@ func SendEmail(subject string, receiver string, content string) error {
 	var err error
 	client, err := newSMTPClient(addr)
 	if err != nil {
-		return err
+		return fmt.Errorf("SMTP connect failed: %w", err)
 	}
 	defer client.Close()
 	if shouldAuthenticateSMTP() {
 		if err = client.Auth(auth); err != nil {
-			return err
+			return fmt.Errorf("SMTP authentication failed: %w", err)
 		}
 	}
 	if err = client.Mail(SMTPFrom); err != nil {
-		return err
+		return fmt.Errorf("SMTP MAIL FROM failed: %w", err)
 	}
 	for _, receiver := range to {
 		if err = client.Rcpt(receiver); err != nil {
-			return err
+			return fmt.Errorf("SMTP RCPT TO failed: %w", err)
 		}
 	}
 	w, err := client.Data()
 	if err != nil {
-		return err
+		return fmt.Errorf("SMTP DATA command failed: %w", err)
 	}
 	_, err = w.Write(mail)
 	if err != nil {
-		return err
+		return fmt.Errorf("SMTP message write failed: %w", err)
 	}
 	err = w.Close()
 	if err != nil {
-		return err
+		return fmt.Errorf("SMTP message submission failed: %w", err)
 	}
 	err = client.Quit()
-	if err != nil {
+	if err != nil && !errors.Is(err, io.EOF) {
 		SysError(fmt.Sprintf("failed to send email to %s: %v", receiver, err))
+		return fmt.Errorf("SMTP QUIT failed: %w", err)
 	}
-	return err
+	return nil
 }

@@ -388,10 +388,11 @@ func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preCons
 		session := &BillingSession{
 			relayInfo: relayInfo,
 			funding: &SubscriptionFunding{
-				requestId: relayInfo.RequestId,
-				userId:    relayInfo.UserId,
-				modelName: relayInfo.OriginModelName,
-				amount:    subConsume,
+				requestId:         relayInfo.RequestId,
+				userId:            relayInfo.UserId,
+				modelName:         relayInfo.OriginModelName,
+				subscriptionGroup: relayInfo.SubscriptionGroup,
+				amount:            subConsume,
 			},
 		}
 		// 必须传 subConsume 而非 preConsumedQuota，保证 SubscriptionFunding.amount、
@@ -400,6 +401,20 @@ func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preCons
 			return nil, apiErr
 		}
 		return session, nil
+	}
+
+	// A subscription-bound token falls back to the user's account group after
+	// its entitlement expires. Do not silently consume a different active
+	// subscription while doing so; wallet billing is the only safe fallback.
+	if relayInfo.TokenGroupFallback && relayInfo.SubscriptionGroup != "" {
+		return tryWallet()
+	}
+	// While a token is bound to a usable subscription entitlement, it must not
+	// charge wallet balance at the subscription group's discounted ratio. Once
+	// the group is exhausted, authentication persists the fallback and the next
+	// request reaches the wallet path with the user's account-group ratio.
+	if relayInfo.SubscriptionGroup != "" {
+		return trySubscription()
 	}
 
 	switch pref {
@@ -431,6 +446,9 @@ func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preCons
 			if apiErr.GetErrorCode() == types.ErrorCodeInsufficientUserQuota {
 				// 仅当用户的活跃订阅允许钱包回退时才回退到钱包，否则返回订阅额度不足错误
 				allowOverflow, overflowErr := model.UserActiveSubscriptionsAllowWalletOverflow(relayInfo.UserId)
+				if relayInfo.SubscriptionGroup != "" {
+					allowOverflow, overflowErr = model.UserActiveSubscriptionGroupAllowsWalletOverflow(relayInfo.UserId, relayInfo.SubscriptionGroup)
+				}
 				if overflowErr != nil {
 					return nil, types.NewError(overflowErr, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
 				}

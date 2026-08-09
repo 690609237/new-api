@@ -1,9 +1,11 @@
 package service
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -502,50 +504,162 @@ func checkAndSendQuotaNotify(relayInfo *relaycommon.RelayInfo, quota int, preCon
 	})
 }
 
-func checkAndSendSubscriptionQuotaNotify(relayInfo *relaycommon.RelayInfo) {
-	gopool.Go(func() {
-		if relayInfo == nil {
-			return
-		}
-		if relayInfo.SubscriptionId == 0 || relayInfo.SubscriptionAmountTotal <= 0 {
-			return
-		}
+type subscriptionQuotaNotificationStage string
 
-		userSetting := relayInfo.UserSetting
-		threshold := common.QuotaRemindThreshold
-		if userSetting.QuotaWarningThreshold != 0 {
-			threshold = int(userSetting.QuotaWarningThreshold)
-		}
+const (
+	subscriptionQuotaNotificationNone      subscriptionQuotaNotificationStage = ""
+	subscriptionQuotaNotificationWarning   subscriptionQuotaNotificationStage = "warning"
+	subscriptionQuotaNotificationExhausted subscriptionQuotaNotificationStage = "exhausted"
+)
 
-		usedAfter := relayInfo.SubscriptionAmountUsedAfterPreConsume + relayInfo.SubscriptionPostDelta
-		remaining := relayInfo.SubscriptionAmountTotal - usedAfter
-		if remaining >= int64(threshold) {
-			return
+func getSubscriptionQuotaNotificationStage(total, remaining, consumed int64, reboundTokenCount int) subscriptionQuotaNotificationStage {
+	if total <= 0 || remaining < 0 || consumed <= 0 {
+		return subscriptionQuotaNotificationNone
+	}
+	if remaining == 0 {
+		if reboundTokenCount > 0 {
+			return subscriptionQuotaNotificationExhausted
 		}
+		return subscriptionQuotaNotificationNone
+	}
+	warningThreshold := total / 50
+	if total%50 != 0 {
+		warningThreshold++
+	}
+	if remaining <= warningThreshold {
+		return subscriptionQuotaNotificationWarning
+	}
+	return subscriptionQuotaNotificationNone
+}
 
-		prompt := "您的订阅额度即将用尽"
-		topUpLink := PaymentReturnURL("/wallet")
+func checkAndQueueSubscriptionQuotaNotify(relayInfo *relaycommon.RelayInfo, consumed int64) {
+	if relayInfo == nil || relayInfo.SubscriptionId == 0 || relayInfo.SubscriptionGroup == "" || consumed <= 0 {
+		return
+	}
+	quotaState, err := model.FinalizeSubscriptionGroupQuota(relayInfo.UserId, relayInfo.SubscriptionGroup)
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to finalize subscription quota for user %d: %s", relayInfo.UserId, err.Error()))
+		return
+	}
+	if quotaState.Unlimited {
+		return
+	}
+	stage := getSubscriptionQuotaNotificationStage(
+		quotaState.Total,
+		quotaState.Remaining,
+		consumed,
+		quotaState.ReboundTokenCount,
+	)
+	if stage == subscriptionQuotaNotificationNone {
+		return
+	}
 
-		var content string
-		var values []interface{}
-		notifyType := userSetting.NotifyType
-		if notifyType == "" {
-			notifyType = dto.NotifyTypeEmail
-		}
+	planTitle := strings.TrimSpace(relayInfo.SubscriptionPlanTitle)
+	if planTitle == "" {
+		planTitle = quotaState.PlanTitle
+	}
+	if err := queueSubscriptionQuotaNotification(
+		relayInfo.UserId,
+		relayInfo.SubscriptionGroup,
+		relayInfo.UserGroup,
+		planTitle,
+		relayInfo.PriceData.GroupRatioInfo.GroupRatio,
+		quotaState,
+		stage,
+	); err != nil {
+		common.SysError(fmt.Sprintf("failed to queue subscription quota notify for user %d: %s", relayInfo.UserId, err.Error()))
+	}
+}
 
-		if notifyType == dto.NotifyTypeBark {
-			content = "{{value}}，剩余额度：{{value}}，请及时充值"
-			values = []interface{}{prompt, logger.FormatQuota(int(remaining))}
-		} else if notifyType == dto.NotifyTypeGotify {
-			content = "{{value}}，当前剩余额度为 {{value}}，请及时充值。"
-			values = []interface{}{prompt, logger.FormatQuota(int(remaining))}
-		} else {
-			content = "{{value}}，当前剩余额度为 {{value}}，为了不影响您的使用，请及时充值。<br/>充值链接：<a href='{{value}}'>{{value}}</a>"
-			values = []interface{}{prompt, logger.FormatQuota(int(remaining)), topUpLink, topUpLink}
-		}
+// FinalizeSubscriptionGroupQuotaAndNotify persists token fallback when an
+// entitlement becomes unavailable before billing starts, and queues the same
+// exhausted notification used by the settlement path.
+func FinalizeSubscriptionGroupQuotaAndNotify(userId int, subscriptionGroup, userGroup string) (int, error) {
+	quotaState, err := model.FinalizeSubscriptionGroupQuota(userId, subscriptionGroup)
+	if err != nil {
+		return 0, err
+	}
+	if quotaState.Unlimited || quotaState.Total <= 0 || quotaState.Remaining != 0 || quotaState.ReboundTokenCount == 0 {
+		return quotaState.ReboundTokenCount, nil
+	}
 
-		if err := NotifyUser(relayInfo.UserId, relayInfo.UserEmail, relayInfo.UserSetting, dto.NewNotify(dto.NotifyTypeQuotaExceed, prompt, content, values)); err != nil {
-			common.SysError(fmt.Sprintf("failed to send subscription quota notify to user %d: %s", relayInfo.UserId, err.Error()))
-		}
+	if err := queueSubscriptionQuotaNotification(
+		userId,
+		subscriptionGroup,
+		userGroup,
+		quotaState.PlanTitle,
+		GetUserGroupRatio(userGroup, subscriptionGroup),
+		quotaState,
+		subscriptionQuotaNotificationExhausted,
+	); err != nil {
+		common.SysError(fmt.Sprintf("failed to queue exhausted subscription quota notify for user %d: %s", userId, err.Error()))
+	}
+	return quotaState.ReboundTokenCount, nil
+}
+
+func queueSubscriptionQuotaNotification(
+	userId int,
+	subscriptionGroup string,
+	userGroup string,
+	planTitle string,
+	oldRatio float64,
+	quotaState *model.SubscriptionGroupQuotaState,
+	stage subscriptionQuotaNotificationStage,
+) error {
+	if userId <= 0 || subscriptionGroup == "" || quotaState == nil || stage == subscriptionQuotaNotificationNone {
+		return errors.New("invalid subscription quota notification")
+	}
+
+	newRatio := GetUserGroupRatio(userGroup, userGroup)
+	oldRatioText := strconv.FormatFloat(oldRatio, 'f', -1, 64)
+	newRatioText := strconv.FormatFloat(newRatio, 'f', -1, 64)
+	planTitle = strings.TrimSpace(planTitle)
+	if planTitle == "" {
+		planTitle = subscriptionGroup
+	}
+
+	title := "订阅套餐额度即将用尽"
+	percentage := float64(quotaState.Remaining) / float64(quotaState.Total) * 100
+	content := fmt.Sprintf(
+		"您的订阅套餐「%s」剩余额度为 %s（%.2f%%）。额度用尽后，相关 API Key 将自动从 %s 倍率切换为用户分组「%s」的 %s 倍率。",
+		planTitle,
+		logger.FormatQuota(int(quotaState.Remaining)),
+		percentage,
+		oldRatioText,
+		userGroup,
+		newRatioText,
+	)
+	if stage == subscriptionQuotaNotificationExhausted {
+		title = "订阅套餐额度已用尽"
+		content = fmt.Sprintf(
+			"您的订阅套餐「%s」额度已用尽，相关 API Key 已自动从 %s 倍率切换为用户分组「%s」的 %s 倍率，后续请求将按新倍率扣除余额。",
+			planTitle,
+			oldRatioText,
+			userGroup,
+			newRatioText,
+		)
+	}
+
+	eventData := fmt.Sprintf(
+		"subscription-quota:%d:%s:%s:%s",
+		userId,
+		subscriptionGroup,
+		stage,
+		quotaState.CycleKey,
+	)
+	eventHash := sha256.Sum256([]byte(eventData))
+	created, err := model.CreateNotificationDelivery(&model.NotificationDelivery{
+		EventKey: fmt.Sprintf("subscription-quota:%x", eventHash),
+		UserId:   userId,
+		Type:     dto.NotifyTypeQuotaExceed,
+		Title:    title,
+		Content:  content,
 	})
+	if err != nil {
+		return err
+	}
+	if created {
+		triggerNotificationDelivery()
+	}
+	return nil
 }

@@ -11,6 +11,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TokenGroupOption describes a group that can be selected when creating an API
+// key. Subscription groups are derived from active UserSubscription records;
+// legacy subscriptions use UpgradeGroup as their entitlement group.
+type TokenGroupOption struct {
+	Ratio       any      `json:"ratio"`
+	Desc        string   `json:"desc"`
+	Source      string   `json:"source"`
+	PlanTitles  []string `json:"plan_titles,omitempty"`
+	RemainQuota int64    `json:"remain_quota,omitempty"`
+	EndTime     int64    `json:"end_time,omitempty"`
+}
+
 func GetUserUsableGroups(userGroup string) map[string]string {
 	groupsCopy := setting.GetUserUsableGroupsCopy()
 	if userGroup != "" {
@@ -50,6 +62,88 @@ func IsUserSelectableGroup(userGroup, groupName string) bool {
 		return false
 	}
 	return GroupInUserUsableGroups(userGroup, groupName) && ratio_setting.ContainsGroupRatio(groupName)
+}
+
+// IsUserSelectableGroupForUser accepts either an ordinary user-selectable
+// group or a group granted by one of the user's active subscriptions.
+func IsUserSelectableGroupForUser(userId int, userGroup, groupName string) (bool, error) {
+	if IsUserSelectableGroup(userGroup, groupName) {
+		return true, nil
+	}
+	if groupName == "" || groupName == "auto" || !ratio_setting.ContainsGroupRatio(groupName) {
+		return false, nil
+	}
+	return model.HasActiveUserSubscriptionGroup(userId, groupName)
+}
+
+// GetUserTokenGroupOptions returns ordinary groups plus active subscription
+// groups for API key creation. It intentionally does not alter the broader
+// /api/user/self/groups contract used by other UI surfaces.
+func GetUserTokenGroupOptions(userId int, userGroup string) (map[string]TokenGroupOption, error) {
+	options := make(map[string]TokenGroupOption)
+	for groupName, desc := range GetUserUsableGroups(userGroup) {
+		if groupName == "auto" || !ratio_setting.ContainsGroupRatio(groupName) {
+			continue
+		}
+		options[groupName] = TokenGroupOption{
+			Ratio:  GetUserGroupRatio(userGroup, groupName),
+			Desc:   desc,
+			Source: "user",
+		}
+	}
+	if _, ok := GetUserUsableGroups(userGroup)["auto"]; ok {
+		options["auto"] = TokenGroupOption{
+			Ratio:  "自动",
+			Desc:   setting.GetUsableGroupDescription("auto"),
+			Source: "user",
+		}
+	}
+
+	subs, err := model.GetActiveUserSubscriptionGroups(userId)
+	if err != nil {
+		return nil, err
+	}
+	for _, sub := range subs {
+		groupName := strings.TrimSpace(sub.SubscriptionGroup)
+		if groupName == "" {
+			groupName = strings.TrimSpace(sub.UpgradeGroup)
+		}
+		if groupName == "" || !ratio_setting.ContainsGroupRatio(groupName) {
+			continue
+		}
+		option := options[groupName]
+		if option.Source == "" || option.Source == "user" {
+			option.Source = "subscription"
+		}
+		option.Ratio = GetUserGroupRatio(userGroup, groupName)
+		if option.Desc == "" {
+			option.Desc = "订阅权益分组"
+		}
+		plan, planErr := model.GetSubscriptionPlanById(sub.PlanId)
+		if planErr == nil && plan != nil {
+			seenTitle := false
+			for _, title := range option.PlanTitles {
+				if title == plan.Title {
+					seenTitle = true
+					break
+				}
+			}
+			if !seenTitle && plan.Title != "" {
+				option.PlanTitles = append(option.PlanTitles, plan.Title)
+			}
+		}
+		if sub.AmountTotal > 0 {
+			remain := sub.AmountTotal - sub.AmountUsed
+			if remain > 0 {
+				option.RemainQuota += remain
+			}
+		}
+		if option.EndTime == 0 || sub.EndTime < option.EndTime {
+			option.EndTime = sub.EndTime
+		}
+		options[groupName] = option
+	}
+	return options, nil
 }
 
 // GetUserAutoGroup 根据用户分组获取自动分组设置

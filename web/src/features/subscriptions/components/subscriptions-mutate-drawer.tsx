@@ -398,9 +398,12 @@ export function SubscriptionsMutateDrawer({
                           { value: '__none__', label: t('No Upgrade') },
                           ...groupOptions.map((g) => ({ value: g, label: g })),
                         ]}
-                        onValueChange={(v) =>
+                        onValueChange={(v) => {
                           field.onChange(v === '__none__' ? '' : v)
-                        }
+                          if (v !== '__none__') {
+                            form.setValue('subscription_group', '')
+                          }
+                        }}
                         value={field.value || ''}
                       >
                         <FormControl>
@@ -421,6 +424,59 @@ export function SubscriptionsMutateDrawer({
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='subscription_group'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Subscription Entitlement Group')}</FormLabel>
+                      <Select
+                        items={[
+                          {
+                            value: '__none__',
+                            label: t('No subscription entitlement'),
+                          },
+                          ...groupOptions.map((g) => ({ value: g, label: g })),
+                        ]}
+                        onValueChange={(v) => {
+                          field.onChange(v === '__none__' ? '' : v)
+                          if (v !== '__none__') {
+                            form.setValue('upgrade_group', '')
+                            form.setValue('downgrade_group', '')
+                          }
+                        }}
+                        value={field.value || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={t('No subscription entitlement')}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectGroup>
+                            <SelectItem value='__none__'>
+                              {t('No subscription entitlement')}
+                            </SelectItem>
+                            {groupOptions.map((g) => (
+                              <SelectItem key={g} value={g}>
+                                {g}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t(
+                          'Grants this group to API keys without changing the user group.'
+                        )}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

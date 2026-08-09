@@ -48,6 +48,7 @@ export type ApiKeyGroupOption = {
   label: string
   desc?: string
   ratio?: number | string
+  source?: 'user' | 'subscription'
 }
 
 type ApiKeyGroupComboboxProps = {

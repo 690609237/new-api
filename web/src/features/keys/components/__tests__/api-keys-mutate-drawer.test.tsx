@@ -97,7 +97,7 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
         return { data: { data: { default_use_auto_group: true } } }
       case '/api/user/models':
         return { data: { success: true, data: [] } }
-      case '/api/user/self/groups':
+      case '/api/token/groups':
         return {
           data: {
             success: true,
@@ -173,7 +173,7 @@ async function renderCreateDrawer(): Promise<void> {
     { updatedAt: freshAt }
   )
   queryClient.setQueryData(
-    ['user-groups'],
+    ['token-groups'],
     {
       success: true,
       data: {

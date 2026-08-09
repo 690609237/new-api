@@ -116,6 +116,54 @@ func setTokenAutoGroups(c *gin.Context, token *model.Token, groups []string) boo
 	return true
 }
 
+func validateTokenSubscriptionGroup(c *gin.Context, userId int, tokenGroup, subscriptionGroup string) bool {
+	subscriptionGroup = strings.TrimSpace(subscriptionGroup)
+	if subscriptionGroup == "" {
+		return true
+	}
+	if tokenGroup == "auto" || tokenGroup != subscriptionGroup {
+		common.ApiErrorMsg(c, "订阅权益分组必须与 API Key 分组一致，且不能用于 auto 分组")
+		return false
+	}
+	active, err := model.HasActiveUserSubscriptionGroup(userId, subscriptionGroup)
+	if err != nil {
+		common.ApiError(c, err)
+		return false
+	}
+	if !active {
+		common.ApiErrorMsg(c, "订阅套餐已失效或不存在")
+		return false
+	}
+	return true
+}
+
+func resolveTokenSubscriptionGroup(c *gin.Context, userId int, tokenGroup, requested string) (string, bool) {
+	requested = strings.TrimSpace(requested)
+	if tokenGroup == "auto" {
+		if requested != "" {
+			common.ApiErrorMsg(c, "auto 分组不能绑定订阅权益")
+			return "", false
+		}
+		return "", true
+	}
+	if requested != "" {
+		return requested, validateTokenSubscriptionGroup(c, userId, tokenGroup, requested)
+	}
+	active, err := model.HasActiveUserSubscriptionEntitlementGroup(userId, tokenGroup)
+	if err != nil {
+		common.ApiError(c, err)
+		return "", false
+	}
+	if !active && (tokenGroup == "" || service.IsUserSelectableGroup(common.GetContextKeyString(c, constant.ContextKeyUserGroup), tokenGroup)) {
+		return "", true
+	}
+	if !active {
+		common.ApiErrorMsg(c, fmt.Sprintf("无权访问 %s 分组", tokenGroup))
+		return "", false
+	}
+	return tokenGroup, validateTokenSubscriptionGroup(c, userId, tokenGroup, tokenGroup)
+}
+
 func GetAllTokens(c *gin.Context) {
 	userId := c.GetInt("id")
 	pageInfo := common.GetPageQuery(c)
@@ -172,6 +220,20 @@ func GetTokenAutoGroups(c *gin.Context) {
 		"groups":    service.GetUserAutoGroup(userGroup),
 		"max_count": setting.GetMaxTokenAutoGroups(),
 	})
+}
+
+func GetTokenGroups(c *gin.Context) {
+	userGroup, err := getTokenRequestUserGroup(c)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	groups, err := service.GetUserTokenGroupOptions(c.GetInt("id"), userGroup)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, groups)
 }
 
 func GetTokenKey(c *gin.Context) {
@@ -307,6 +369,11 @@ func AddToken(c *gin.Context) {
 		token.CrossGroupRetry = false
 		_ = token.SetAutoGroups(nil)
 	}
+	var valid bool
+	token.SubscriptionGroup, valid = resolveTokenSubscriptionGroup(c, c.GetInt("id"), token.Group, token.SubscriptionGroup)
+	if !valid {
+		return
+	}
 	key, err := common.GenerateKey()
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgTokenGenerateFailed)
@@ -326,6 +393,7 @@ func AddToken(c *gin.Context) {
 		ModelLimits:        token.ModelLimits,
 		AllowIps:           token.AllowIps,
 		Group:              token.Group,
+		SubscriptionGroup:  token.SubscriptionGroup,
 		CrossGroupRetry:    token.CrossGroupRetry,
 		AutoGroups:         token.AutoGroups,
 	}
@@ -405,7 +473,23 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.ModelLimitsEnabled = token.ModelLimitsEnabled
 		cleanToken.ModelLimits = token.ModelLimits
 		cleanToken.AllowIps = token.AllowIps
+		previousGroup := cleanToken.Group
 		cleanToken.Group = token.Group
+		subscriptionGroup := strings.TrimSpace(token.SubscriptionGroup)
+		if subscriptionGroup == "" && cleanToken.SubscriptionGroup != "" && token.Group == previousGroup {
+			// Older dashboard clients do not send the new field; preserve the
+			// existing binding when the group itself is unchanged.
+			subscriptionGroup = cleanToken.SubscriptionGroup
+		}
+		if token.Group == "auto" {
+			subscriptionGroup = ""
+		}
+		var valid bool
+		subscriptionGroup, valid = resolveTokenSubscriptionGroup(c, userId, token.Group, subscriptionGroup)
+		if !valid {
+			return
+		}
+		cleanToken.SubscriptionGroup = subscriptionGroup
 		cleanToken.CrossGroupRetry = token.CrossGroupRetry
 		if token.Group != "auto" {
 			cleanToken.CrossGroupRetry = false

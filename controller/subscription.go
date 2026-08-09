@@ -186,9 +186,20 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 		return
 	}
 	req.Plan.UpgradeGroup = strings.TrimSpace(req.Plan.UpgradeGroup)
+	req.Plan.SubscriptionGroup = strings.TrimSpace(req.Plan.SubscriptionGroup)
+	if req.Plan.SubscriptionGroup != "" && (req.Plan.UpgradeGroup != "" || strings.TrimSpace(req.Plan.DowngradeGroup) != "") {
+		common.ApiErrorMsg(c, "订阅权益分组不能与用户升级或降级分组同时设置")
+		return
+	}
 	if req.Plan.UpgradeGroup != "" {
 		if _, ok := ratio_setting.GetGroupRatioCopy()[req.Plan.UpgradeGroup]; !ok {
 			common.ApiErrorMsg(c, "升级分组不存在")
+			return
+		}
+	}
+	if req.Plan.SubscriptionGroup != "" {
+		if _, ok := ratio_setting.GetGroupRatioCopy()[req.Plan.SubscriptionGroup]; !ok {
+			common.ApiErrorMsg(c, "订阅权益分组不存在")
 			return
 		}
 	}
@@ -260,9 +271,20 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		return
 	}
 	req.Plan.UpgradeGroup = strings.TrimSpace(req.Plan.UpgradeGroup)
+	req.Plan.SubscriptionGroup = strings.TrimSpace(req.Plan.SubscriptionGroup)
+	if req.Plan.SubscriptionGroup != "" && (req.Plan.UpgradeGroup != "" || strings.TrimSpace(req.Plan.DowngradeGroup) != "") {
+		common.ApiErrorMsg(c, "订阅权益分组不能与用户升级或降级分组同时设置")
+		return
+	}
 	if req.Plan.UpgradeGroup != "" {
 		if _, ok := ratio_setting.GetGroupRatioCopy()[req.Plan.UpgradeGroup]; !ok {
 			common.ApiErrorMsg(c, "升级分组不存在")
+			return
+		}
+	}
+	if req.Plan.SubscriptionGroup != "" {
+		if _, ok := ratio_setting.GetGroupRatioCopy()[req.Plan.SubscriptionGroup]; !ok {
+			common.ApiErrorMsg(c, "订阅权益分组不存在")
 			return
 		}
 	}
@@ -297,6 +319,7 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 			"max_purchase_per_user":      req.Plan.MaxPurchasePerUser,
 			"total_amount":               req.Plan.TotalAmount,
 			"upgrade_group":              req.Plan.UpgradeGroup,
+			"subscription_group":         req.Plan.SubscriptionGroup,
 			"downgrade_group":            req.Plan.DowngradeGroup,
 			"quota_reset_period":         req.Plan.QuotaResetPeriod,
 			"quota_reset_custom_seconds": req.Plan.QuotaResetCustomSeconds,

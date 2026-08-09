@@ -34,6 +34,7 @@ export const apiKeySchema = z.object({
   created_time: z.number(),
   accessed_time: z.number(),
   group: z.string().nullish().default(''),
+  subscription_group: z.string().nullish().default(''),
   auto_groups: z.array(z.string()).nullish().default(null),
   cross_group_retry: z
     .preprocess((v) => {
@@ -92,6 +93,7 @@ export interface ApiKeyFormData {
   model_limits: string
   allow_ips: string
   group: string
+  subscription_group: string
   auto_groups: string[]
   cross_group_retry: boolean
 }
@@ -100,6 +102,17 @@ export interface TokenAutoGroupsConfig {
   groups: string[]
   max_count: number
 }
+
+export interface TokenGroupOption {
+  ratio: number | string
+  desc: string
+  source?: 'user' | 'subscription'
+  plan_titles?: string[]
+  remain_quota?: number
+  end_time?: number
+}
+
+export type TokenGroupsConfig = Record<string, TokenGroupOption>
 
 // ============================================================================
 // Dialog Types

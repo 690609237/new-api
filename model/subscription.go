@@ -175,6 +175,10 @@ type SubscriptionPlan struct {
 	// Upgrade user group after purchase (empty = no change)
 	UpgradeGroup string `json:"upgrade_group" gorm:"type:varchar(64);default:''"`
 
+	// SubscriptionGroup grants an entitlement group without changing the user's
+	// account group. Empty keeps the legacy UpgradeGroup behavior.
+	SubscriptionGroup string `json:"subscription_group" gorm:"type:varchar(64);default:'';index"`
+
 	// Downgrade user group on expiry (empty = revert to the group held before purchase)
 	DowngradeGroup string `json:"downgrade_group" gorm:"type:varchar(64);default:''"`
 
@@ -269,6 +273,10 @@ type UserSubscription struct {
 
 	UpgradeGroup  string `json:"upgrade_group" gorm:"type:varchar(64);default:''"`
 	PrevUserGroup string `json:"prev_user_group" gorm:"type:varchar(64);default:''"`
+
+	// SubscriptionGroup is snapshotted from the plan and scopes token billing.
+	// Empty means this is a legacy subscription governed by UpgradeGroup.
+	SubscriptionGroup string `json:"subscription_group" gorm:"type:varchar(64);default:'';index"`
 
 	// Downgrade target group on expiry (snapshot from plan; empty = revert to PrevUserGroup)
 	DowngradeGroup string `json:"downgrade_group" gorm:"type:varchar(64);default:''"`
@@ -430,11 +438,11 @@ func getUserGroupByIdTx(tx *gorm.DB, userId int) (string, error) {
 	if tx == nil {
 		tx = DB
 	}
-	var group string
-	if err := lockForUpdate(tx).Model(&User{}).Where("id = ?", userId).Select(commonGroupCol).Find(&group).Error; err != nil {
+	var user User
+	if err := lockForUpdate(tx).First(&user, userId).Error; err != nil {
 		return "", err
 	}
-	return group, nil
+	return user.Group, nil
 }
 
 func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now int64) (string, error) {
@@ -514,7 +522,13 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	if nextReset > 0 {
 		lastReset = now.Unix()
 	}
-	upgradeGroup := strings.TrimSpace(plan.UpgradeGroup)
+	subscriptionGroup := strings.TrimSpace(plan.SubscriptionGroup)
+	upgradeGroup := ""
+	if subscriptionGroup == "" {
+		// Empty SubscriptionGroup preserves the legacy behavior where a plan
+		// upgrades the user's account group.
+		upgradeGroup = strings.TrimSpace(plan.UpgradeGroup)
+	}
 	prevGroup := ""
 	if upgradeGroup != "" {
 		currentGroup, err := getUserGroupByIdTx(tx, userId)
@@ -528,6 +542,10 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 				return nil, err
 			}
 		}
+	}
+	downgradeGroup := strings.TrimSpace(plan.DowngradeGroup)
+	if subscriptionGroup != "" {
+		downgradeGroup = ""
 	}
 	allowWalletOverflow := true
 	if plan.AllowWalletOverflow != nil {
@@ -545,8 +563,9 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		LastResetTime:       lastReset,
 		NextResetTime:       nextReset,
 		UpgradeGroup:        upgradeGroup,
+		SubscriptionGroup:   subscriptionGroup,
 		PrevUserGroup:       prevGroup,
-		DowngradeGroup:      strings.TrimSpace(plan.DowngradeGroup),
+		DowngradeGroup:      downgradeGroup,
 		AllowWalletOverflow: allowWalletOverflow,
 		CreatedAt:           common.GetTimestamp(),
 		UpdatedAt:           common.GetTimestamp(),
@@ -850,6 +869,56 @@ func GetAllActiveUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	return buildSubscriptionSummaries(subs), nil
 }
 
+// GetActiveUserSubscriptionGroups returns active subscriptions that grant a
+// selectable entitlement group. New subscriptions use subscription_group;
+// legacy records fall back to upgrade_group for compatibility.
+func GetActiveUserSubscriptionGroups(userId int) ([]UserSubscription, error) {
+	if userId <= 0 {
+		return nil, errors.New("invalid userId")
+	}
+	now := common.GetTimestamp()
+	var subs []UserSubscription
+	err := usableActiveUserSubscriptions(DB, userId, now).
+		Where("(subscription_group <> ? OR upgrade_group <> ?)", "", "").
+		Order("end_time asc, id asc").
+		Find(&subs).Error
+	return subs, err
+}
+
+func usableActiveUserSubscriptions(db *gorm.DB, userId int, now int64) *gorm.DB {
+	return db.Where(
+		"user_id = ? AND status = ? AND end_time > ? AND (amount_total <= 0 OR amount_used < amount_total OR (next_reset_time > 0 AND next_reset_time <= ?))",
+		userId, "active", now, now,
+	)
+}
+
+// HasActiveUserSubscriptionGroup reports whether a user has an active
+// subscription granting the requested group. Legacy subscriptions are matched
+// through UpgradeGroup when SubscriptionGroup is empty.
+func HasActiveUserSubscriptionGroup(userId int, group string) (bool, error) {
+	if userId <= 0 || strings.TrimSpace(group) == "" {
+		return false, errors.New("invalid userId or group")
+	}
+	now := common.GetTimestamp()
+	var count int64
+	err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
+		Where("(subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?))", group, "", group).
+		Count(&count).Error
+	return count > 0, err
+}
+
+func HasActiveUserSubscriptionEntitlementGroup(userId int, group string) (bool, error) {
+	if userId <= 0 || strings.TrimSpace(group) == "" {
+		return false, errors.New("invalid userId or group")
+	}
+	now := common.GetTimestamp()
+	var count int64
+	err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
+		Where("subscription_group = ?", group).
+		Count(&count).Error
+	return count > 0, err
+}
+
 // HasActiveUserSubscription returns whether the user has any active subscription.
 // This is a lightweight existence check to avoid heavy pre-consume transactions.
 func HasActiveUserSubscription(userId int) (bool, error) {
@@ -858,8 +927,7 @@ func HasActiveUserSubscription(userId int) (bool, error) {
 	}
 	now := common.GetTimestamp()
 	var count int64
-	if err := DB.Model(&UserSubscription{}).
-		Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
+	if err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -875,9 +943,25 @@ func UserActiveSubscriptionsAllowWalletOverflow(userId int) (bool, error) {
 	}
 	now := common.GetTimestamp()
 	var strictCount int64
-	if err := DB.Model(&UserSubscription{}).
-		Where("user_id = ? AND status = ? AND end_time > ? AND allow_wallet_overflow = ?",
-			userId, "active", now, false).
+	if err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
+		Where("allow_wallet_overflow = ?", false).
+		Count(&strictCount).Error; err != nil {
+		return false, err
+	}
+	return strictCount == 0, nil
+}
+
+// UserActiveSubscriptionGroupAllowsWalletOverflow applies the wallet fallback
+// rule only to subscriptions granting one entitlement group.
+func UserActiveSubscriptionGroupAllowsWalletOverflow(userId int, group string) (bool, error) {
+	if userId <= 0 || strings.TrimSpace(group) == "" {
+		return false, errors.New("invalid userId or group")
+	}
+	now := common.GetTimestamp()
+	var strictCount int64
+	if err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
+		Where("(subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?)) AND allow_wallet_overflow = ?",
+			group, "", group, false).
 		Count(&strictCount).Error; err != nil {
 		return false, err
 	}
@@ -913,6 +997,157 @@ func buildSubscriptionSummaries(subs []UserSubscription) []SubscriptionSummary {
 	return result
 }
 
+// rebindSubscriptionTokensTx moves tokens back to the user's account group
+// after the last active subscription granting an entitlement group ends.
+func rebindSubscriptionTokensTx(tx *gorm.DB, userId int, subscriptionGroup string, now int64) ([]Token, error) {
+	subscriptionGroup = strings.TrimSpace(subscriptionGroup)
+	if tx == nil || userId <= 0 || subscriptionGroup == "" {
+		return nil, nil
+	}
+
+	var activeCount int64
+	if err := usableActiveUserSubscriptions(tx.Model(&UserSubscription{}), userId, now).
+		Where("(subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?))",
+			subscriptionGroup, "", subscriptionGroup).
+		Count(&activeCount).Error; err != nil {
+		return nil, err
+	}
+	if activeCount > 0 {
+		return nil, nil
+	}
+
+	userGroup, err := getUserGroupByIdTx(tx, userId)
+	if err != nil {
+		return nil, err
+	}
+	var tokens []Token
+	if err := lockForUpdate(tx).
+		Where("user_id = ? AND subscription_group = ?", userId, subscriptionGroup).
+		Find(&tokens).Error; err != nil {
+		return nil, err
+	}
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+	if err := tx.Model(&Token{}).
+		Where("user_id = ? AND subscription_group = ?", userId, subscriptionGroup).
+		Updates(map[string]interface{}{
+			"group":              userGroup,
+			"subscription_group": "",
+		}).Error; err != nil {
+		return nil, err
+	}
+	return tokens, nil
+}
+
+func invalidateReboundTokenCaches(tokens []Token) {
+	if !common.RedisEnabled {
+		return
+	}
+	for _, token := range tokens {
+		if err := cacheDeleteToken(token.Key); err != nil {
+			common.SysError(fmt.Sprintf("failed to invalidate rebound subscription token %d cache: %v", token.Id, err))
+		}
+	}
+}
+
+// RebindUnavailableSubscriptionTokens persists the runtime fallback used by
+// token authentication when an entitlement group has no usable quota left.
+func RebindUnavailableSubscriptionTokens(userId int, subscriptionGroup string) (int, error) {
+	var reboundTokens []Token
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var err error
+		reboundTokens, err = rebindSubscriptionTokensTx(tx, userId, subscriptionGroup, GetDBTimestamp())
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	invalidateReboundTokenCaches(reboundTokens)
+	return len(reboundTokens), nil
+}
+
+type SubscriptionGroupQuotaState struct {
+	Total             int64
+	Remaining         int64
+	Unlimited         bool
+	ReboundTokenCount int
+	CycleKey          string
+	PlanTitle         string
+}
+
+// FinalizeSubscriptionGroupQuota returns aggregate usable quota for an
+// entitlement group and rebinds its tokens when the final quota is exhausted.
+func FinalizeSubscriptionGroupQuota(userId int, subscriptionGroup string) (*SubscriptionGroupQuotaState, error) {
+	subscriptionGroup = strings.TrimSpace(subscriptionGroup)
+	if userId <= 0 || subscriptionGroup == "" {
+		return nil, errors.New("invalid userId or subscription group")
+	}
+	now := GetDBTimestamp()
+	state := &SubscriptionGroupQuotaState{}
+	var reboundTokens []Token
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var subs []UserSubscription
+		if err := lockForUpdate(tx).
+			Where("user_id = ? AND status = ? AND end_time > ? AND (subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?))",
+				userId, "active", now, subscriptionGroup, "", subscriptionGroup).
+			Order("end_time asc, id asc").
+			Find(&subs).Error; err != nil {
+			return err
+		}
+
+		const maxInt64Value int64 = 1<<63 - 1
+		cycleParts := make([]string, 0, len(subs))
+		for i := range subs {
+			plan, err := getSubscriptionPlanByIdTx(tx, subs[i].PlanId)
+			if err != nil {
+				return err
+			}
+			if state.PlanTitle == "" {
+				state.PlanTitle = strings.TrimSpace(plan.Title)
+			}
+			if err := maybeResetUserSubscriptionWithPlanTx(tx, &subs[i], plan, now); err != nil {
+				return err
+			}
+			cycleParts = append(cycleParts, fmt.Sprintf("%d:%d:%d", subs[i].Id, subs[i].LastResetTime, subs[i].AmountTotal))
+			if subs[i].AmountTotal <= 0 {
+				state.Unlimited = true
+				continue
+			}
+			if state.Total > maxInt64Value-subs[i].AmountTotal {
+				state.Total = maxInt64Value
+			} else {
+				state.Total += subs[i].AmountTotal
+			}
+			remaining := subs[i].AmountTotal - subs[i].AmountUsed
+			if remaining <= 0 {
+				continue
+			}
+			if state.Remaining > maxInt64Value-remaining {
+				state.Remaining = maxInt64Value
+			} else {
+				state.Remaining += remaining
+			}
+		}
+		state.CycleKey = strings.Join(cycleParts, ",")
+		if state.Unlimited || state.Total == 0 || state.Remaining > 0 {
+			return nil
+		}
+		var err error
+		reboundTokens, err = rebindSubscriptionTokensTx(tx, userId, subscriptionGroup, now)
+		if err != nil {
+			return err
+		}
+		state.ReboundTokenCount = len(reboundTokens)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	invalidateReboundTokenCaches(reboundTokens)
+	return state, nil
+}
+
 // AdminInvalidateUserSubscription marks a user subscription as cancelled and ends it immediately.
 func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 	if userSubscriptionId <= 0 {
@@ -922,6 +1157,7 @@ func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 	cacheGroup := ""
 	downgradeGroup := ""
 	var userId int
+	var reboundTokens []Token
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var sub UserSubscription
 		if err := lockForUpdate(tx).
@@ -944,6 +1180,14 @@ func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 			cacheGroup = target
 			downgradeGroup = target
 		}
+		subscriptionGroup := strings.TrimSpace(sub.SubscriptionGroup)
+		if subscriptionGroup == "" {
+			subscriptionGroup = strings.TrimSpace(sub.UpgradeGroup)
+		}
+		reboundTokens, err = rebindSubscriptionTokensTx(tx, sub.UserId, subscriptionGroup, now)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -952,6 +1196,7 @@ func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 	if cacheGroup != "" && userId > 0 {
 		refreshSubscriptionUserGroupCache(userId, "admin subscription update")
 	}
+	invalidateReboundTokenCaches(reboundTokens)
 	if downgradeGroup != "" {
 		return fmt.Sprintf("用户分组将回退到 %s", downgradeGroup), nil
 	}
@@ -967,6 +1212,7 @@ func AdminDeleteUserSubscription(userSubscriptionId int) (string, error) {
 	cacheGroup := ""
 	downgradeGroup := ""
 	var userId int
+	var reboundTokens []Token
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var sub UserSubscription
 		if err := lockForUpdate(tx).
@@ -985,6 +1231,14 @@ func AdminDeleteUserSubscription(userSubscriptionId int) (string, error) {
 		if err := tx.Where("id = ?", userSubscriptionId).Delete(&UserSubscription{}).Error; err != nil {
 			return err
 		}
+		subscriptionGroup := strings.TrimSpace(sub.SubscriptionGroup)
+		if subscriptionGroup == "" {
+			subscriptionGroup = strings.TrimSpace(sub.UpgradeGroup)
+		}
+		reboundTokens, err = rebindSubscriptionTokensTx(tx, sub.UserId, subscriptionGroup, now)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -993,6 +1247,7 @@ func AdminDeleteUserSubscription(userSubscriptionId int) (string, error) {
 	if cacheGroup != "" && userId > 0 {
 		refreshSubscriptionUserGroupCache(userId, "admin subscription deletion")
 	}
+	invalidateReboundTokenCaches(reboundTokens)
 	if downgradeGroup != "" {
 		return fmt.Sprintf("用户分组将回退到 %s", downgradeGroup), nil
 	}
@@ -1151,7 +1406,14 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 	}
 	for userId := range userIds {
 		cacheGroup := ""
+		var reboundTokens []Token
 		err := DB.Transaction(func(tx *gorm.DB) error {
+			var expiringSubscriptions []UserSubscription
+			if err := lockForUpdate(tx).
+				Where("user_id = ? AND status = ? AND end_time > 0 AND end_time <= ?", userId, "active", now).
+				Find(&expiringSubscriptions).Error; err != nil {
+				return err
+			}
 			res := tx.Model(&UserSubscription{}).
 				Where("user_id = ? AND status = ? AND end_time > 0 AND end_time <= ?", userId, "active", now).
 				Updates(map[string]interface{}{
@@ -1163,55 +1425,77 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 			}
 			expiredCount += int(res.RowsAffected)
 
-			// If there's an active upgraded subscription, keep current group.
+			seenGroups := make(map[string]struct{}, len(expiringSubscriptions))
+			for _, sub := range expiringSubscriptions {
+				subscriptionGroup := strings.TrimSpace(sub.SubscriptionGroup)
+				if subscriptionGroup == "" {
+					subscriptionGroup = strings.TrimSpace(sub.UpgradeGroup)
+				}
+				if subscriptionGroup == "" {
+					continue
+				}
+				if _, ok := seenGroups[subscriptionGroup]; ok {
+					continue
+				}
+				seenGroups[subscriptionGroup] = struct{}{}
+			}
+
+			// If no legacy upgraded subscription remains, restore the account group
+			// before rebinding tokens so they inherit the final account group.
 			var activeSub UserSubscription
 			activeQuery := tx.Where("user_id = ? AND status = ? AND end_time > ? AND upgrade_group <> ''",
 				userId, "active", now).
 				Order("end_time desc, id desc").
 				Limit(1).
 				Find(&activeSub)
-			if activeQuery.Error == nil && activeQuery.RowsAffected > 0 {
-				return nil
+			if activeQuery.Error != nil {
+				return activeQuery.Error
+			}
+			if activeQuery.RowsAffected == 0 {
+				// Find the most recently expired subscription that defines a group transition
+				// (an explicit downgrade target or an upgrade snapshot to revert).
+				var lastExpired UserSubscription
+				expiredQuery := tx.Where("user_id = ? AND status = ? AND (downgrade_group <> '' OR upgrade_group <> '')",
+					userId, "expired").
+					Order("end_time desc, id desc").
+					Limit(1).
+					Find(&lastExpired)
+				if expiredQuery.Error != nil {
+					return expiredQuery.Error
+				}
+				if expiredQuery.RowsAffected > 0 {
+					currentGroup, err := getUserGroupByIdTx(tx, userId)
+					if err != nil {
+						return err
+					}
+					// An explicit downgrade group takes precedence; otherwise revert to the
+					// group held before purchase (legacy behavior, only when the subscription
+					// actually elevated the user).
+					target := strings.TrimSpace(lastExpired.DowngradeGroup)
+					if target == "" {
+						upgradeGroup := strings.TrimSpace(lastExpired.UpgradeGroup)
+						prevGroup := strings.TrimSpace(lastExpired.PrevUserGroup)
+						if upgradeGroup != "" && prevGroup != "" && currentGroup == upgradeGroup {
+							target = prevGroup
+						}
+					}
+					if target != "" && target != currentGroup {
+						if err := tx.Model(&User{}).Where("id = ?", userId).
+							Update("group", target).Error; err != nil {
+							return err
+						}
+						cacheGroup = target
+					}
+				}
 			}
 
-			// Find the most recently expired subscription that defines a group transition
-			// (an explicit downgrade target or an upgrade snapshot to revert).
-			var lastExpired UserSubscription
-			expiredQuery := tx.Where("user_id = ? AND status = ? AND (downgrade_group <> '' OR upgrade_group <> '')",
-				userId, "expired").
-				Order("end_time desc, id desc").
-				Limit(1).
-				Find(&lastExpired)
-			if expiredQuery.Error != nil || expiredQuery.RowsAffected == 0 {
-				return nil
-			}
-			currentGroup, err := getUserGroupByIdTx(tx, userId)
-			if err != nil {
-				return err
-			}
-			// An explicit downgrade group takes precedence; otherwise revert to the
-			// group held before purchase (legacy behavior, only when the subscription
-			// actually elevated the user).
-			target := strings.TrimSpace(lastExpired.DowngradeGroup)
-			if target == "" {
-				upgradeGroup := strings.TrimSpace(lastExpired.UpgradeGroup)
-				prevGroup := strings.TrimSpace(lastExpired.PrevUserGroup)
-				if upgradeGroup == "" || prevGroup == "" {
-					return nil
+			for subscriptionGroup := range seenGroups {
+				tokens, err := rebindSubscriptionTokensTx(tx, userId, subscriptionGroup, now)
+				if err != nil {
+					return err
 				}
-				if currentGroup != upgradeGroup {
-					return nil
-				}
-				target = prevGroup
+				reboundTokens = append(reboundTokens, tokens...)
 			}
-			if target == "" || target == currentGroup {
-				return nil
-			}
-			if err := tx.Model(&User{}).Where("id = ?", userId).
-				Update("group", target).Error; err != nil {
-				return err
-			}
-			cacheGroup = target
 			return nil
 		})
 		if err != nil {
@@ -1220,6 +1504,7 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 		if cacheGroup != "" {
 			refreshSubscriptionUserGroupCache(userId, "subscription expiration")
 		}
+		invalidateReboundTokenCaches(reboundTokens)
 	}
 	return expiredCount, nil
 }
@@ -1284,8 +1569,10 @@ func maybeResetUserSubscriptionWithPlanTx(tx *gorm.DB, sub *UserSubscription, pl
 	return tx.Save(sub).Error
 }
 
-// PreConsumeUserSubscription pre-consumes from any active subscription total quota.
-func PreConsumeUserSubscription(requestId string, userId int, modelName string, quotaType int, amount int64) (*SubscriptionPreConsumeResult, error) {
+// PreConsumeUserSubscription pre-consumes from active subscription quota. When
+// subscriptionGroup is non-empty, only that entitlement group is eligible;
+// legacy records match through UpgradeGroup.
+func PreConsumeUserSubscription(requestId string, userId int, modelName string, quotaType int, subscriptionGroup string, amount int64) (*SubscriptionPreConsumeResult, error) {
 	if userId <= 0 {
 		return nil, errors.New("invalid userId")
 	}
@@ -1322,10 +1609,11 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 		}
 
 		var subs []UserSubscription
-		if err := lockForUpdate(tx).
-			Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
-			Order("end_time asc, id asc").
-			Find(&subs).Error; err != nil {
+		subscriptionsQuery := usableActiveUserSubscriptions(lockForUpdate(tx), userId, now)
+		if group := strings.TrimSpace(subscriptionGroup); group != "" {
+			subscriptionsQuery = subscriptionsQuery.Where("(subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?))", group, "", group)
+		}
+		if err := subscriptionsQuery.Order("end_time asc, id asc").Find(&subs).Error; err != nil {
 			return errors.New("no active subscription")
 		}
 		if len(subs) == 0 {

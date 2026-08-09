@@ -63,7 +63,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useStatus } from '@/hooks/use-status'
-import { getUserModels, getUserGroups } from '@/lib/api'
+import { getUserModels } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 
@@ -71,6 +71,7 @@ import {
   createApiKey,
   updateApiKey,
   getApiKey,
+  getTokenGroups,
   getTokenAutoGroups,
 } from '../api'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
@@ -126,8 +127,8 @@ export function ApiKeysMutateDrawer({
     isFetched: groupsFetched,
     isFetching: groupsFetching,
   } = useQuery({
-    queryKey: ['user-groups'],
-    queryFn: getUserGroups,
+    queryKey: ['token-groups'],
+    queryFn: getTokenGroups,
     enabled: open,
     staleTime: 0,
   })
@@ -160,10 +161,14 @@ export function ApiKeysMutateDrawer({
       Object.entries(groupsData?.data || {}).map(([key, info]) => ({
         value: key,
         label: key,
-        desc: info.desc || key,
+        desc:
+          info.source === 'subscription'
+            ? `${t('Subscription group')}${info.plan_titles?.length ? ` · ${info.plan_titles.join(', ')}` : ''}`
+            : info.desc || key,
         ratio: info.ratio,
+        source: info.source,
       })),
-    [groupsData]
+    [groupsData, t]
   )
   const backendHasAuto = groups.some((g) => g.value === 'auto')
   const availableAutoGroupNames = useMemo(
@@ -269,6 +274,7 @@ export function ApiKeysMutateDrawer({
         groups[0]?.value ??
         ''
       form.setValue('group', fallback)
+      form.setValue('subscription_group', '')
       if (currentGroup === 'auto') {
         form.setValue('auto_groups', [])
         form.setValue('auto_groups_mode', 'inherit')
@@ -424,6 +430,14 @@ export function ApiKeysMutateDrawer({
                         value={field.value}
                         onValueChange={(group) => {
                           field.onChange(group)
+                          const selected = groups.find(
+                            (option) => option.value === group
+                          )
+                          form.setValue(
+                            'subscription_group',
+                            selected?.source === 'subscription' ? group : '',
+                            { shouldDirty: true }
+                          )
                           if (group === 'auto') {
                             form.setValue('cross_group_retry', true, {
                               shouldDirty: true,
