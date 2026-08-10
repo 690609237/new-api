@@ -43,6 +43,7 @@ func SetupLogger() {
 	defer func() {
 		setupLogWorking = false
 	}()
+	setupUserMessageLogger()
 	if *common.LogDir != "" {
 		ok := setupLogLock.TryLock()
 		if !ok {

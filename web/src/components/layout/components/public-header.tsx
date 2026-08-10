@@ -227,7 +227,7 @@ export function PublicHeader(props: PublicHeaderProps) {
             {/* Logo */}
             <Link
               to={homeUrl}
-              className='group flex shrink-0 items-center gap-2'
+              className='group flex min-w-0 flex-1 items-center gap-2 lg:flex-none lg:shrink-0'
             >
               <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
                 {headerLogo}
@@ -241,7 +241,13 @@ export function PublicHeader(props: PublicHeaderProps) {
                   )}
                 </span>
                 {!loading && !scrolled && (
-                  <BrandContactLine className='mt-1 hidden xl:block' />
+                  <>
+                    <BrandContactLine className='mt-1 hidden xl:block' />
+                    <BrandContactLine
+                      variant='compact'
+                      className='mt-1 lg:hidden'
+                    />
+                  </>
                 )}
               </span>
             </Link>

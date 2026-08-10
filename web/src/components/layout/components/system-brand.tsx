@@ -77,6 +77,10 @@ export function SystemBrand(props: SystemBrandProps) {
         <span className='flex min-w-0 flex-col justify-center'>
           <span className='max-w-[12rem] truncate leading-none'>{name}</span>
           <BrandContactLine className='mt-1 hidden xl:block' />
+          <BrandContactLine
+            variant='compact'
+            className='absolute end-2 bottom-1 start-[3.75rem] lg:hidden'
+          />
         </span>
       </Link>
     )

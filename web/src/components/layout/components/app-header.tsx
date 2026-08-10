@@ -112,7 +112,7 @@ export function AppHeader({
 
   return (
     <>
-      <Header>
+      <Header contentClassName='relative items-start pt-1 lg:items-center lg:pt-0'>
         <SystemBrand variant='inline' />
 
         {leftContent ? (
@@ -120,7 +120,7 @@ export function AppHeader({
         ) : null}
 
         {rightContent ?? (
-          <div className='ms-auto flex items-center gap-1 sm:gap-2'>
+          <div className='ms-auto flex shrink-0 items-center gap-1 sm:gap-2'>
             {showTopNav && (
               <div className='me-1 hidden lg:block'>
                 <TopNav links={links} />

@@ -85,70 +85,91 @@ await i18n.use(initReactI18next).init({
   resources: {
     zh: {
       translation: {
+        'Contact the author': '联系作者交流',
         'Model Square': '模型广场',
         Rankings: '排行榜',
+        WeChat: '微信',
       },
     },
   },
 })
 
+async function renderHeader(path: '/' | '/pricing') {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  })
+  queryClient.setQueryData(['status'], {
+    header_nav_modules: JSON.stringify({
+      home: false,
+      console: false,
+      pricing: { enabled: true, requireAuth: false },
+      rankings: { enabled: true, requireAuth: false },
+      docs: false,
+      about: false,
+    }),
+    announcements_enabled: false,
+  })
+  queryClient.setQueryData(['notice'], { success: true, data: '' })
+  useSystemConfigStore.setState((state) => ({
+    ...state,
+    loading: false,
+    loadedLogoUrl: state.config.logo,
+  }))
+
+  const HeaderFixture = () => (
+    <PublicHeader
+      siteName='Test'
+      showAuthButtons={false}
+      showLanguageSwitcher={false}
+      showNotifications={false}
+      showThemeSwitch={false}
+    />
+  )
+  const rootRoute = createRootRoute({ component: Outlet })
+  const homeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: HeaderFixture,
+  })
+  const pricingRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/pricing',
+    component: HeaderFixture,
+  })
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([homeRoute, pricingRoute]),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  })
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+
+  await act(async () => {
+    root.render(
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </I18nextProvider>
+    )
+    await router.load()
+  })
+
+  return {
+    container,
+    cleanup: async () => {
+      await act(async () => root.unmount())
+      container.remove()
+      queryClient.clear()
+    },
+  }
+}
+
 describe('public header navigation layout', () => {
   test('keeps desktop labels horizontal and uses the mobile menu below the large breakpoint', async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-    })
-    queryClient.setQueryData(['status'], {
-      header_nav_modules: JSON.stringify({
-        home: false,
-        console: false,
-        pricing: { enabled: true, requireAuth: false },
-        rankings: { enabled: true, requireAuth: false },
-        docs: false,
-        about: false,
-      }),
-      announcements_enabled: false,
-    })
-    queryClient.setQueryData(['notice'], { success: true, data: '' })
-    useSystemConfigStore.setState((state) => ({
-      ...state,
-      loading: false,
-      loadedLogoUrl: state.config.logo,
-    }))
+    const rendered = await renderHeader('/pricing')
 
-    const rootRoute = createRootRoute({ component: Outlet })
-    const pricingRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/pricing',
-      component: () => (
-        <PublicHeader
-          siteName='Test'
-          showAuthButtons={false}
-          showLanguageSwitcher={false}
-          showNotifications={false}
-          showThemeSwitch={false}
-        />
-      ),
-    })
-    const router = createRouter({
-      routeTree: rootRoute.addChildren([pricingRoute]),
-      history: createMemoryHistory({ initialEntries: ['/pricing'] }),
-    })
-    const container = document.createElement('div')
-    document.body.append(container)
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <I18nextProvider i18n={i18n}>
-          <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-          </QueryClientProvider>
-        </I18nextProvider>
-      )
-      await router.load()
-    })
-
-    const pricingLink = [...container.querySelectorAll('a')].find(
+    const pricingLink = [...rendered.container.querySelectorAll('a')].find(
       (link) => link.textContent === '模型广场'
     )
     assert.ok(pricingLink)
@@ -160,7 +181,7 @@ describe('public header navigation layout', () => {
     assert.equal(desktopNavigation.classList.contains('lg:flex'), true)
     assert.equal(desktopNavigation.classList.contains('sm:flex'), false)
 
-    const menuButton = container.querySelector(
+    const menuButton = rendered.container.querySelector(
       'button[aria-label="Toggle navigation menu"]'
     )
     assert.ok(menuButton)
@@ -169,9 +190,23 @@ describe('public header navigation layout', () => {
       true
     )
 
-    await act(async () => root.unmount())
-    container.remove()
-    queryClient.clear()
+    await rendered.cleanup()
+  })
+
+  test('shows all contact methods in a wrapping mobile brand line on public pages', async () => {
+    const rendered = await renderHeader('/pricing')
+    const mobileContact = rendered.container.querySelector(
+      '[data-slot="brand-contact-line"][data-variant="compact"]'
+    )
+
+    assert.ok(mobileContact)
+    assert.match(mobileContact.textContent || '', /QQ 1549277597/)
+    assert.match(mobileContact.textContent || '', /微信 ModelPass/)
+    assert.match(mobileContact.textContent || '', /1549277597@qq\.com/)
+    assert.equal(mobileContact.classList.contains('flex-wrap'), true)
+    assert.equal(mobileContact.classList.contains('lg:hidden'), true)
+
+    await rendered.cleanup()
   })
 })
 
