@@ -1,9 +1,11 @@
 package service
 
 import (
+	"net/http/httptest"
 	"testing"
 
 	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/gin-gonic/gin"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -56,6 +58,47 @@ func TestExtractLatestUserMessageExcludesContext(t *testing.T) {
 			},
 			want: "draw a lighthouse",
 		},
+		{
+			name: "openai assistant continuation",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{
+				{Role: "system", Content: "system prompt"},
+				{Role: "user", Content: "already logged user message"},
+				{Role: "assistant", Content: "latest assistant response"},
+			}},
+			want: "",
+		},
+		{
+			name: "openai tool continuation",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{
+				{Role: "user", Content: "already logged user message"},
+				{Role: "assistant", Content: "calling a tool"},
+				{Role: "tool", Content: "tool output"},
+			}},
+			want: "",
+		},
+		{
+			name: "openai system only",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{
+				{Role: "system", Content: "must never be logged"},
+			}},
+			want: "",
+		},
+		{
+			name: "claude assistant continuation",
+			request: &dto.ClaudeRequest{Messages: []dto.ClaudeMessage{
+				{Role: "user", Content: "already logged user message"},
+				{Role: "assistant", Content: "latest assistant response"},
+			}},
+			want: "",
+		},
+		{
+			name: "gemini model continuation",
+			request: &dto.GeminiChatRequest{Contents: []dto.GeminiChatContent{
+				{Role: "user", Parts: []dto.GeminiPart{{Text: "already logged user message"}}},
+				{Role: "model", Parts: []dto.GeminiPart{{Text: "latest model response"}}},
+			}},
+			want: "",
+		},
 	}
 
 	for _, test := range tests {
@@ -73,10 +116,93 @@ func TestExtractLatestUserMessageFromResponsesInput(t *testing.T) {
 			{"type":"input_text","text":"latest one"},
 			{"type":"input_image","image_url":"data:image/png;base64,secret"},
 			{"type":"input_text","text":"latest two"}
-		]},
-		{"type":"function_call_output","content":"tool output must not replace the user message"}
+		]}
 	]`)
 	request := &dto.OpenAIResponsesRequest{Input: input}
 
 	assert.Equal(t, "latest one\nlatest two", ExtractLatestUserMessage(request))
+}
+
+func TestExtractLatestUserMessageExcludesResponsesContinuation(t *testing.T) {
+	input := []byte(`[
+		{"role":"user","content":[{"type":"input_text","text":"already logged user message"}]},
+		{"type":"function_call","name":"read_file","arguments":"{}"},
+		{"type":"function_call_output","content":"tool output must not be logged"}
+	]`)
+	request := &dto.OpenAIResponsesRequest{
+		Input:        input,
+		Instructions: []byte(`"system instructions must not be logged"`),
+	}
+
+	assert.Empty(t, ExtractLatestUserMessage(request))
+}
+
+func TestExtractLatestUserMessageFromResponsesTopLevelInputText(t *testing.T) {
+	request := &dto.OpenAIResponsesRequest{
+		Input: []byte(`[{"type":"input_text","text":"fresh user input"}]`),
+	}
+
+	assert.Equal(t, "fresh user input", ExtractLatestUserMessage(request))
+}
+
+func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	tests := []struct {
+		name           string
+		subagentHeader string
+		turnHeader     string
+		clientMetadata []byte
+	}{
+		{
+			name:           "subagent header",
+			subagentHeader: "collab_spawn",
+		},
+		{
+			name:       "compaction header",
+			turnHeader: `{"request_kind":"compaction"}`,
+		},
+		{
+			name:           "subagent client metadata",
+			clientMetadata: []byte(`{"x-openai-subagent":"guardian"}`),
+		},
+		{
+			name:           "encoded turn metadata",
+			clientMetadata: []byte(`{"x-codex-turn-metadata":"{\"request_kind\":\"turn\",\"subagent_kind\":\"thread_spawn\"}"}`),
+		},
+		{
+			name:           "automation turn",
+			clientMetadata: []byte(`{"x-codex-turn-metadata":"{\"request_kind\":\"turn\",\"thread_source\":\"automation\"}"}`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			ctx.Request = httptest.NewRequest("POST", "/v1/responses", nil)
+			ctx.Request.Header.Set("x-openai-subagent", test.subagentHeader)
+			ctx.Request.Header.Set("x-codex-turn-metadata", test.turnHeader)
+			request := &dto.OpenAIResponsesRequest{
+				Input:          []byte(`"system-generated text presented as user input"`),
+				ClientMetadata: test.clientMetadata,
+			}
+
+			assert.Empty(t, ExtractUserMessageForLog(ctx, request))
+		})
+	}
+}
+
+func TestExtractUserMessageForLogKeepsDirectCodexUserTurn(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest("POST", "/v1/responses", nil)
+	request := &dto.OpenAIResponsesRequest{
+		Input: []byte(`"direct user input"`),
+		ClientMetadata: []byte(`{
+			"x-codex-turn-metadata":"{\"request_kind\":\"turn\"}"
+		}`),
+	}
+
+	assert.Equal(t, "direct user input", ExtractUserMessageForLog(ctx, request))
 }

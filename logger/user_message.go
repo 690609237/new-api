@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,8 +21,10 @@ const (
 	defaultUserMessageLogMaxSizeMB = 100
 	defaultUserMessageLogMaxFiles  = 100
 	defaultUserMessageLogRetention = 15
+	defaultUserMessageLogDedupSecs = 600
 	userMessageLogCleanupInterval  = 6 * time.Hour
 	userMessageLogFilePermission   = 0600
+	userMessageLogDedupMaxEntries  = 100000
 )
 
 type userMessageLogEntry struct {
@@ -35,6 +38,7 @@ type userMessageLogConfig struct {
 	maxSizeBytes  int64
 	maxFiles      int
 	retentionDays int
+	dedupWindow   time.Duration
 }
 
 type userMessageLogWriter struct {
@@ -49,6 +53,9 @@ type userMessageLogWriter struct {
 	openedDay   string
 	sequence    uint64
 	nextCleanup time.Time
+
+	recentMessages   map[[sha256.Size]byte]time.Time
+	nextDedupCleanup time.Time
 }
 
 var (
@@ -77,14 +84,21 @@ func setupUserMessageLogger() {
 			common.SysError(fmt.Sprintf("USER_MESSAGE_LOG_RETENTION_DAYS must be positive, using default value: %d", defaultUserMessageLogRetention))
 			retentionDays = defaultUserMessageLogRetention
 		}
+		dedupSeconds := common.GetEnvOrDefault("USER_MESSAGE_LOG_DEDUP_SECONDS", defaultUserMessageLogDedupSecs)
+		if dedupSeconds < 0 {
+			common.SysError(fmt.Sprintf("USER_MESSAGE_LOG_DEDUP_SECONDS must not be negative, using default value: %d", defaultUserMessageLogDedupSecs))
+			dedupSeconds = defaultUserMessageLogDedupSecs
+		}
 		writer := &userMessageLogWriter{
 			config: userMessageLogConfig{
 				dir:           *common.LogDir,
 				maxSizeBytes:  int64(maxSizeMB) << 20,
 				maxFiles:      maxFiles,
 				retentionDays: retentionDays,
+				dedupWindow:   time.Duration(dedupSeconds) * time.Second,
 			},
-			now: time.Now,
+			now:            time.Now,
+			recentMessages: make(map[[sha256.Size]byte]time.Time),
 		}
 		userMessageLogger = writer
 
@@ -117,6 +131,33 @@ func LogUserMessage(username string, content string) {
 
 func (w *userMessageLogWriter) write(username string, content string) error {
 	now := w.now()
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	var dedupKey [sha256.Size]byte
+	if w.config.dedupWindow > 0 {
+		if w.recentMessages == nil {
+			w.recentMessages = make(map[[sha256.Size]byte]time.Time)
+		}
+		dedupKey = sha256.Sum256([]byte(username + "\x00" + content))
+		if lastSeen, ok := w.recentMessages[dedupKey]; ok && now.Sub(lastSeen) < w.config.dedupWindow {
+			return nil
+		}
+		if w.nextDedupCleanup.IsZero() || !now.Before(w.nextDedupCleanup) || len(w.recentMessages) >= userMessageLogDedupMaxEntries {
+			cutoff := now.Add(-w.config.dedupWindow)
+			for key, lastSeen := range w.recentMessages {
+				if !lastSeen.After(cutoff) {
+					delete(w.recentMessages, key)
+				}
+			}
+			if len(w.recentMessages) >= userMessageLogDedupMaxEntries {
+				clear(w.recentMessages)
+			}
+			w.nextDedupCleanup = now.Add(w.config.dedupWindow)
+		}
+	}
+
 	data, err := common.Marshal(userMessageLogEntry{
 		Username:  username,
 		CreatedAt: now.Unix(),
@@ -126,9 +167,6 @@ func (w *userMessageLogWriter) write(username string, content string) error {
 		return fmt.Errorf("marshal entry: %w", err)
 	}
 	data = append(data, '\n')
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
 
 	day := now.Format("20060102")
 	if w.file == nil || w.openedDay != day || (w.currentSize > 0 && w.currentSize+int64(len(data)) > w.config.maxSizeBytes) {
@@ -144,6 +182,9 @@ func (w *userMessageLogWriter) write(username string, content string) error {
 	}
 	if written != len(data) {
 		return fmt.Errorf("write entry: wrote %d of %d bytes", written, len(data))
+	}
+	if w.config.dedupWindow > 0 {
+		w.recentMessages[dedupKey] = now
 	}
 
 	if w.nextCleanup.IsZero() || !now.Before(w.nextCleanup) {

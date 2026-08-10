@@ -126,7 +126,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
-	logger.LogUserMessage(c.GetString("username"), service.ExtractLatestUserMessage(request))
+	logger.LogUserMessage(c.GetString("username"), service.ExtractUserMessageForLog(c, request))
 
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
 	needCountToken := constant.CountToken

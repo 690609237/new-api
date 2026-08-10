@@ -80,3 +80,36 @@ func TestUserMessageLogCleanupAppliesAgeAndFileCountLimits(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, files, 2)
 }
+
+func TestUserMessageLogDeduplicatesRepeatedContentWithinWindow(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Date(2026, time.August, 10, 12, 0, 0, 0, time.UTC)
+	writer := &userMessageLogWriter{
+		config: userMessageLogConfig{
+			dir:           dir,
+			maxSizeBytes:  1 << 20,
+			maxFiles:      10,
+			retentionDays: 15,
+			dedupWindow:   time.Minute,
+		},
+		now: func() time.Time { return now },
+	}
+
+	repeated := "the same user submission"
+	require.NoError(t, writer.write("alice", repeated))
+	now = now.Add(time.Second)
+	require.NoError(t, writer.write("alice", repeated))
+	require.NoError(t, writer.write("bob", repeated))
+	now = now.Add(time.Minute)
+	require.NoError(t, writer.write("alice", repeated))
+	require.NoError(t, writer.file.Close())
+	writer.file = nil
+
+	files, err := filepath.Glob(filepath.Join(dir, userMessageLogPrefix+"*"+userMessageLogSuffix))
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	data, err := os.ReadFile(files[0])
+	require.NoError(t, err)
+	lines := bytes.Split(bytes.TrimSpace(data), []byte{'\n'})
+	assert.Len(t, lines, 3)
+}

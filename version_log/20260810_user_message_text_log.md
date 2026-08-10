@@ -8,8 +8,10 @@
 
 - 消息日志使用独立的 `user-messages-*.jsonl` 文件，不写入 `oneapi-*.log` 主日志，也不提供前端或 API 查询入口。
 - 每行仅包含 `username`、`created_at`、`content` 三个字段；JSON 转义保证多行输入仍对应一条日志记录。
-- OpenAI、Claude、Gemini 和 Responses 请求只提取最后一条 `user` 文本；补全、图片、音频、Embedding、Rerank 请求记录对应的最新文本输入。
+- OpenAI、Claude、Gemini 和 Responses 请求仅在当前请求的最后一个会话项确实是用户文本时记录；助手续写、工具调用/结果回传等后续请求不会回溯并重复记录历史用户消息。补全、图片、音频、Embedding、Rerank 请求记录对应的最新文本输入。
 - 不记录历史上下文、系统提示词、助手回复、工具调用、图片、音频、文件及 Base64 数据。
+- Codex 请求会识别 `x-openai-subagent` 与 `x-codex-turn-metadata`（包括 Responses `client_metadata` 内的对应字段），跳过子 Agent、内容压缩、预热、记忆整理和自动化任务产生的提示文本。
+- 同一用户的完全相同文本默认在 10 分钟内只记录一次，避免 Codex/Agent 工具续跑、并行子任务或客户端重试反复写入同一条待审核内容。
 - 默认单文件最大 100MB，并按天轮转；最多保留 100 个文件，每 6 小时清理一次，删除超过 15 天的文件。
 - 文件权限为 `0600`。写入或清理失败时仅在主日志记录不含消息正文的错误，不中断正常模型请求。
 
@@ -24,6 +26,7 @@
 | `USER_MESSAGE_LOG_MAX_SIZE_MB` | 单文件大小上限，默认 `100` |
 | `USER_MESSAGE_LOG_RETENTION_DAYS` | 保留天数，默认 `15` |
 | `USER_MESSAGE_LOG_MAX_FILES` | 文件数量上限，默认 `100` |
+| `USER_MESSAGE_LOG_DEDUP_SECONDS` | 同一用户相同文本的去重窗口，默认 `600` 秒，设为 `0` 可关闭 |
 
 ## 部署与查看
 

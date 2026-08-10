@@ -1,24 +1,87 @@
 package service
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/gin-gonic/gin"
 )
 
-// ExtractLatestUserMessage returns only the newest user-supplied text from a
-// validated relay request. Historical messages, system prompts, tool calls,
-// files, images, and audio payloads are deliberately excluded.
+// ExtractUserMessageForLog filters automated Codex requests before extracting
+// the current user turn. Codex marks subagents, compaction, prewarm, memory, and
+// automation turns in headers and Responses client_metadata.
+func ExtractUserMessageForLog(c *gin.Context, request dto.Request) string {
+	if c != nil {
+		if strings.TrimSpace(c.GetHeader("x-openai-subagent")) != "" {
+			return ""
+		}
+		if isAutomatedCodexTurnMetadata([]byte(c.GetHeader("x-codex-turn-metadata"))) {
+			return ""
+		}
+	}
+
+	if req, ok := request.(*dto.OpenAIResponsesRequest); ok && len(req.ClientMetadata) > 0 {
+		var metadata struct {
+			Subagent     string          `json:"x-openai-subagent"`
+			TurnMetadata json.RawMessage `json:"x-codex-turn-metadata"`
+		}
+		if err := common.Unmarshal(req.ClientMetadata, &metadata); err == nil {
+			if strings.TrimSpace(metadata.Subagent) != "" {
+				return ""
+			}
+			turnMetadata := metadata.TurnMetadata
+			if common.GetJsonType(turnMetadata) == "string" {
+				var encoded string
+				if err := common.Unmarshal(turnMetadata, &encoded); err == nil {
+					turnMetadata = []byte(encoded)
+				}
+			}
+			if isAutomatedCodexTurnMetadata(turnMetadata) {
+				return ""
+			}
+		}
+	}
+
+	return ExtractLatestUserMessage(request)
+}
+
+func isAutomatedCodexTurnMetadata(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	var metadata struct {
+		RequestKind  string `json:"request_kind"`
+		SubagentKind string `json:"subagent_kind"`
+		ThreadSource string `json:"thread_source"`
+	}
+	if err := common.Unmarshal(data, &metadata); err != nil {
+		return false
+	}
+	if metadata.SubagentKind != "" {
+		return true
+	}
+	if metadata.RequestKind != "" && !strings.EqualFold(metadata.RequestKind, "turn") {
+		return true
+	}
+	return strings.EqualFold(metadata.ThreadSource, "automation") ||
+		strings.EqualFold(metadata.ThreadSource, "subagent")
+}
+
+// ExtractLatestUserMessage returns text only when the current request ends in
+// a user-authored turn. Historical messages, system prompts, assistant/tool
+// continuations, files, images, and audio payloads are deliberately excluded.
 func ExtractLatestUserMessage(request dto.Request) string {
 	switch req := request.(type) {
 	case *dto.GeneralOpenAIRequest:
-		for i := len(req.Messages) - 1; i >= 0; i-- {
-			if !strings.EqualFold(req.Messages[i].Role, "user") {
-				continue
+		if len(req.Messages) > 0 {
+			message := req.Messages[len(req.Messages)-1]
+			if !strings.EqualFold(message.Role, "user") {
+				return ""
 			}
 			parts := make([]string, 0)
-			for _, part := range req.Messages[i].ParseContent() {
+			for _, part := range message.ParseContent() {
 				if part.Type == dto.ContentTypeText && part.Text != "" {
 					parts = append(parts, part.Text)
 				}
@@ -45,14 +108,15 @@ func ExtractLatestUserMessage(request dto.Request) string {
 		return ""
 
 	case *dto.ClaudeRequest:
-		for i := len(req.Messages) - 1; i >= 0; i-- {
-			if !strings.EqualFold(req.Messages[i].Role, "user") {
-				continue
+		if len(req.Messages) > 0 {
+			message := req.Messages[len(req.Messages)-1]
+			if !strings.EqualFold(message.Role, "user") {
+				return ""
 			}
-			if req.Messages[i].IsStringContent() {
-				return req.Messages[i].GetStringContent()
+			if message.IsStringContent() {
+				return message.GetStringContent()
 			}
-			content, err := req.Messages[i].ParseContent()
+			content, err := message.ParseContent()
 			if err != nil {
 				return ""
 			}
@@ -93,20 +157,20 @@ func latestGeminiUserMessage(request *dto.GeminiChatRequest) string {
 	if len(request.Contents) == 0 && len(request.Requests) > 0 {
 		return latestGeminiUserMessage(&request.Requests[len(request.Requests)-1])
 	}
-	for i := len(request.Contents) - 1; i >= 0; i-- {
-		content := request.Contents[i]
-		if content.Role != "" && !strings.EqualFold(content.Role, "user") {
-			continue
-		}
-		parts := make([]string, 0)
-		for _, part := range content.Parts {
-			if part.Text != "" && !part.Thought {
-				parts = append(parts, part.Text)
-			}
-		}
-		return strings.Join(parts, "\n")
+	if len(request.Contents) == 0 {
+		return ""
 	}
-	return ""
+	content := request.Contents[len(request.Contents)-1]
+	if content.Role != "" && !strings.EqualFold(content.Role, "user") {
+		return ""
+	}
+	parts := make([]string, 0)
+	for _, part := range content.Parts {
+		if part.Text != "" && !part.Thought {
+			parts = append(parts, part.Text)
+		}
+	}
+	return strings.Join(parts, "\n")
 }
 
 func latestResponsesUserMessage(input []byte) string {
@@ -121,32 +185,41 @@ func latestResponsesUserMessage(input []byte) string {
 		return ""
 	}
 
-	var inputs []dto.Input
+	var inputs []struct {
+		Type    string          `json:"type"`
+		Role    string          `json:"role"`
+		Content json.RawMessage `json:"content"`
+		Text    string          `json:"text"`
+	}
 	if err := common.Unmarshal(input, &inputs); err != nil {
 		return ""
 	}
-	for i := len(inputs) - 1; i >= 0; i-- {
-		if !strings.EqualFold(inputs[i].Role, "user") {
-			continue
-		}
-		if common.GetJsonType(inputs[i].Content) == "string" {
-			var text string
-			if err := common.Unmarshal(inputs[i].Content, &text); err == nil {
-				return text
-			}
-			continue
-		}
-		var parts []dto.MediaInput
-		if err := common.Unmarshal(inputs[i].Content, &parts); err != nil {
-			continue
-		}
-		texts := make([]string, 0)
-		for _, part := range parts {
-			if part.Type == "input_text" && part.Text != "" {
-				texts = append(texts, part.Text)
-			}
-		}
-		return strings.Join(texts, "\n")
+	if len(inputs) == 0 {
+		return ""
 	}
-	return ""
+	latest := inputs[len(inputs)-1]
+	if latest.Type == "input_text" {
+		return latest.Text
+	}
+	if !strings.EqualFold(latest.Role, "user") {
+		return ""
+	}
+	if common.GetJsonType(latest.Content) == "string" {
+		var text string
+		if err := common.Unmarshal(latest.Content, &text); err == nil {
+			return text
+		}
+		return ""
+	}
+	var parts []dto.MediaInput
+	if err := common.Unmarshal(latest.Content, &parts); err != nil {
+		return ""
+	}
+	texts := make([]string, 0)
+	for _, part := range parts {
+		if part.Type == "input_text" && part.Text != "" {
+			texts = append(texts, part.Text)
+		}
+	}
+	return strings.Join(texts, "\n")
 }
