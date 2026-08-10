@@ -36,7 +36,7 @@ export function ToggleStatusDialog() {
   const title = isEnabled ? t('Confirm disable') : t('Confirm enable')
   const description = isEnabled
     ? t(
-        'After disabling, it will no longer be shown to users, but historical orders are not affected. Continue?'
+        'Disabling this plan immediately terminates active subscriptions and moves related API keys to an available fallback group. Re-enabling it will not restore terminated subscriptions. Continue?'
       )
     : t('After enabling, the plan will be shown to users. Continue?')
 

@@ -311,7 +311,6 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 			"duration_unit":              req.Plan.DurationUnit,
 			"duration_value":             req.Plan.DurationValue,
 			"custom_seconds":             req.Plan.CustomSeconds,
-			"enabled":                    req.Plan.Enabled,
 			"sort_order":                 req.Plan.SortOrder,
 			"stripe_price_id":            req.Plan.StripePriceId,
 			"creem_product_id":           req.Plan.CreemProductId,
@@ -340,7 +339,10 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	model.InvalidateSubscriptionPlanCache(id)
+	if err := model.SetSubscriptionPlanEnabled(id, req.Plan.Enabled); err != nil {
+		common.ApiError(c, err)
+		return
+	}
 	common.ApiSuccess(c, nil)
 }
 
@@ -363,11 +365,10 @@ func AdminUpdateSubscriptionPlanStatus(c *gin.Context) {
 		common.ApiErrorMsg(c, "参数错误")
 		return
 	}
-	if err := model.DB.Model(&model.SubscriptionPlan{}).Where("id = ?", id).Update("enabled", *req.Enabled).Error; err != nil {
+	if err := model.SetSubscriptionPlanEnabled(id, *req.Enabled); err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	model.InvalidateSubscriptionPlanCache(id)
 	common.ApiSuccess(c, nil)
 }
 

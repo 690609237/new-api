@@ -142,6 +142,100 @@ func InvalidateSubscriptionPlanCache(planId int) {
 	_ = infoCache.Purge()
 }
 
+// SetSubscriptionPlanEnabled updates a plan's availability. Disabling a plan
+// also ends its active subscriptions immediately and moves subscription-bound
+// tokens back to each user's account group.
+func SetSubscriptionPlanEnabled(planId int, enabled bool) error {
+	if planId <= 0 {
+		return errors.New("invalid plan id")
+	}
+
+	now := GetDBTimestamp()
+	userIdsToRefresh := make(map[int]struct{})
+	var reboundTokens []Token
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		var plan SubscriptionPlan
+		if err := lockForUpdate(tx).Where("id = ?", planId).First(&plan).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&plan).Updates(map[string]interface{}{
+			"enabled":    enabled,
+			"updated_at": now,
+		}).Error; err != nil {
+			return err
+		}
+		if enabled {
+			return nil
+		}
+
+		var subscriptions []UserSubscription
+		if err := lockForUpdate(tx).
+			Where("plan_id = ? AND status = ?", planId, "active").
+			Order("user_id asc, end_time desc, id desc").
+			Find(&subscriptions).Error; err != nil {
+			return err
+		}
+		if len(subscriptions) == 0 {
+			return nil
+		}
+		if err := tx.Model(&UserSubscription{}).
+			Where("plan_id = ? AND status = ?", planId, "active").
+			Updates(map[string]interface{}{
+				"status":     "cancelled",
+				"end_time":   now,
+				"updated_at": now,
+			}).Error; err != nil {
+			return err
+		}
+
+		type userSubscriptionGroup struct {
+			userId int
+			group  string
+		}
+		seenGroups := make(map[userSubscriptionGroup]struct{}, len(subscriptions))
+		for i := range subscriptions {
+			target, err := downgradeUserGroupForSubscriptionTx(tx, &subscriptions[i], now)
+			if err != nil {
+				return err
+			}
+			if target != "" {
+				userIdsToRefresh[subscriptions[i].UserId] = struct{}{}
+			}
+
+			subscriptionGroup := strings.TrimSpace(subscriptions[i].SubscriptionGroup)
+			if subscriptionGroup == "" {
+				subscriptionGroup = strings.TrimSpace(subscriptions[i].UpgradeGroup)
+			}
+			if subscriptionGroup == "" {
+				continue
+			}
+			key := userSubscriptionGroup{userId: subscriptions[i].UserId, group: subscriptionGroup}
+			if _, ok := seenGroups[key]; ok {
+				continue
+			}
+			seenGroups[key] = struct{}{}
+		}
+		for key := range seenGroups {
+			tokens, err := rebindSubscriptionTokensTx(tx, key.userId, key.group, now)
+			if err != nil {
+				return err
+			}
+			reboundTokens = append(reboundTokens, tokens...)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	InvalidateSubscriptionPlanCache(planId)
+	for userId := range userIdsToRefresh {
+		refreshSubscriptionUserGroupCache(userId, "subscription plan disabled")
+	}
+	invalidateReboundTokenCaches(reboundTokens)
+	return nil
+}
+
 // Subscription plan
 type SubscriptionPlan struct {
 	Id int `json:"id"`
@@ -459,15 +553,27 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	if err != nil {
 		return "", err
 	}
-	// If another active upgraded subscription exists, keep the current group.
+	// If another active upgraded subscription exists, restore the group granted
+	// by the most recently purchased one. This matters when the subscription
+	// being removed is the one that most recently changed the account group.
 	var activeSub UserSubscription
 	activeQuery := tx.Where("user_id = ? AND status = ? AND end_time > ? AND id <> ? AND upgrade_group <> ''",
 		sub.UserId, "active", now, sub.Id).
-		Order("end_time desc, id desc").
+		Order("start_time desc, id desc").
 		Limit(1).
 		Find(&activeSub)
-	if activeQuery.Error == nil && activeQuery.RowsAffected > 0 {
-		return "", nil
+	if activeQuery.Error != nil {
+		return "", activeQuery.Error
+	}
+	if activeQuery.RowsAffected > 0 {
+		target := strings.TrimSpace(activeSub.UpgradeGroup)
+		if target == "" || target == currentGroup {
+			return "", nil
+		}
+		if err := tx.Model(&User{}).Where("id = ?", sub.UserId).Update("group", target).Error; err != nil {
+			return "", err
+		}
+		return target, nil
 	}
 	// Determine the downgrade target: an explicit downgrade group takes precedence,
 	// otherwise revert to the group held before purchase (legacy behavior).
@@ -478,6 +584,33 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 			return "", nil
 		}
 		target = strings.TrimSpace(sub.PrevUserGroup)
+		// A later subscription may have captured a previous group that was itself
+		// granted by an older subscription. Walk that purchase-time chain so a
+		// cancelled/expired intermediate plan is not restored as the final group.
+		chainStartTime := sub.StartTime
+		seenSubscriptionIds := map[int]struct{}{sub.Id: {}}
+		for target != "" {
+			var previousSub UserSubscription
+			query := tx.Where(
+				"user_id = ? AND upgrade_group = ? AND prev_user_group <> ? AND start_time <= ? AND end_time > ?",
+				sub.UserId, target, "", chainStartTime, chainStartTime,
+			).
+				Order("start_time desc, id desc").
+				Limit(1).
+				Find(&previousSub)
+			if query.Error != nil {
+				return "", query.Error
+			}
+			if query.RowsAffected == 0 {
+				break
+			}
+			if _, seen := seenSubscriptionIds[previousSub.Id]; seen {
+				break
+			}
+			seenSubscriptionIds[previousSub.Id] = struct{}{}
+			target = strings.TrimSpace(previousSub.PrevUserGroup)
+			chainStartTime = previousSub.StartTime
+		}
 	}
 	if target == "" || target == currentGroup {
 		return "", nil
@@ -510,7 +643,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 			return nil, errors.New("已达到该套餐购买上限")
 		}
 	}
-	nowUnix := GetDBTimestamp()
+	nowUnix := getDBTimestamp(tx)
 	now := time.Unix(nowUnix, 0)
 	endUnix, err := calcPlanEndTime(now, plan)
 	if err != nil {
@@ -612,12 +745,9 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if order.Status != common.TopUpStatusPending {
 			return ErrSubscriptionOrderStatusInvalid
 		}
-		plan, err := GetSubscriptionPlanById(order.PlanId)
+		plan, err := getSubscriptionPlanByIdTx(tx, order.PlanId)
 		if err != nil {
 			return err
-		}
-		if !plan.Enabled {
-			// still allow completion for already purchased orders
 		}
 		subscription, err := CreateUserSubscriptionFromPlanTx(tx, order.UserId, plan, "order")
 		if err != nil {
@@ -728,6 +858,9 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 	plan, err := GetSubscriptionPlanById(planId)
 	if err != nil {
 		return "", err
+	}
+	if !plan.Enabled {
+		return "", errors.New("套餐未启用")
 	}
 	groupChanged := false
 	err = DB.Transaction(func(tx *gorm.DB) error {
@@ -1020,9 +1153,34 @@ func rebindSubscriptionTokensTx(tx *gorm.DB, userId int, subscriptionGroup strin
 	if err != nil {
 		return nil, err
 	}
+	fallbackSubscriptionGroup := ""
+	if userGroup != "" {
+		var fallbackActiveCount int64
+		if err := usableActiveUserSubscriptions(tx.Model(&UserSubscription{}), userId, now).
+			Where("(subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?))",
+				userGroup, "", userGroup).
+			Count(&fallbackActiveCount).Error; err != nil {
+			return nil, err
+		}
+		if fallbackActiveCount > 0 {
+			fallbackSubscriptionGroup = userGroup
+		}
+	}
+	tokenBindingQuery := tx.Session(&gorm.Session{NewDB: true}).
+		Where("subscription_group = ?", subscriptionGroup)
+	if userGroup != subscriptionGroup {
+		// Tokens created before subscription_group was persisted only carry the
+		// discounted group in their group column. Include those legacy rows when
+		// that group is no longer the user's account group.
+		tokenBindingQuery = tokenBindingQuery.Or(map[string]interface{}{
+			"subscription_group": "",
+			"group":              subscriptionGroup,
+		})
+	}
 	var tokens []Token
 	if err := lockForUpdate(tx).
-		Where("user_id = ? AND subscription_group = ?", userId, subscriptionGroup).
+		Where("user_id = ?", userId).
+		Where(tokenBindingQuery).
 		Find(&tokens).Error; err != nil {
 		return nil, err
 	}
@@ -1030,10 +1188,11 @@ func rebindSubscriptionTokensTx(tx *gorm.DB, userId int, subscriptionGroup strin
 		return nil, nil
 	}
 	if err := tx.Model(&Token{}).
-		Where("user_id = ? AND subscription_group = ?", userId, subscriptionGroup).
+		Where("user_id = ?", userId).
+		Where(tokenBindingQuery).
 		Updates(map[string]interface{}{
 			"group":              userGroup,
-			"subscription_group": "",
+			"subscription_group": fallbackSubscriptionGroup,
 		}).Error; err != nil {
 		return nil, err
 	}
@@ -1411,6 +1570,7 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 			var expiringSubscriptions []UserSubscription
 			if err := lockForUpdate(tx).
 				Where("user_id = ? AND status = ? AND end_time > 0 AND end_time <= ?", userId, "active", now).
+				Order("start_time desc, id desc").
 				Find(&expiringSubscriptions).Error; err != nil {
 				return err
 			}
@@ -1440,53 +1600,22 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 				seenGroups[subscriptionGroup] = struct{}{}
 			}
 
-			// If no legacy upgraded subscription remains, restore the account group
-			// before rebinding tokens so they inherit the final account group.
-			var activeSub UserSubscription
-			activeQuery := tx.Where("user_id = ? AND status = ? AND end_time > ? AND upgrade_group <> ''",
-				userId, "active", now).
-				Order("end_time desc, id desc").
-				Limit(1).
-				Find(&activeSub)
-			if activeQuery.Error != nil {
-				return activeQuery.Error
-			}
-			if activeQuery.RowsAffected == 0 {
-				// Find the most recently expired subscription that defines a group transition
-				// (an explicit downgrade target or an upgrade snapshot to revert).
-				var lastExpired UserSubscription
-				expiredQuery := tx.Where("user_id = ? AND status = ? AND (downgrade_group <> '' OR upgrade_group <> '')",
-					userId, "expired").
-					Order("end_time desc, id desc").
-					Limit(1).
-					Find(&lastExpired)
-				if expiredQuery.Error != nil {
-					return expiredQuery.Error
+			// Restore the account group before rebinding tokens. The subscriptions
+			// are ordered by purchase time, so the first legacy transition is the one
+			// that most recently determined the user's account group.
+			for i := range expiringSubscriptions {
+				if strings.TrimSpace(expiringSubscriptions[i].UpgradeGroup) == "" &&
+					strings.TrimSpace(expiringSubscriptions[i].DowngradeGroup) == "" {
+					continue
 				}
-				if expiredQuery.RowsAffected > 0 {
-					currentGroup, err := getUserGroupByIdTx(tx, userId)
-					if err != nil {
-						return err
-					}
-					// An explicit downgrade group takes precedence; otherwise revert to the
-					// group held before purchase (legacy behavior, only when the subscription
-					// actually elevated the user).
-					target := strings.TrimSpace(lastExpired.DowngradeGroup)
-					if target == "" {
-						upgradeGroup := strings.TrimSpace(lastExpired.UpgradeGroup)
-						prevGroup := strings.TrimSpace(lastExpired.PrevUserGroup)
-						if upgradeGroup != "" && prevGroup != "" && currentGroup == upgradeGroup {
-							target = prevGroup
-						}
-					}
-					if target != "" && target != currentGroup {
-						if err := tx.Model(&User{}).Where("id = ?", userId).
-							Update("group", target).Error; err != nil {
-							return err
-						}
-						cacheGroup = target
-					}
+				target, err := downgradeUserGroupForSubscriptionTx(tx, &expiringSubscriptions[i], now)
+				if err != nil {
+					return err
 				}
+				if target != "" {
+					cacheGroup = target
+				}
+				break
 			}
 
 			for subscriptionGroup := range seenGroups {

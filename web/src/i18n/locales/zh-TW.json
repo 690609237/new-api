@@ -1393,6 +1393,7 @@
     "Disabled lanes are omitted on save.": "關閉的價格通道儲存時會被省略。",
     "Disabled Reason": "停用原因",
     "Disabled Time": "停用時間",
+    "Disabling this plan immediately terminates active subscriptions and moves related API keys to an available fallback group. Re-enabling it will not restore terminated subscriptions. Continue?": "停用此方案會立即終止現有有效訂閱，並將相關 API Key 切換到可用的備援分組。重新啟用方案不會恢復已終止的訂閱。是否繼續？",
     "Disabling...": "停用中...",
     "Disclaimer: Personal use only. Do not distribute or share any credentials. This channel has prerequisites and requires prior setup; use it only if you understand the flow and risks, and comply with OpenAI's terms and policies. Credentials and configuration are for Codex CLI integration only, and are not intended for any other client, platform, or channel.": "免責聲明：僅限個人使用，請勿分發或共享任何憑證。該渠道存在前置條件與使用門檻，請在充分了解流程與風險後使用，並遵守 OpenAI 的相關條款與政策。相關憑證與設定僅限接入 Codex CLI 使用，不適用於其他用戶端、平台或渠道。",
     "Discord": "Discord",

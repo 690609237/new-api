@@ -149,13 +149,13 @@ func resolveTokenSubscriptionGroup(c *gin.Context, userId int, tokenGroup, reque
 	if requested != "" {
 		return requested, validateTokenSubscriptionGroup(c, userId, tokenGroup, requested)
 	}
+	if tokenGroup == "" || service.IsUserSelectableGroup(common.GetContextKeyString(c, constant.ContextKeyUserGroup), tokenGroup) {
+		return "", true
+	}
 	active, err := model.HasActiveUserSubscriptionEntitlementGroup(userId, tokenGroup)
 	if err != nil {
 		common.ApiError(c, err)
 		return "", false
-	}
-	if !active && (tokenGroup == "" || service.IsUserSelectableGroup(common.GetContextKeyString(c, constant.ContextKeyUserGroup), tokenGroup)) {
-		return "", true
 	}
 	if !active {
 		common.ApiErrorMsg(c, fmt.Sprintf("无权访问 %s 分组", tokenGroup))

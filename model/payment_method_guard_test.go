@@ -158,6 +158,32 @@ func TestCompleteSubscriptionOrder_RejectsMismatchedPaymentProvider(t *testing.T
 	assert.Nil(t, topUp)
 }
 
+func TestCompleteSubscriptionOrder_HonorsPendingOrderAfterPlanDisabled(t *testing.T) {
+	truncateTables(t)
+
+	insertUserForPaymentGuardTest(t, 203, 0)
+	plan := insertSubscriptionPlanForPaymentGuardTest(t, 302)
+	plan.SubscriptionGroup = "month_pending"
+	require.NoError(t, DB.Model(plan).Update("subscription_group", plan.SubscriptionGroup).Error)
+	insertSubscriptionOrderForPaymentGuardTest(t, "sub-disabled-pending-order", 203, plan.Id, PaymentProviderStripe)
+	require.NoError(t, SetSubscriptionPlanEnabled(plan.Id, false))
+
+	err := CompleteSubscriptionOrder(
+		"sub-disabled-pending-order",
+		`{"provider":"stripe"}`,
+		PaymentProviderStripe,
+		PaymentMethodStripe,
+	)
+	require.NoError(t, err)
+
+	active, err := HasActiveUserSubscriptionGroup(203, "month_pending")
+	require.NoError(t, err)
+	assert.True(t, active)
+	var subscription UserSubscription
+	require.NoError(t, DB.Where("user_id = ?", 203).First(&subscription).Error)
+	assert.Equal(t, "active", subscription.Status)
+}
+
 func TestExpireSubscriptionOrder_RejectsMismatchedPaymentProvider(t *testing.T) {
 	truncateTables(t)
 
