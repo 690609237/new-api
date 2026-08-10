@@ -17,6 +17,9 @@ func ExtractUserMessageForLog(c *gin.Context, request dto.Request) string {
 		if strings.TrimSpace(c.GetHeader("x-openai-subagent")) != "" {
 			return ""
 		}
+		if strings.TrimSpace(c.GetHeader("x-openai-memgen-request")) != "" {
+			return ""
+		}
 		if isAutomatedCodexTurnMetadata([]byte(c.GetHeader("x-codex-turn-metadata"))) {
 			return ""
 		}
@@ -44,7 +47,25 @@ func ExtractUserMessageForLog(c *gin.Context, request dto.Request) string {
 		}
 	}
 
-	return ExtractLatestUserMessage(request)
+	message := ExtractLatestUserMessage(request)
+	if isAutomatedCodexPrompt(message) {
+		return ""
+	}
+	return message
+}
+
+func isAutomatedCodexPrompt(message string) bool {
+	message = strings.TrimSpace(message)
+	automatedPromptPrefixes := [...]string{
+		"You are a helpful assistant. You will be presented with a user prompt, and your job is to provide a short title for a task that will be created from that prompt.",
+		"# Overview\n\nGenerate 0 to 3 hyperpersonalized suggestions for what this user can do with Codex in this local project:",
+	}
+	for _, prefix := range automatedPromptPrefixes {
+		if strings.HasPrefix(message, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func isAutomatedCodexTurnMetadata(data []byte) bool {

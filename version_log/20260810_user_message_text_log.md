@@ -30,12 +30,14 @@
 
 ## 部署与查看
 
-- 日志目录由 `--log-dir` 决定，未指定时为程序工作目录下的 `./logs/`；当前生产 `docker-compose.yml` 使用容器内 `/app/logs/`，并挂载到 Docker 卷 `new_api_logs`。
-- 使用 `docker exec new-api sh -c 'ls -lh /app/logs/user-messages-*.jsonl'` 查看文件，使用 `tail` 查看内容；没有有效文本请求时不会创建文件。
+- 日志目录由 `--log-dir` 决定，未指定时为程序工作目录下的 `./logs/`。非 Docker 部署应到服务启动参数指定的日志目录查看；例如使用 `--log-dir /path/to/new-api/logs` 时，文件位于 `/path/to/new-api/logs/user-messages-*.jsonl`。
+- 当前 `docker-compose.yml` 使用容器内 `/app/logs/`，并挂载到 Docker 卷 `new_api_logs`；可使用 `docker exec new-api sh -c 'ls -lh /app/logs/user-messages-*.jsonl'` 查看文件。
+- 使用 `tail` 查看 JSONL 内容；没有有效用户文本请求时不会创建文件。该独立文件不替换、不裁剪正常系统日志，写入失败也不会影响请求处理。
 - 消息日志没有前端或 API 查询入口，只能由服务器文件系统权限允许的运维人员查看。
 
 ## 后续改动注意
 
 - 后续接入审核系统时直接消费 JSONL 文件，不要把消息正文重新写入消费日志或普通运行日志。
+- 审核侧只处理 `content` 中的用户本次输入；不要重新拼接请求历史、系统提示词、工具结果或 Codex 自动任务元数据。
 - 如需增加上下文、审核状态或重试能力，应单独设计审核存储与任务链路，避免改变当前日志的三字段格式。
 - 修改请求 DTO 或新增协议时，应同步补充“最近一条用户文本”的提取逻辑和回归测试。

@@ -150,8 +150,10 @@ func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {
 	tests := []struct {
 		name           string
 		subagentHeader string
+		memgenHeader   string
 		turnHeader     string
 		clientMetadata []byte
+		request        dto.Request
 	}{
 		{
 			name:           "subagent header",
@@ -160,6 +162,10 @@ func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {
 		{
 			name:       "compaction header",
 			turnHeader: `{"request_kind":"compaction"}`,
+		},
+		{
+			name:         "memory generation header",
+			memgenHeader: "1",
 		},
 		{
 			name:           "subagent client metadata",
@@ -173,6 +179,20 @@ func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {
 			name:           "automation turn",
 			clientMetadata: []byte(`{"x-codex-turn-metadata":"{\"request_kind\":\"turn\",\"thread_source\":\"automation\"}"}`),
 		},
+		{
+			name: "title generation prompt",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{{
+				Role:    "user",
+				Content: "You are a helpful assistant. You will be presented with a user prompt, and your job is to provide a short title for a task that will be created from that prompt.\n\nUser prompt:\ncheck my plan",
+			}}},
+		},
+		{
+			name: "suggestion generation prompt",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{{
+				Role:    "user",
+				Content: "# Overview\n\nGenerate 0 to 3 hyperpersonalized suggestions for what this user can do with Codex in this local project: /workspace/project\n\n# Rules",
+			}}},
+		},
 	}
 
 	for _, test := range tests {
@@ -181,10 +201,14 @@ func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {
 			ctx, _ := gin.CreateTestContext(recorder)
 			ctx.Request = httptest.NewRequest("POST", "/v1/responses", nil)
 			ctx.Request.Header.Set("x-openai-subagent", test.subagentHeader)
+			ctx.Request.Header.Set("x-openai-memgen-request", test.memgenHeader)
 			ctx.Request.Header.Set("x-codex-turn-metadata", test.turnHeader)
-			request := &dto.OpenAIResponsesRequest{
-				Input:          []byte(`"system-generated text presented as user input"`),
-				ClientMetadata: test.clientMetadata,
+			request := test.request
+			if request == nil {
+				request = &dto.OpenAIResponsesRequest{
+					Input:          []byte(`"system-generated text presented as user input"`),
+					ClientMetadata: test.clientMetadata,
+				}
 			}
 
 			assert.Empty(t, ExtractUserMessageForLog(ctx, request))
