@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/url"
@@ -168,6 +169,28 @@ func chooseDB(envName string, isLog bool) (*gorm.DB, common.DatabaseType, error)
 	return db, common.DatabaseTypeSQLite, err
 }
 
+// configureSQLitePragmas executes performance and concurrency pragmas for SQLite.
+// WAL mode allows concurrent readers during writes, dramatically reducing lock
+// contention. These are set via raw SQL to guarantee they run on every
+// underlying connection, regardless of DSN parameter support.
+func configureSQLitePragmas(sqlDB *sql.DB) {
+	pragmas := []struct {
+		name  string
+		value string
+	}{
+		{"journal_mode", "WAL"},
+		{"synchronous", "NORMAL"},
+		{"cache_size", "-20000"},
+		{"temp_store", "MEMORY"},
+	}
+	for _, p := range pragmas {
+		if _, err := sqlDB.Exec("PRAGMA " + p.name + "=" + p.value); err != nil {
+			common.SysLog(fmt.Sprintf("SQLite PRAGMA %s=%s warning: %v", p.name, p.value, err))
+		}
+	}
+	common.SysLog("SQLite WAL mode and performance pragmas configured")
+}
+
 func InitDB() (err error) {
 	db, dbType, err := chooseDB("SQL_DSN", false)
 	if err == nil {
@@ -190,9 +213,18 @@ func InitDB() (err error) {
 		if err != nil {
 			return err
 		}
-		sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 100))
-		sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
-		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+		if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
+			// SQLite only supports one concurrent writer; a large connection pool
+			// causes SQLITE_BUSY under write contention. Keep defaults conservative.
+			sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 4))
+			sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 4))
+			sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+			configureSQLitePragmas(sqlDB)
+		} else {
+			sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 100))
+			sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
+			sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+		}
 
 		if !common.IsMasterNode {
 			return nil
@@ -234,9 +266,16 @@ func InitLogDB() (err error) {
 		if err != nil {
 			return err
 		}
-		sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 100))
-		sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
-		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+		if common.UsingLogDatabase(common.DatabaseTypeSQLite) {
+			sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 4))
+			sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 4))
+			sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+			configureSQLitePragmas(sqlDB)
+		} else {
+			sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 100))
+			sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
+			sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+		}
 
 		if !common.IsMasterNode {
 			return nil
