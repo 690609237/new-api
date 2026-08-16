@@ -501,7 +501,8 @@ func TestInvalidatingLastSubscriptionEntitlementRebindsExistingTokens(t *testing
 		SubscriptionGroup: "month_a",
 	}
 	require.NoError(t, token.Insert())
-	require.NoError(t, cacheSetToken(token))
+	_, err = cacheInitToken(token)
+	require.NoError(t, err)
 
 	_, err = AdminInvalidateUserSubscription(first.Id)
 	require.NoError(t, err)

@@ -1217,7 +1217,7 @@ func invalidateReboundTokenCaches(tokens []Token) {
 		return
 	}
 	for _, token := range tokens {
-		if err := cacheDeleteToken(token.Key); err != nil {
+		if err := invalidateTokenCacheForMutation(token.Key); err != nil {
 			common.SysError(fmt.Sprintf("failed to invalidate rebound subscription token %d cache: %v", token.Id, err))
 		}
 	}

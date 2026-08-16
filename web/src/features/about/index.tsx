@@ -16,170 +16,122 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
-import { Construction } from 'lucide-react'
+import { Mail, MessageCircle, Smartphone, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
-import { RichContent } from '@/components/rich-content'
-import { Skeleton } from '@/components/ui/skeleton'
-import { isHttpUrl, isLikelyHtml } from '@/lib/content-format'
+import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
-import { getAboutContent } from './api'
-
-function EmptyAboutState() {
-  const { t } = useTranslation()
-  const currentYear = new Date().getFullYear()
-
-  return (
-    <div className='flex min-h-[60vh] items-center justify-center p-8'>
-      <div className='max-w-2xl space-y-6 text-center'>
-        <div className='flex justify-center'>
-          <Construction className='text-muted-foreground h-24 w-24' />
-        </div>
-        <div className='space-y-2'>
-          <h2 className='text-2xl font-bold'>{t('No About Content Set')}</h2>
-          <p className='text-muted-foreground'>
-            {t(
-              'The administrator has not configured any about content yet. You can set it in the settings page, supporting HTML or URL.'
-            )}
-          </p>
-        </div>
-        <div className='space-y-4 text-sm'>
-          <p>
-            {t('New API Project Repository:')}{' '}
-            <a
-              href='https://github.com/QuantumNous/new-api'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary hover:underline'
-            >
-              {t('https://github.com/QuantumNous/new-api')}
-            </a>
-          </p>
-          <p className='text-muted-foreground'>
-            <a
-              href='https://github.com/QuantumNous/new-api'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary hover:underline'
-            >
-              {t('NewAPI')}
-            </a>{' '}
-            © {currentYear}{' '}
-            <a
-              href='https://github.com/QuantumNous'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary hover:underline'
-            >
-              {t('QuantumNous')}
-            </a>{' '}
-            {t('| Based on')}{' '}
-            <a
-              href='https://github.com/songquanpeng/one-api'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary hover:underline'
-            >
-              {t('One API')}
-            </a>{' '}
-            © 2023{' '}
-            <a
-              href='https://github.com/songquanpeng'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary hover:underline'
-            >
-              {t('JustSong')}
-            </a>
-          </p>
-          <p className='text-muted-foreground'>
-            {t('This project must be used in compliance with the')}{' '}
-            <a
-              href='https://github.com/QuantumNous/new-api/blob/main/LICENSE'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary hover:underline'
-            >
-              {t('AGPL v3.0 License')}
-            </a>
-            .
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
+const contacts = [
+  { label: 'QQ', value: '1549277597', icon: MessageCircle },
+  { label: 'WeChat', value: 'ModelPass', icon: Smartphone },
+  {
+    label: 'Email',
+    value: '1549277597@qq.com',
+    href: 'mailto:1549277597@qq.com',
+    icon: Mail,
+  },
+  {
+    label: 'QQ Group',
+    value: '450997742',
+    description: 'Occasional AI application exchange activities are held here.',
+    recommended: true,
+    icon: Users,
+  },
+] as const
 
 export function About() {
   const { t } = useTranslation()
-  const { data, isLoading } = useQuery({
-    queryKey: ['about-content'],
-    queryFn: getAboutContent,
-  })
-
-  const rawContent = data?.data?.trim() ?? ''
-  const hasContent = rawContent.length > 0
-  const isUrl = hasContent && isHttpUrl(rawContent)
-  const contentIsHtml = hasContent && isLikelyHtml(rawContent)
-
-  if (isLoading) {
-    return (
-      <PublicLayout>
-        <div className='mx-auto flex max-w-4xl flex-col gap-4 py-12'>
-          <Skeleton className='h-8 w-[45%]' />
-          <Skeleton className='h-4 w-full' />
-          <Skeleton className='h-4 w-[90%]' />
-          <Skeleton className='h-4 w-[80%]' />
-        </div>
-      </PublicLayout>
-    )
-  }
-
-  if (!hasContent) {
-    return (
-      <PublicLayout>
-        <EmptyAboutState />
-      </PublicLayout>
-    )
-  }
-
-  if (isUrl) {
-    return (
-      <PublicLayout showMainContainer={false}>
-        <iframe
-          src={rawContent}
-          className='h-[calc(100vh-3.5rem)] w-full border-0'
-          title={t('About')}
-          sandbox='allow-forms allow-popups allow-popups-to-escape-sandbox allow-scripts'
-        />
-      </PublicLayout>
-    )
-  }
-
-  if (contentIsHtml) {
-    return (
-      <PublicLayout showMainContainer={false}>
-        <RichContent
-          mode='html'
-          htmlVariant='isolated'
-          content={rawContent}
-          className='prose-neutral dark:prose-invert max-w-none'
-        />
-      </PublicLayout>
-    )
-  }
 
   return (
-    <PublicLayout>
-      <div className='mx-auto max-w-6xl px-4 py-8'>
-        <RichContent
-          mode='markdown'
-          content={rawContent}
-          className='prose-neutral dark:prose-invert max-w-none'
-        />
-      </div>
+    <PublicLayout showMainContainer={false}>
+      <main className='bg-background min-h-[calc(100vh-4rem)]'>
+        <section className='border-border/70 bg-muted/30 relative overflow-hidden border-b'>
+          <div
+            className='bg-primary/10 pointer-events-none absolute -top-28 right-[8%] size-72 rounded-full blur-3xl'
+            aria-hidden='true'
+          />
+          <div className='relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8'>
+            <div className='max-w-3xl'>
+              <p className='text-primary mb-3 text-sm font-semibold tracking-wide uppercase'>
+                {t('About the author')}
+              </p>
+              <h1 className='text-foreground text-3xl font-semibold tracking-tight sm:text-4xl'>
+                {t('Get in touch')}
+              </h1>
+              <p className='text-muted-foreground mt-4 max-w-2xl text-base leading-7 sm:text-lg'>
+                {t(
+                  'For product questions, usage feedback, or collaboration, contact the author through any channel below.'
+                )}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className='mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8'
+          aria-labelledby='author-contacts-title'
+        >
+          <h2
+            id='author-contacts-title'
+            className='text-foreground mb-6 text-2xl font-semibold tracking-tight'
+          >
+            {t('Author contacts')}
+          </h2>
+
+          <address className='not-italic'>
+            <ul className='grid gap-4 sm:grid-cols-2'>
+              {contacts.map((contact) => {
+                const Icon = contact.icon
+
+                return (
+                  <li key={contact.label}>
+                    <Card className='h-full shadow-sm'>
+                      <CardHeader className='grid grid-cols-[auto_1fr] items-center gap-x-3'>
+                        <div className='bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg'>
+                          <Icon className='size-5' aria-hidden='true' />
+                        </div>
+                        <CardTitle className='flex items-center gap-2'>
+                          {t(contact.label)}
+                          {'recommended' in contact && (
+                            <Badge variant='secondary'>{t('Recommended')}</Badge>
+                          )}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className='space-y-2'>
+                        {'href' in contact ? (
+                          <a
+                            className='text-foreground text-lg font-medium underline-offset-4 hover:underline'
+                            href={contact.href}
+                          >
+                            {contact.value}
+                          </a>
+                        ) : (
+                          <p className='text-foreground text-lg font-medium'>
+                            {contact.value}
+                          </p>
+                        )}
+                        {'description' in contact && (
+                          <p className='text-muted-foreground text-sm leading-6'>
+                            {t(contact.description)}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </li>
+                )
+              })}
+            </ul>
+          </address>
+
+        </section>
+      </main>
     </PublicLayout>
   )
 }
