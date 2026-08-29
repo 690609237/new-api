@@ -5584,25 +5584,6 @@
     "Zero retention": "Zero retention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom",
-    "Content Moderation": "Content Moderation",
-    "Save moderation settings": "Save moderation settings",
-    "Enable content moderation": "Enable content moderation",
-    "Use an OpenAI-compatible moderation endpoint to scan user prompts.": "Use an OpenAI-compatible moderation endpoint to scan user prompts.",
-    "Moderate before channel selection": "Moderate before channel selection",
-    "Scan prompts before selecting an upstream channel. This may add latency.": "Scan prompts before selecting an upstream channel. This may add latency.",
-    "Moderation base URL": "Moderation base URL",
-    "The endpoint should expose POST /moderations.": "The endpoint should expose POST /moderations.",
-    "Moderation model": "Moderation model",
-    "Defaults to omni-moderation-latest when blank.": "Defaults to omni-moderation-latest when blank.",
-    "Moderation API key": "Moderation API key",
-    "The key is write-only and is never shown after saving.": "The key is write-only and is never shown after saving.",
-    "Moderation alert email": "Moderation alert email",
-    "Optional alert recipient": "Optional alert recipient",
-    "Receive an email after repeated moderation upstream failures.": "Receive an email after repeated moderation upstream failures.",
-    "Moderation alert threshold": "Moderation alert threshold",
-    "Failures within 30 minutes before an alert is sent.": "Failures within 30 minutes before an alert is sent.",
-    "Moderation cache TTL": "Moderation cache TTL",
-    "Seconds to reuse a successful moderation result.": "Seconds to reuse a successful moderation result."
+    "Zoom": "Zoom"
   }
 }

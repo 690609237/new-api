@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -176,14 +175,6 @@ func InitOptionMap() {
 	common.OptionMap["MjForwardUrlEnabled"] = strconv.FormatBool(setting.MjForwardUrlEnabled)
 	common.OptionMap["MjActionCheckSuccessEnabled"] = strconv.FormatBool(setting.MjActionCheckSuccessEnabled)
 	common.OptionMap["CheckSensitiveEnabled"] = strconv.FormatBool(setting.CheckSensitiveEnabled)
-	common.OptionMap["ModerationEnabled"] = strconv.FormatBool(setting.ShouldModeratePrompt())
-	common.OptionMap["ModerationBaseURL"] = setting.ModerationBaseURL()
-	common.OptionMap["ModerationAPIKey"] = setting.ModerationAPIKey()
-	common.OptionMap["ModerationModel"] = setting.ModerationModel()
-	common.OptionMap["ModerationAlertEmail"] = setting.ModerationAlertEmail()
-	common.OptionMap["ModerationAlertThreshold"] = strconv.Itoa(setting.ModerationAlertThreshold())
-	common.OptionMap["ModerationCacheTTLSeconds"] = strconv.Itoa(int(setting.ModerationCacheTTL().Seconds()))
-	common.OptionMap["ModerationBeforeChannel"] = strconv.FormatBool(setting.ShouldModerateBeforeChannel())
 	common.OptionMap["DemoSiteEnabled"] = strconv.FormatBool(operation_setting.DemoSiteEnabled)
 	common.OptionMap["SelfUseModeEnabled"] = strconv.FormatBool(operation_setting.SelfUseModeEnabled)
 	common.OptionMap["ModelRequestRateLimitEnabled"] = strconv.FormatBool(setting.ModelRequestRateLimitEnabled)
@@ -233,18 +224,6 @@ func validateOptionValue(key string, value string) error {
 	}
 	if key == "MaxTokenAutoGroups" {
 		return setting.ValidateMaxTokenAutoGroups(value)
-	}
-	if key == "ModerationAlertThreshold" || key == "ModerationCacheTTLSeconds" {
-		parsed, err := strconv.Atoi(strings.TrimSpace(value))
-		if err != nil || parsed <= 0 {
-			return fmt.Errorf("%s must be a positive integer", key)
-		}
-		if key == "ModerationAlertThreshold" && parsed > 1000000 {
-			return fmt.Errorf("%s exceeds the maximum allowed value", key)
-		}
-		if key == "ModerationCacheTTLSeconds" && parsed > 86400 {
-			return fmt.Errorf("%s exceeds the maximum allowed value", key)
-		}
 	}
 	return nil
 }
@@ -316,7 +295,6 @@ func updateOptionMap(key string, value string) (err error) {
 	common.OptionMapRWMutex.Lock()
 	defer common.OptionMapRWMutex.Unlock()
 	common.OptionMap[key] = value
-	setting.UpdateModerationOption(key, value)
 
 	// 检查是否是模型配置 - 使用更规范的方式处理
 	if handleConfigUpdate(key, value) {

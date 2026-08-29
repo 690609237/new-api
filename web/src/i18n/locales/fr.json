@@ -5584,25 +5584,6 @@
     "Zero retention": "Aucune rétention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom",
-    "Content Moderation": "Modération du contenu",
-    "Save moderation settings": "Enregistrer les paramètres de modération",
-    "Enable content moderation": "Activer la modération du contenu",
-    "Use an OpenAI-compatible moderation endpoint to scan user prompts.": "Utiliser un endpoint de modération compatible OpenAI pour analyser les prompts utilisateur.",
-    "Moderate before channel selection": "Modérer avant la sélection du canal",
-    "Scan prompts before selecting an upstream channel. This may add latency.": "Analyser les prompts avant de sélectionner un canal amont. Cela peut ajouter de la latence.",
-    "Moderation base URL": "URL de base de modération",
-    "The endpoint should expose POST /moderations.": "L’endpoint doit fournir POST /moderations.",
-    "Moderation model": "Modèle de modération",
-    "Defaults to omni-moderation-latest when blank.": "Utilise omni-moderation-latest si le champ est vide.",
-    "Moderation API key": "Clé API de modération",
-    "The key is write-only and is never shown after saving.": "La clé est en écriture seule et ne sera jamais affichée après l’enregistrement.",
-    "Moderation alert email": "E-mail d’alerte de modération",
-    "Optional alert recipient": "Destinataire d’alerte facultatif",
-    "Receive an email after repeated moderation upstream failures.": "Recevoir un e-mail après des échecs répétés du service de modération amont.",
-    "Moderation alert threshold": "Seuil d’alerte de modération",
-    "Failures within 30 minutes before an alert is sent.": "Nombre d’échecs en 30 minutes avant l’envoi d’une alerte.",
-    "Moderation cache TTL": "TTL du cache de modération",
-    "Seconds to reuse a successful moderation result.": "Nombre de secondes pendant lesquelles un résultat réussi est réutilisé."
+    "Zoom": "Zoom"
   }
 }

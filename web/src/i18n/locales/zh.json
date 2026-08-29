@@ -5584,25 +5584,6 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放",
-    "Content Moderation": "内容审核",
-    "Save moderation settings": "保存审核设置",
-    "Enable content moderation": "启用内容审核",
-    "Use an OpenAI-compatible moderation endpoint to scan user prompts.": "使用兼容 OpenAI 的审核接口扫描用户提示词。",
-    "Moderate before channel selection": "在选择渠道前审核",
-    "Scan prompts before selecting an upstream channel. This may add latency.": "在选择上游渠道前扫描提示词，可能会增加延迟。",
-    "Moderation base URL": "审核接口地址",
-    "The endpoint should expose POST /moderations.": "接口应提供 POST /moderations 路径。",
-    "Moderation model": "审核模型",
-    "Defaults to omni-moderation-latest when blank.": "留空时使用 omni-moderation-latest。",
-    "Moderation API key": "审核 API 密钥",
-    "The key is write-only and is never shown after saving.": "密钥仅支持写入，保存后不会显示。",
-    "Moderation alert email": "审核告警邮箱",
-    "Optional alert recipient": "可选的告警接收邮箱",
-    "Receive an email after repeated moderation upstream failures.": "审核上游连续失败后接收邮件通知。",
-    "Moderation alert threshold": "审核告警阈值",
-    "Failures within 30 minutes before an alert is sent.": "30 分钟内达到此失败次数后发送告警。",
-    "Moderation cache TTL": "审核缓存时长",
-    "Seconds to reuse a successful moderation result.": "成功审核结果的复用时长（秒）。"
+    "Zoom": "缩放"
   }
 }

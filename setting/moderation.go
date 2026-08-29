@@ -7,10 +7,9 @@ import (
 	"time"
 )
 
-// Moderation settings default to environment variables and can be overridden
-// at runtime through the persisted system options. The API key is still
-// treated as a sensitive option by the admin API and is never returned in the
-// options list.
+// Moderation settings are deployment-level settings. They intentionally use
+// environment variables so the moderation credential is not stored in the
+// application database or exposed in the admin UI.
 const (
 	moderationEnabledEnv        = "MODERATION_ENABLED"
 	moderationBaseURLEnv        = "MODERATION_BASE_URL"
@@ -22,126 +21,52 @@ const (
 	moderationBeforeChannelEnv  = "MODERATION_BEFORE_CHANNEL"
 )
 
-var (
-	moderationEnabled         = envBool(moderationEnabledEnv)
-	moderationBeforeChannel   = envBool(moderationBeforeChannelEnv)
-	moderationBaseURL         = os.Getenv(moderationBaseURLEnv)
-	moderationAPIKey          = os.Getenv(moderationAPIKeyEnv)
-	moderationModel           = os.Getenv(moderationModelEnv)
-	moderationAlertEmail      = strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
-	moderationAlertThreshold  = envPositiveInt(moderationAlertThresholdEnv, 20)
-	moderationCacheTTL        = envPositiveInt(moderationCacheTTLEnv, 600)
-	moderationOptionOverrides = map[string]bool{}
-)
-
-func envBool(key string) bool {
-	enabled, _ := strconv.ParseBool(os.Getenv(key))
-	return enabled
-}
-
-func envPositiveInt(key string, fallback int) int {
-	value, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
-	if err != nil || value <= 0 {
-		return fallback
-	}
-	return value
-}
-
 func ShouldModeratePrompt() bool {
-	if !moderationOptionOverrides["ModerationEnabled"] {
-		return envBool(moderationEnabledEnv)
-	}
-	return moderationEnabled
+	enabled, _ := strconv.ParseBool(os.Getenv(moderationEnabledEnv))
+	return enabled
 }
 
 // ShouldModerateBeforeChannel enables the temporary pre-distribution check.
 // It is disabled by default because normal moderation runs after channel setup.
 func ShouldModerateBeforeChannel() bool {
-	if !moderationOptionOverrides["ModerationBeforeChannel"] {
-		return envBool(moderationBeforeChannelEnv)
-	}
-	return moderationBeforeChannel
+	enabled, _ := strconv.ParseBool(os.Getenv(moderationBeforeChannelEnv))
+	return enabled
 }
 
 func ModerationBaseURL() string {
-	if !moderationOptionOverrides["ModerationBaseURL"] {
-		return os.Getenv(moderationBaseURLEnv)
-	}
-	return moderationBaseURL
+	return os.Getenv(moderationBaseURLEnv)
 }
 
 func ModerationAPIKey() string {
-	if !moderationOptionOverrides["ModerationAPIKey"] {
-		return os.Getenv(moderationAPIKeyEnv)
-	}
-	return moderationAPIKey
+	return os.Getenv(moderationAPIKeyEnv)
 }
 
 func ModerationModel() string {
-	if !moderationOptionOverrides["ModerationModel"] {
-		moderationModel = os.Getenv(moderationModelEnv)
-	}
-	if model := strings.TrimSpace(moderationModel); model != "" {
+	if model := os.Getenv(moderationModelEnv); model != "" {
 		return model
 	}
 	return "omni-moderation-latest"
 }
 
 func ModerationAlertEmail() string {
-	if !moderationOptionOverrides["ModerationAlertEmail"] {
-		return strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
-	}
-	return moderationAlertEmail
+	return strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
 }
 
 func ModerationAlertThreshold() int {
-	if !moderationOptionOverrides["ModerationAlertThreshold"] {
-		return envPositiveInt(moderationAlertThresholdEnv, 20)
+	threshold, err := strconv.Atoi(strings.TrimSpace(os.Getenv(moderationAlertThresholdEnv)))
+	if err != nil || threshold <= 0 {
+		return 20
 	}
-	return moderationAlertThreshold
+	return threshold
 }
 
 // ModerationCacheTTL controls how long a successful moderation result can be
 // reused for an identical prompt. A short default keeps the cache useful for
 // client retries without retaining results indefinitely.
 func ModerationCacheTTL() time.Duration {
-	if !moderationOptionOverrides["ModerationCacheTTLSeconds"] {
-		return time.Duration(envPositiveInt(moderationCacheTTLEnv, 600)) * time.Second
+	seconds, err := strconv.Atoi(strings.TrimSpace(os.Getenv(moderationCacheTTLEnv)))
+	if err != nil || seconds <= 0 {
+		seconds = 600
 	}
-	return time.Duration(moderationCacheTTL) * time.Second
-}
-
-// UpdateModerationOption applies a persisted system option to the in-memory
-// moderation settings. It returns false for unrelated keys.
-func UpdateModerationOption(key, value string) bool {
-	switch key {
-	case "ModerationEnabled":
-		moderationEnabled = value == "true" || value == "1"
-	case "ModerationBeforeChannel":
-		moderationBeforeChannel = value == "true" || value == "1"
-	case "ModerationBaseURL":
-		moderationBaseURL = strings.TrimSpace(value)
-	case "ModerationAPIKey":
-		moderationAPIKey = strings.TrimSpace(value)
-	case "ModerationModel":
-		moderationModel = strings.TrimSpace(value)
-	case "ModerationAlertEmail":
-		moderationAlertEmail = strings.TrimSpace(value)
-	case "ModerationAlertThreshold":
-		if parsed, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && parsed > 0 {
-			moderationAlertThreshold = parsed
-		} else {
-			moderationAlertThreshold = 20
-		}
-	case "ModerationCacheTTLSeconds":
-		if parsed, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && parsed > 0 {
-			moderationCacheTTL = parsed
-		} else {
-			moderationCacheTTL = 600
-		}
-	default:
-		return false
-	}
-	moderationOptionOverrides[key] = true
-	return true
+	return time.Duration(seconds) * time.Second
 }
