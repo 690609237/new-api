@@ -18,6 +18,8 @@ const (
 	ContextKeyTokenSubscriptionGroup ContextKey = "token_subscription_group"
 	ContextKeyTokenGroupFallback     ContextKey = "token_group_fallback"
 	ContextKeyTokenSpecificChannelId ContextKey = "specific_channel_id"
+	ContextKeyOriginTasks            ContextKey = "origin_tasks"
+	ContextKeyChannelConstraints     ContextKey = "channel_constraints"
 	ContextKeyTokenModelLimitEnabled ContextKey = "token_model_limit_enabled"
 	ContextKeyTokenModelLimit        ContextKey = "token_model_limit"
 	ContextKeyTokenCrossGroupRetry   ContextKey = "token_cross_group_retry"
