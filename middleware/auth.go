@@ -21,6 +21,10 @@ import (
 	"gorm.io/gorm"
 )
 
+func isRelayAPIPath(path string) bool {
+	return strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v1beta/") || strings.HasPrefix(path, "/pg/") || strings.HasPrefix(path, "/mj/")
+}
+
 const authIdentityContextKey = "auth_identity"
 
 type dashboardCredentialKind int
@@ -341,6 +345,11 @@ func TokenAuthReadOnly() func(c *gin.Context) {
 			c.Abort()
 			return
 		}
+		if userCache.APIBlocked && isRelayAPIPath(c.Request.URL.Path) {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "API access is blocked due to moderation violations"})
+			c.Abort()
+			return
+		}
 
 		c.Set("id", token.UserId)
 		c.Set("token_id", token.Id)
@@ -451,6 +460,10 @@ func TokenAuth() func(c *gin.Context) {
 		userEnabled := userCache.Status == common.UserStatusEnabled
 		if !userEnabled {
 			abortWithOpenAiMessage(c, http.StatusForbidden, common.TranslateMessage(c, i18n.MsgAuthUserBanned))
+			return
+		}
+		if userCache.APIBlocked && isRelayAPIPath(c.Request.URL.Path) {
+			abortWithOpenAiMessage(c, http.StatusForbidden, "API access is blocked due to moderation violations")
 			return
 		}
 

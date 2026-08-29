@@ -128,21 +128,54 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	logger.LogUserMessage(c.GetString("username"), service.ExtractUserMessageForLog(c, request))
 
+	relayMode := relayconstant.Path2RelayMode(c.Request.URL.Path)
+	needModeration := setting.ShouldModeratePrompt() && relayMode != relayconstant.RelayModeModerations
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
 	needCountToken := constant.CountToken
-	// Avoid building huge CombineText (strings.Join) when token counting and sensitive check are both disabled.
+	// Avoid building huge CombineText (strings.Join) when token counting,
+	// sensitive-word checking, and moderation are all disabled.
 	var meta *types.TokenCountMeta
-	if needSensitiveCheck || needCountToken {
+	if needSensitiveCheck || needModeration || needCountToken {
 		meta = request.GetTokenCountMeta()
 	} else {
 		meta = fastTokenCountMetaForPricing(request)
 	}
 
-	if needSensitiveCheck && meta != nil {
+	if needSensitiveCheck && meta != nil && !common.GetContextKeyBool(c, constant.ContextKeySensitiveChecked) {
 		contains, words := service.CheckSensitiveText(meta.CombineText)
 		if contains {
 			logger.LogWarn(c, fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", ")))
 			newAPIError = types.NewError(err, types.ErrorCodeSensitiveWordsDetected)
+			return
+		}
+	}
+
+	if needModeration && meta != nil && !common.GetContextKeyBool(c, constant.ContextKeyModerationChecked) {
+		moderationText := service.ExtractLatestUserMessageForModeration(request)
+		flagged, moderationErr := service.ModeratePrompt(c.Request.Context(), moderationText)
+		if moderationErr != nil {
+			logger.LogWarn(c, fmt.Sprintf("omni moderation request failed: %s", moderationErr.Error()))
+			service.RecordModerationAlert(c.Request.Context(), moderationErr)
+			if service.ShouldSkipModerationError(moderationErr) {
+				logger.LogWarn(c, fmt.Sprintf("skip omni moderation because upstream request failed: %s", moderationErr.Error()))
+			} else {
+				newAPIError = types.NewErrorWithStatusCode(
+					moderationErr,
+					types.ErrorCodeDoRequestFailed,
+					http.StatusServiceUnavailable,
+					types.ErrOptionWithSkipRetry(),
+				)
+				return
+			}
+		}
+		if flagged {
+			violationCount, violationLimit, accountBanned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
+			newAPIError = types.NewErrorWithStatusCode(
+				errors.New(service.ModerationViolationMessage(violationCount, violationLimit, accountBanned)),
+				types.ErrorCodePromptBlocked,
+				http.StatusBadRequest,
+				types.ErrOptionWithSkipRetry(),
+			)
 			return
 		}
 	}

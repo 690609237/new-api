@@ -173,6 +173,28 @@ export function useUsersColumns(): ColumnDef<User>[] {
       meta: { mobileOrder: 40 },
     },
     {
+      id: 'violations',
+      header: t('Violations'),
+      cell: ({ row }) => {
+        const count = row.original.violation_count ?? 0
+        const limit = row.original.violation_limit ?? 3
+        return (
+          <span
+            className={
+              count > 0
+                ? 'text-destructive font-medium'
+                : 'text-muted-foreground'
+            }
+          >
+            {count}/{limit}
+          </span>
+        )
+      },
+      enableSorting: false,
+      size: 100,
+      meta: { mobileOrder: 45 },
+    },
+    {
       accessorKey: 'group',
       header: t('Group'),
       cell: ({ row }) => {

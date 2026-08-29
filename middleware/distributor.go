@@ -16,9 +16,11 @@ import (
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
+	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
@@ -38,6 +40,11 @@ func Distribute() func(c *gin.Context) {
 		if err != nil {
 			abortWithOpenAiMessage(c, http.StatusBadRequest, i18n.T(c, i18n.MsgDistributorInvalidRequest, map[string]any{"Error": err.Error()}))
 			return
+		}
+		if shouldRunPreChannelModeration(c) {
+			if !runPreChannelModeration(c) {
+				return
+			}
 		}
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
@@ -168,6 +175,87 @@ func Distribute() func(c *gin.Context) {
 			service.RecordChannelAffinity(c, channel.Id)
 		}
 	}
+}
+
+// shouldRunPreChannelModeration limits the temporary pre-distribution path to
+// text-generation request formats. Multipart, embedding, and task routes
+// continue through the normal controller check to avoid parsing their payloads
+// twice before the selected channel has initialized request-specific state.
+func shouldRunPreChannelModeration(c *gin.Context) bool {
+	if c.Request.Method != http.MethodPost || !setting.ShouldModerateBeforeChannel() {
+		return false
+	}
+	if !setting.ShouldModeratePrompt() && !setting.ShouldCheckPromptSensitive() {
+		return false
+	}
+	path := c.Request.URL.Path
+	return strings.HasPrefix(path, "/v1/chat/completions") ||
+		strings.HasPrefix(path, "/v1/completions") ||
+		strings.HasPrefix(path, "/v1/responses") ||
+		strings.HasPrefix(path, "/v1/messages") ||
+		strings.HasPrefix(path, "/v1/alpha/search")
+}
+
+// runPreChannelModeration performs the same prompt check as controller.Relay,
+// but before Distribute attempts to find a channel. The request body is
+// reusable, so the controller can validate and parse it again afterwards.
+func runPreChannelModeration(c *gin.Context) bool {
+	if common.GetContextKeyBool(c, constant.ContextKeyModerationChecked) {
+		return true
+	}
+	format := types.RelayFormatOpenAI
+	path := c.Request.URL.Path
+	switch {
+	case strings.HasPrefix(path, "/v1/messages"):
+		format = types.RelayFormatClaude
+	case strings.HasPrefix(path, "/v1/responses"):
+		if strings.HasPrefix(path, "/v1/responses/compact") {
+			format = types.RelayFormatOpenAIResponsesCompaction
+		} else {
+			format = types.RelayFormatOpenAIResponses
+		}
+	case strings.HasPrefix(path, "/v1/alpha/search"):
+		format = types.RelayFormatOpenAIAlphaSearch
+	}
+	request, err := helper.GetAndValidateRequest(c, format)
+	if err != nil {
+		// Normal validation in controller.Relay owns the client-facing error.
+		return true
+	}
+	if setting.ShouldCheckPromptSensitive() {
+		meta := request.GetTokenCountMeta()
+		if meta != nil {
+			contains, _ := service.CheckSensitiveText(meta.CombineText)
+			common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
+			if contains {
+				abortWithOpenAiMessage(c, http.StatusBadRequest, "sensitive content detected", types.ErrorCodeSensitiveWordsDetected)
+				return false
+			}
+		}
+	}
+	if !setting.ShouldModeratePrompt() {
+		return true
+	}
+	prompt := service.ExtractLatestUserMessageForModeration(request)
+	if strings.TrimSpace(prompt) == "" {
+		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
+		return true
+	}
+	flagged, moderationErr := service.ModeratePrompt(c.Request.Context(), prompt)
+	if moderationErr != nil {
+		service.RecordModerationAlert(c.Request.Context(), moderationErr)
+		if !service.ShouldSkipModerationError(moderationErr) {
+			abortWithOpenAiMessage(c, http.StatusServiceUnavailable, moderationErr.Error(), types.ErrorCodeDoRequestFailed)
+			return false
+		}
+	}
+	common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
+	if flagged {
+		count, limit, banned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
+		abortWithOpenAiMessage(c, http.StatusBadRequest, service.ModerationViolationMessage(count, limit, banned), types.ErrorCodePromptBlocked)
+		return false
+	}
+	return true
 }
 
 // channelSupportsRequestPath reports whether a channel can serve the request path.

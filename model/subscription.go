@@ -318,8 +318,8 @@ type SubscriptionOrder struct {
 	TradeNo         string `json:"trade_no" gorm:"unique;type:varchar(255);index"`
 	PaymentMethod   string `json:"payment_method" gorm:"type:varchar(50)"`
 	PaymentProvider string `json:"payment_provider" gorm:"type:varchar(50);default:''"`
-	Status          string `json:"status"`
-	CreateTime      int64  `json:"create_time"`
+	Status          string `json:"status" gorm:"index:idx_subscription_orders_pending_cleanup,priority:1"`
+	CreateTime      int64  `json:"create_time" gorm:"index:idx_subscription_orders_pending_cleanup,priority:2"`
 	CompleteTime    int64  `json:"complete_time"`
 
 	ProviderPayload string `json:"provider_payload" gorm:"type:text"`

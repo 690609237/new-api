@@ -51,6 +51,9 @@ export interface UserProfile {
   used_quota: number
   /** Total request count */
   request_count: number
+  violation_count?: number
+  violation_limit?: number
+  api_blocked?: boolean
   /** Account status (1=启用, 2=禁用, 3=待审核, 4=已删除) */
   status: number
   /** Access token (system token) */

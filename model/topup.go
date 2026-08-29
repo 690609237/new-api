@@ -19,9 +19,9 @@ type TopUp struct {
 	TradeNo         string  `json:"trade_no" gorm:"unique;type:varchar(255);index"`
 	PaymentMethod   string  `json:"payment_method" gorm:"type:varchar(50)"`
 	PaymentProvider string  `json:"payment_provider" gorm:"type:varchar(50);default:''"`
-	CreateTime      int64   `json:"create_time"`
+	CreateTime      int64   `json:"create_time" gorm:"index:idx_top_ups_pending_cleanup,priority:2"`
 	CompleteTime    int64   `json:"complete_time"`
-	Status          string  `json:"status"`
+	Status          string  `json:"status" gorm:"index:idx_top_ups_pending_cleanup,priority:1"`
 }
 
 const (
@@ -48,6 +48,8 @@ var (
 	ErrInvalidTopUpQuota       = errors.New("invalid top-up quota")
 	ErrTopUpQuotaLimitExceeded = errors.New("top-up quota limit exceeded")
 )
+
+const pendingPaymentCleanupBatchSize = 500
 
 func (topUp *TopUp) Insert() error {
 	var err error
@@ -140,6 +142,57 @@ func GetTopUpByTradeNo(tradeNo string) *TopUp {
 		return nil
 	}
 	return topUp
+}
+
+// DeleteExpiredPendingPaymentOrders removes payment records that have been
+// left pending beyond the supplied cutoff. The status predicate is part of the
+// DELETE so a delayed webhook cannot delete an order that was completed while
+// the cleanup was running. Subscription orders are stored separately and are
+// cleaned in the same transaction to keep both payment tables bounded.
+func DeleteExpiredPendingPaymentOrders(cutoff int64) (topUpsDeleted int64, subscriptionOrdersDeleted int64, err error) {
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		for {
+			var ids []int
+			if err := tx.Model(&TopUp{}).
+				Where("status = ? AND create_time < ?", common.TopUpStatusPending, cutoff).
+				Order("id").Limit(pendingPaymentCleanupBatchSize).Pluck("id", &ids).Error; err != nil {
+				return err
+			}
+			if len(ids) == 0 {
+				break
+			}
+			result := tx.Where("id IN ? AND status = ? AND create_time < ?", ids, common.TopUpStatusPending, cutoff).Delete(&TopUp{})
+			if result.Error != nil {
+				return result.Error
+			}
+			topUpsDeleted += result.RowsAffected
+			if len(ids) < pendingPaymentCleanupBatchSize {
+				break
+			}
+		}
+
+		for {
+			var ids []int
+			if err := tx.Model(&SubscriptionOrder{}).
+				Where("status = ? AND create_time < ?", common.TopUpStatusPending, cutoff).
+				Order("id").Limit(pendingPaymentCleanupBatchSize).Pluck("id", &ids).Error; err != nil {
+				return err
+			}
+			if len(ids) == 0 {
+				break
+			}
+			result := tx.Where("id IN ? AND status = ? AND create_time < ?", ids, common.TopUpStatusPending, cutoff).Delete(&SubscriptionOrder{})
+			if result.Error != nil {
+				return result.Error
+			}
+			subscriptionOrdersDeleted += result.RowsAffected
+			if len(ids) < pendingPaymentCleanupBatchSize {
+				break
+			}
+		}
+		return nil
+	})
+	return
 }
 
 func UpdatePendingTopUpStatus(tradeNo string, expectedPaymentProvider string, targetStatus string) error {

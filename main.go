@@ -128,6 +128,9 @@ func main() {
 	// Subscription quota reset task (daily/weekly/monthly/custom)
 	service.StartSubscriptionQuotaResetTask()
 
+	// Remove payment orders that have remained pending for more than 24 hours.
+	service.StartPaymentOrderCleanupTask()
+
 	// Persisted user notification delivery and retry task.
 	service.StartNotificationDeliveryTask()
 

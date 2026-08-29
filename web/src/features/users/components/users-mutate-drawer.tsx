@@ -80,6 +80,7 @@ import {
   getUser,
   getGroups,
   getPermissionCatalog,
+  manageUser,
 } from '../api'
 import { BINDING_FIELDS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
@@ -209,6 +210,17 @@ export function UsersMutateDrawer({
       form.reset(transformUserToFormDefaults(result.data))
     }
     triggerRefresh()
+  }
+
+  const resetViolations = async () => {
+    if (!currentRow) return
+    const result = await manageUser(currentRow.id, 'reset_violations')
+    if (result.success) {
+      toast.success(t('Violations reset'))
+      await refreshUserData()
+    } else {
+      toast.error(result.message || t('Operation failed'))
+    }
   }
 
   return (
@@ -443,6 +455,34 @@ export function UsersMutateDrawer({
                             rows={3}
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='violation_limit'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Moderation violation limit')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            min={1}
+                            max={100}
+                            value={field.value ?? 3}
+                            onChange={(event) =>
+                              field.onChange(Number(event.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Account is disabled after this many violations in 24 hours.')}
+                        </FormDescription>
+                        <Button type='button' variant='outline' onClick={resetViolations}>
+                          {t('Reset violations')}
+                        </Button>
                         <FormMessage />
                       </FormItem>
                     )}

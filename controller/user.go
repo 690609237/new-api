@@ -510,31 +510,35 @@ func buildSelfUserData(user *model.User) map[string]interface{} {
 	permissions := calculateUserPermissions(user.Role)
 	permissions["admin_permissions"] = authz.Capabilities(user.Id, user.Role)
 	return map[string]interface{}{
-		"id":                user.Id,
-		"username":          user.Username,
-		"display_name":      user.DisplayName,
-		"role":              user.Role,
-		"status":            user.Status,
-		"email":             user.Email,
-		"github_id":         user.GitHubId,
-		"discord_id":        user.DiscordId,
-		"oidc_id":           user.OidcId,
-		"wechat_id":         user.WeChatId,
-		"telegram_id":       user.TelegramId,
-		"group":             user.Group,
-		"quota":             user.Quota,
-		"used_quota":        user.UsedQuota,
-		"request_count":     user.RequestCount,
-		"aff_code":          user.AffCode,
-		"aff_count":         user.AffCount,
-		"aff_quota":         user.AffQuota,
-		"aff_history_quota": user.AffHistoryQuota,
-		"inviter_id":        user.InviterId,
-		"linux_do_id":       user.LinuxDOId,
-		"setting":           user.Setting,
-		"stripe_customer":   user.StripeCustomer,
-		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
-		"permissions":       permissions,
+		"id":                     user.Id,
+		"username":               user.Username,
+		"display_name":           user.DisplayName,
+		"role":                   user.Role,
+		"status":                 user.Status,
+		"email":                  user.Email,
+		"github_id":              user.GitHubId,
+		"discord_id":             user.DiscordId,
+		"oidc_id":                user.OidcId,
+		"wechat_id":              user.WeChatId,
+		"telegram_id":            user.TelegramId,
+		"group":                  user.Group,
+		"quota":                  user.Quota,
+		"used_quota":             user.UsedQuota,
+		"request_count":          user.RequestCount,
+		"violation_count":        user.ViolationCount,
+		"violation_limit":        user.ViolationLimit,
+		"api_blocked":             user.APIBlocked,
+		"violation_window_start": user.ViolationWindowStart,
+		"aff_code":               user.AffCode,
+		"aff_count":              user.AffCount,
+		"aff_quota":              user.AffQuota,
+		"aff_history_quota":      user.AffHistoryQuota,
+		"inviter_id":             user.InviterId,
+		"linux_do_id":            user.LinuxDOId,
+		"setting":                user.Setting,
+		"stripe_customer":        user.StripeCustomer,
+		"sidebar_modules":        userSetting.SidebarModules, // 正确提取sidebar_modules字段
+		"permissions":            permissions,
 	}
 }
 
@@ -671,6 +675,10 @@ func UpdateUser(c *gin.Context) {
 	}
 	updatedUser.Username = strings.TrimSpace(updatedUser.Username)
 	if updatedUser.Username == "" {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	if updatedUser.ViolationLimit != 0 && (updatedUser.ViolationLimit < 1 || updatedUser.ViolationLimit > 100) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
@@ -1113,6 +1121,7 @@ func ManageUser(c *gin.Context) {
 		}
 	case "enable":
 		user.Status = common.UserStatusEnabled
+		user.APIBlocked = false
 	case "delete":
 		if user.Role == common.RoleRootUser {
 			common.ApiErrorI18n(c, i18n.MsgUserCannotDeleteRootUser)
@@ -1200,10 +1209,25 @@ func ManageUser(c *gin.Context) {
 			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "",
-		})
+	case "set_violation_limit":
+		if req.Value < 1 || req.Value > 100 {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return
+		}
+		if err := model.UpdateViolationLimit(user.Id, req.Value); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		recordManageAuditFor(c, user.Id, "user.violation_limit", map[string]interface{}{"limit": req.Value})
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
+		return
+	case "reset_violations":
+		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(map[string]interface{}{"violation_count": 0, "violation_window_start": 0}).Error; err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		recordManageAuditFor(c, user.Id, "user.violation_reset", map[string]interface{}{})
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
 		return
 	default:
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
@@ -1236,6 +1260,12 @@ func ManageUser(c *gin.Context) {
 		if err := user.Update(false); err != nil {
 			common.ApiError(c, err)
 			return
+		}
+		if req.Action == "enable" {
+			if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("api_blocked", false).Error; err != nil {
+				common.ApiError(c, err)
+				return
+			}
 		}
 	}
 	// Update/UpdateWithTx has already published the new user hash and revoked

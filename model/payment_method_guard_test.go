@@ -7,6 +7,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func insertUserForPaymentGuardTest(t *testing.T, id int, quota int) *User {
@@ -86,6 +87,37 @@ func getUserQuotaForPaymentGuardTest(t *testing.T, userID int) int {
 	var user User
 	require.NoError(t, DB.Select("quota").Where("id = ?", userID).First(&user).Error)
 	return user.Quota
+}
+
+func TestDeleteExpiredPendingPaymentOrdersRemovesOnlyOldPendingRows(t *testing.T) {
+	truncateTables(t)
+	now := time.Now().Unix()
+	cutoff := now - 24*60*60
+
+	orders := []TopUp{
+		{UserId: 1, Amount: 1, Money: 1, TradeNo: "old-pending", Status: common.TopUpStatusPending, CreateTime: cutoff - 1},
+		{UserId: 1, Amount: 1, Money: 1, TradeNo: "recent-pending", Status: common.TopUpStatusPending, CreateTime: cutoff + 1},
+		{UserId: 1, Amount: 1, Money: 1, TradeNo: "old-success", Status: common.TopUpStatusSuccess, CreateTime: cutoff - 1},
+	}
+	require.NoError(t, DB.Create(&orders).Error)
+	subscriptionOrders := []SubscriptionOrder{
+		{UserId: 1, PlanId: 1, Money: 1, TradeNo: "old-sub-pending", Status: common.TopUpStatusPending, CreateTime: cutoff - 1},
+		{UserId: 1, PlanId: 1, Money: 1, TradeNo: "recent-sub-pending", Status: common.TopUpStatusPending, CreateTime: cutoff + 1},
+		{UserId: 1, PlanId: 1, Money: 1, TradeNo: "old-sub-success", Status: common.TopUpStatusSuccess, CreateTime: cutoff - 1},
+	}
+	require.NoError(t, DB.Create(&subscriptionOrders).Error)
+
+	topUpsDeleted, subscriptionsDeleted, err := DeleteExpiredPendingPaymentOrders(cutoff)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), topUpsDeleted)
+	assert.Equal(t, int64(1), subscriptionsDeleted)
+
+	assert.ErrorIs(t, DB.First(&TopUp{}, "trade_no = ?", "old-pending").Error, gorm.ErrRecordNotFound)
+	assert.NoError(t, DB.First(&TopUp{}, "trade_no = ?", "recent-pending").Error)
+	assert.NoError(t, DB.First(&TopUp{}, "trade_no = ?", "old-success").Error)
+	assert.ErrorIs(t, DB.First(&SubscriptionOrder{}, "trade_no = ?", "old-sub-pending").Error, gorm.ErrRecordNotFound)
+	assert.NoError(t, DB.First(&SubscriptionOrder{}, "trade_no = ?", "recent-sub-pending").Error)
+	assert.NoError(t, DB.First(&SubscriptionOrder{}, "trade_no = ?", "old-sub-success").Error)
 }
 
 func TestRechargeWaffoPancake_RejectsMismatchedPaymentMethod(t *testing.T) {

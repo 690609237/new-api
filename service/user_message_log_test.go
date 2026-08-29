@@ -145,6 +145,17 @@ func TestExtractLatestUserMessageFromResponsesTopLevelInputText(t *testing.T) {
 	assert.Equal(t, "fresh user input", ExtractLatestUserMessage(request))
 }
 
+func TestExtractLatestUserMessageForModerationFindsUserBeforeContinuation(t *testing.T) {
+	input := []byte(`[
+		{"role":"user","content":[{"type":"input_text","text":"check this command"}]},
+		{"type":"function_call","name":"read_file","arguments":"{}"},
+		{"type":"function_call_output","content":"tool output"}
+	]`)
+	request := &dto.OpenAIResponsesRequest{Input: input}
+
+	assert.Equal(t, "check this command", ExtractLatestUserMessageForModeration(request))
+}
+
 func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	tests := []struct {

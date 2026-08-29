@@ -31,6 +31,18 @@ type StringCodec struct{}
 func (c StringCodec) Encode(v string) (string, error) { return v, nil }
 func (c StringCodec) Decode(s string) (string, error) { return s, nil }
 
+type BoolCodec struct{}
+
+func (c BoolCodec) Encode(v bool) (string, error) { return strconv.FormatBool(v), nil }
+
+func (c BoolCodec) Decode(s string) (bool, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return false, fmt.Errorf("empty bool value")
+	}
+	return strconv.ParseBool(s)
+}
+
 type JSONCodec[V any] struct{}
 
 func (c JSONCodec[V]) Encode(v V) (string, error) {

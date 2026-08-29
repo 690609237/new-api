@@ -45,6 +45,9 @@ export const userSchema = z.object({
   quota: z.number(),
   used_quota: z.number(),
   request_count: z.number(),
+  violation_count: z.number().optional(),
+  violation_limit: z.number().optional(),
+  api_blocked: z.boolean().optional(),
   group: z.string(),
   aff_code: z.string().optional(),
   aff_count: z.number().optional(),
@@ -125,6 +128,7 @@ export interface UserFormData {
   quota?: number // Only used when updating user
   group?: string // Only used when updating user
   remark?: string // Only used when updating user
+  violation_limit?: number
   admin_permissions?: AdminPermissionMatrix
 }
 
@@ -135,6 +139,8 @@ export type ManageUserAction =
   | 'disable'
   | 'delete'
   | 'add_quota'
+  | 'set_violation_limit'
+  | 'reset_violations'
 
 export type QuotaAdjustMode = 'add' | 'subtract' | 'override'
 
