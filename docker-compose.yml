@@ -46,7 +46,7 @@ services:
       - MODERATION_ENABLED=true  # 请求进入大模型前使用 OpenAI Omni Moderation 审核
       - MODERATION_BEFORE_CHANNEL=false  # 是否先于渠道选择执行审核
       - MODERATION_BASE_URL=https://api.openai.com/v1
-      - MODERATION_API_KEY=your-openai-api-key
+      - MODERATION_API_KEY=${KEY}
       - MODERATION_MODEL=omni-moderation-latest
       - MODERATION_CACHE_TTL_SECONDS=600  # 相同输入的审核成功结果缓存时间（秒）
       - MODERATION_ALERT_EMAIL=you@example.com  # 审核接口失败告警邮件接收地址
