@@ -5584,6 +5584,25 @@
     "Zero retention": "零數據保留",
     "Zhipu": "智譜",
     "Zhipu V4": "智譜 V4",
-    "Zoom": "縮放"
+    "Zoom": "縮放",
+    "Content Moderation": "內容審核",
+    "Save moderation settings": "儲存審核設定",
+    "Enable content moderation": "啟用內容審核",
+    "Use an OpenAI-compatible moderation endpoint to scan user prompts.": "使用相容 OpenAI 的審核端點掃描使用者提示詞。",
+    "Moderate before channel selection": "選擇渠道前審核",
+    "Scan prompts before selecting an upstream channel. This may add latency.": "在選擇上游渠道前掃描提示詞，可能增加延遲。",
+    "Moderation base URL": "審核端點位址",
+    "The endpoint should expose POST /moderations.": "端點應提供 POST /moderations 路徑。",
+    "Moderation model": "審核模型",
+    "Defaults to omni-moderation-latest when blank.": "留空時使用 omni-moderation-latest。",
+    "Moderation API key": "審核 API 金鑰",
+    "The key is write-only and is never shown after saving.": "金鑰僅可寫入，儲存後不會顯示。",
+    "Moderation alert email": "審核告警信箱",
+    "Optional alert recipient": "可選的告警收件信箱",
+    "Receive an email after repeated moderation upstream failures.": "審核上游連續失敗後接收電子郵件通知。",
+    "Moderation alert threshold": "審核告警閾值",
+    "Failures within 30 minutes before an alert is sent.": "30 分鐘內達到此失敗次數後發送告警。",
+    "Moderation cache TTL": "審核快取時間",
+    "Seconds to reuse a successful moderation result.": "成功審核結果的重用時間（秒）。"
   }
 }

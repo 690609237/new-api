@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { ModerationSection } from '../request-limits/moderation-section'
 import { RateLimitSection } from '../request-limits/rate-limit-section'
 import { SensitiveWordsSection } from '../request-limits/sensitive-words-section'
 import { SSRFSection } from '../request-limits/ssrf-section'
@@ -50,6 +51,24 @@ const SECURITY_SECTIONS = [
           CheckSensitiveEnabled: settings.CheckSensitiveEnabled,
           CheckSensitiveOnPromptEnabled: settings.CheckSensitiveOnPromptEnabled,
           SensitiveWords: settings.SensitiveWords,
+        }}
+      />
+    ),
+  },
+  {
+    id: 'moderation',
+    titleKey: 'Content Moderation',
+    build: (settings: SecuritySettings) => (
+      <ModerationSection
+        defaultValues={{
+          ModerationEnabled: settings.ModerationEnabled,
+          ModerationBeforeChannel: settings.ModerationBeforeChannel,
+          ModerationBaseURL: settings.ModerationBaseURL,
+          ModerationAPIKey: settings.ModerationAPIKey,
+          ModerationModel: settings.ModerationModel,
+          ModerationAlertEmail: settings.ModerationAlertEmail,
+          ModerationAlertThreshold: settings.ModerationAlertThreshold,
+          ModerationCacheTTLSeconds: settings.ModerationCacheTTLSeconds,
         }}
       />
     ),
