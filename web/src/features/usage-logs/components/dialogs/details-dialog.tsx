@@ -527,6 +527,7 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const showAdminIp =
     !!props.log.ip && (showTiming || (props.isAdmin && isTopup))
   const adminInfo = other?.admin_info
+  const moderationAudit = props.isAdmin ? adminInfo?.moderation : undefined
   const topupAuditFields =
     isTopup && props.isAdmin && adminInfo
       ? ([
@@ -1037,6 +1038,43 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 }
                 mono
               />
+            )}
+          </DetailSection>
+        )}
+
+        {moderationAudit && (
+          <DetailSection
+            icon={<AlertTriangle className='size-3.5' aria-hidden='true' />}
+            iconTone='destructive'
+            label={t('Moderation Audit')}
+          >
+            <DetailRow
+              label={t('Decision')}
+              value={
+                <StatusBadge
+                  label={moderationAudit.flagged ? t('Flagged') : t('Allowed')}
+                  variant={moderationAudit.flagged ? 'red' : 'green'}
+                  size='sm'
+                  copyable={false}
+                />
+              }
+            />
+            {moderationAudit.model && (
+              <DetailRow
+                label={t('Moderation model')}
+                value={moderationAudit.model}
+                mono
+              />
+            )}
+            {moderationAudit.prompt && (
+              <div className='space-y-1.5'>
+                <Label className='text-xs font-semibold'>
+                  {t('Submitted content')}
+                </Label>
+                <pre className='bg-background/60 max-h-64 overflow-y-auto rounded border p-2.5 font-mono text-xs leading-relaxed wrap-break-word whitespace-pre-wrap'>
+                  {moderationAudit.prompt}
+                </pre>
+              </div>
             )}
           </DetailSection>
         )}

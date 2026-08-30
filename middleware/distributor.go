@@ -287,6 +287,14 @@ func runPreChannelModeration(c *gin.Context) bool {
 	if !setting.ShouldModeratePrompt() {
 		return true
 	}
+	moderationGroup := c.GetString("user_group")
+	if moderationGroup == "" {
+		moderationGroup = c.GetString("group")
+	}
+	if !setting.ShouldModeratePromptForUser(c.GetInt("id"), moderationGroup) {
+		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
+		return true
+	}
 	prompt := service.ExtractLatestUserMessageForModeration(request)
 	if strings.TrimSpace(prompt) == "" {
 		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
@@ -302,6 +310,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 	}
 	common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 	if flagged {
+		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), flagged)
 		count, limit, banned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 		abortWithOpenAiMessage(c, http.StatusBadRequest, service.ModerationViolationMessage(count, limit, banned), types.ErrorCodePromptBlocked)
 		return false

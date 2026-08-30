@@ -69,6 +69,9 @@ const SECURITY_SECTIONS = [
           ModerationAlertEmail: settings.ModerationAlertEmail,
           ModerationAlertThreshold: settings.ModerationAlertThreshold,
           ModerationCacheTTLSeconds: settings.ModerationCacheTTLSeconds,
+          ModerationExemptUserIDs: settings.ModerationExemptUserIDs,
+          ModerationExemptGroups: settings.ModerationExemptGroups,
+          ModerationSampleRate: settings.ModerationSampleRate,
         }}
       />
     ),

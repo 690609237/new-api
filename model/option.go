@@ -184,6 +184,9 @@ func InitOptionMap() {
 	common.OptionMap["ModerationAlertThreshold"] = strconv.Itoa(setting.ModerationAlertThreshold())
 	common.OptionMap["ModerationCacheTTLSeconds"] = strconv.Itoa(int(setting.ModerationCacheTTL().Seconds()))
 	common.OptionMap["ModerationBeforeChannel"] = strconv.FormatBool(setting.ShouldModerateBeforeChannel())
+	common.OptionMap["ModerationExemptUserIDs"] = setting.ModerationExemptUserIDs()
+	common.OptionMap["ModerationExemptGroups"] = setting.ModerationExemptGroups()
+	common.OptionMap["ModerationSampleRate"] = strconv.Itoa(setting.ModerationSampleRate())
 	common.OptionMap["DemoSiteEnabled"] = strconv.FormatBool(operation_setting.DemoSiteEnabled)
 	common.OptionMap["SelfUseModeEnabled"] = strconv.FormatBool(operation_setting.SelfUseModeEnabled)
 	common.OptionMap["ModelRequestRateLimitEnabled"] = strconv.FormatBool(setting.ModelRequestRateLimitEnabled)
@@ -244,6 +247,12 @@ func validateOptionValue(key string, value string) error {
 		}
 		if key == "ModerationCacheTTLSeconds" && parsed > 86400 {
 			return fmt.Errorf("%s exceeds the maximum allowed value", key)
+		}
+	}
+	if key == "ModerationSampleRate" {
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || parsed < 0 || parsed > 100 {
+			return fmt.Errorf("%s must be between 0 and 100", key)
 		}
 	}
 	return nil

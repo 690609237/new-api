@@ -360,7 +360,7 @@
     "Allow users to sign in with WeChat": "允许用户使用微信登录",
     "Allow using models without price configuration": "允许使用未配置价格的模型",
     "Allow wallet balance after quota used up": "额度用尽后允许使用钱包余额",
-    "Allowed": "允许",
+    "Allowed": "通过",
     "Allowed hosts": "允许访问的主机",
     "Allowed Origins": "允许的 Origins",
     "Allowed Ports": "允许的端口",
@@ -5603,6 +5603,18 @@
     "Moderation alert threshold": "审核告警阈值",
     "Failures within 30 minutes before an alert is sent.": "30 分钟内达到此失败次数后发送告警。",
     "Moderation cache TTL": "审核缓存时长",
-    "Seconds to reuse a successful moderation result.": "成功审核结果的复用时长（秒）。"
+    "Seconds to reuse a successful moderation result.": "成功审核结果的复用时长（秒）。",
+    "Moderation sample rate": "审核采样比例",
+    "Percentage of non-exempt users selected for moderation. 100% checks everyone.": "未豁免用户中参与审核的比例，100% 表示全部审核。",
+    "Exempt user IDs": "豁免用户 ID",
+    "One user ID per line": "每行一个用户 ID",
+    "These users bypass moderation. Commas and line breaks are supported.": "这些用户会跳过审核，支持使用逗号或换行分隔。",
+    "Exempt user groups": "豁免用户组",
+    "One group per line": "每行一个用户组",
+    "Users in these groups bypass moderation. Matching is case-insensitive.": "这些用户组中的用户会跳过审核，匹配不区分大小写。",
+    "Moderation Audit": "审核追溯",
+    "Decision": "审核结果",
+    "Flagged": "违规",
+    "Submitted content": "送审内容"
   }
 }

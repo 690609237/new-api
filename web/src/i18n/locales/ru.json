@@ -5603,6 +5603,18 @@
     "Moderation alert threshold": "Порог оповещения модерации",
     "Failures within 30 minutes before an alert is sent.": "Число сбоев за 30 минут до отправки оповещения.",
     "Moderation cache TTL": "TTL кэша модерации",
-    "Seconds to reuse a successful moderation result.": "Количество секунд для повторного использования успешного результата."
+    "Seconds to reuse a successful moderation result.": "Количество секунд для повторного использования успешного результата.",
+    "Moderation sample rate": "Доля выборочной модерации",
+    "Percentage of non-exempt users selected for moderation. 100% checks everyone.": "Процент пользователей без исключений, выбранных для модерации. 100% проверяет всех.",
+    "Exempt user IDs": "Идентификаторы исключённых пользователей",
+    "One user ID per line": "Один ID пользователя в строке",
+    "These users bypass moderation. Commas and line breaks are supported.": "Эти пользователи пропускают модерацию. Поддерживаются запятые и переносы строк.",
+    "Exempt user groups": "Исключённые группы пользователей",
+    "One group per line": "Одна группа в строке",
+    "Users in these groups bypass moderation. Matching is case-insensitive.": "Пользователи этих групп пропускают модерацию. Регистр не учитывается.",
+    "Moderation Audit": "Аудит модерации",
+    "Decision": "Решение",
+    "Flagged": "Нарушение",
+    "Submitted content": "Отправленное содержимое"
   }
 }

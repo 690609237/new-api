@@ -131,7 +131,13 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	logger.LogUserMessage(c.GetString("username"), service.ExtractUserMessageForLog(c, request))
 
 	relayMode := relayconstant.Path2RelayMode(c.Request.URL.Path)
-	needModeration := setting.ShouldModeratePrompt() && relayMode != relayconstant.RelayModeModerations
+	moderationGroup := c.GetString("user_group")
+	if moderationGroup == "" {
+		moderationGroup = c.GetString("group")
+	}
+	needModeration := setting.ShouldModeratePrompt() &&
+		setting.ShouldModeratePromptForUser(c.GetInt("id"), moderationGroup) &&
+		relayMode != relayconstant.RelayModeModerations
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
 	needCountToken := constant.CountToken
 	// Avoid building huge CombineText (strings.Join) when token counting,
@@ -171,6 +177,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			}
 		}
 		if flagged {
+			model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), flagged)
 			violationCount, violationLimit, accountBanned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 			newAPIError = types.NewErrorWithStatusCode(
 				errors.New(service.ModerationViolationMessage(violationCount, violationLimit, accountBanned)),

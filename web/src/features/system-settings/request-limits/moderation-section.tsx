@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 
 import {
   SettingsForm,
@@ -58,6 +59,9 @@ const createModerationSchema = (t: (key: string) => string) =>
       ),
     ModerationAlertThreshold: z.number().int().min(1).max(1000000),
     ModerationCacheTTLSeconds: z.number().int().min(1).max(86400),
+    ModerationExemptUserIDs: z.string(),
+    ModerationExemptGroups: z.string(),
+    ModerationSampleRate: z.number().int().min(0).max(100),
   })
 
 type ModerationFormValues = z.infer<ReturnType<typeof createModerationSchema>>
@@ -274,6 +278,83 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                   </FormControl>
                   <FormDescription>
                     {t('Seconds to reuse a successful moderation result.')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='ModerationSampleRate'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Moderation sample rate')}</FormLabel>
+                  <FormControl>
+                    <div className='flex items-center gap-2'>
+                      <Input
+                        type='number'
+                        min={0}
+                        max={100}
+                        step={1}
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(Number.parseInt(e.target.value) || 0)
+                        }
+                      />
+                      <span className='text-muted-foreground text-sm'>%</span>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Percentage of non-exempt users selected for moderation. 100% checks everyone.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className='grid gap-4 md:grid-cols-2'>
+            <FormField
+              control={form.control}
+              name='ModerationExemptUserIDs'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Exempt user IDs')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder={t('One user ID per line')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'These users bypass moderation. Commas and line breaks are supported.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='ModerationExemptGroups'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Exempt user groups')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder={t('One group per line')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Users in these groups bypass moderation. Matching is case-insensitive.'
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

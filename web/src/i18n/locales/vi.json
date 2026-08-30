@@ -360,7 +360,7 @@
     "Allow users to sign in with WeChat": "Cho phép người dùng đăng nhập bằng WeChat",
     "Allow using models without price configuration": "Cho phép sử dụng mô hình không có cấu hình giá",
     "Allow wallet balance after quota used up": "Cho phép dùng số dư ví sau khi dùng hết hạn ngạch",
-    "Allowed": "Cho phép",
+    "Allowed": "Được phép",
     "Allowed hosts": "Máy chủ được phép",
     "Allowed Origins": "Nguồn gốc được phép",
     "Allowed Ports": "Cổng được phép",
@@ -5603,6 +5603,18 @@
     "Moderation alert threshold": "Ngưỡng cảnh báo kiểm duyệt",
     "Failures within 30 minutes before an alert is sent.": "Số lần thất bại trong 30 phút trước khi gửi cảnh báo.",
     "Moderation cache TTL": "TTL bộ nhớ đệm kiểm duyệt",
-    "Seconds to reuse a successful moderation result.": "Số giây tái sử dụng kết quả kiểm duyệt thành công."
+    "Seconds to reuse a successful moderation result.": "Số giây tái sử dụng kết quả kiểm duyệt thành công.",
+    "Moderation sample rate": "Tỷ lệ lấy mẫu kiểm duyệt",
+    "Percentage of non-exempt users selected for moderation. 100% checks everyone.": "Tỷ lệ người dùng không được miễn kiểm duyệt sẽ được chọn. 100% là kiểm tra tất cả.",
+    "Exempt user IDs": "ID người dùng được miễn",
+    "One user ID per line": "Mỗi dòng một ID người dùng",
+    "These users bypass moderation. Commas and line breaks are supported.": "Những người dùng này sẽ bỏ qua kiểm duyệt. Hỗ trợ dấu phẩy và xuống dòng.",
+    "Exempt user groups": "Nhóm người dùng được miễn",
+    "One group per line": "Mỗi dòng một nhóm",
+    "Users in these groups bypass moderation. Matching is case-insensitive.": "Người dùng trong các nhóm này sẽ bỏ qua kiểm duyệt. Không phân biệt hoa thường.",
+    "Moderation Audit": "Kiểm tra kiểm duyệt",
+    "Decision": "Kết quả",
+    "Flagged": "Vi phạm",
+    "Submitted content": "Nội dung đã gửi"
   }
 }

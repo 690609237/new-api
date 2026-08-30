@@ -54,6 +54,22 @@ const newKeys = {
     'Moderation cache TTL': 'Moderation cache TTL',
     'Seconds to reuse a successful moderation result.':
       'Seconds to reuse a successful moderation result.',
+    'Moderation sample rate': 'Moderation sample rate',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      'Percentage of non-exempt users selected for moderation. 100% checks everyone.',
+    'Exempt user IDs': 'Exempt user IDs',
+    'One user ID per line': 'One user ID per line',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      'These users bypass moderation. Commas and line breaks are supported.',
+    'Exempt user groups': 'Exempt user groups',
+    'One group per line': 'One group per line',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      'Users in these groups bypass moderation. Matching is case-insensitive.',
+    'Moderation Audit': 'Moderation Audit',
+    Decision: 'Decision',
+    Flagged: 'Flagged',
+    Allowed: 'Allowed',
+    'Submitted content': 'Submitted content',
   },
   zh: {
     'Content Moderation': '内容审核',
@@ -83,6 +99,22 @@ const newKeys = {
     'Moderation cache TTL': '审核缓存时长',
     'Seconds to reuse a successful moderation result.':
       '成功审核结果的复用时长（秒）。',
+    'Moderation sample rate': '审核采样比例',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      '未豁免用户中参与审核的比例，100% 表示全部审核。',
+    'Exempt user IDs': '豁免用户 ID',
+    'One user ID per line': '每行一个用户 ID',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      '这些用户会跳过审核，支持使用逗号或换行分隔。',
+    'Exempt user groups': '豁免用户组',
+    'One group per line': '每行一个用户组',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      '这些用户组中的用户会跳过审核，匹配不区分大小写。',
+    'Moderation Audit': '审核追溯',
+    Decision: '审核结果',
+    Flagged: '违规',
+    Allowed: '通过',
+    'Submitted content': '送审内容',
   },
   'zh-TW': {
     'Content Moderation': '內容審核',
@@ -112,6 +144,22 @@ const newKeys = {
     'Moderation cache TTL': '審核快取時間',
     'Seconds to reuse a successful moderation result.':
       '成功審核結果的重用時間（秒）。',
+    'Moderation sample rate': '審核採樣比例',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      '未豁免使用者中參與審核的比例，100% 表示全部審核。',
+    'Exempt user IDs': '豁免使用者 ID',
+    'One user ID per line': '每行一個使用者 ID',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      '這些使用者會跳過審核，支援使用逗號或換行分隔。',
+    'Exempt user groups': '豁免使用者群組',
+    'One group per line': '每行一個使用者群組',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      '這些使用者群組中的使用者會跳過審核，匹配不分大小寫。',
+    'Moderation Audit': '審核追溯',
+    Decision: '審核結果',
+    Flagged: '違規',
+    Allowed: '通過',
+    'Submitted content': '送審內容',
   },
   fr: {
     'Content Moderation': 'Modération du contenu',
@@ -141,6 +189,22 @@ const newKeys = {
     'Moderation cache TTL': 'TTL du cache de modération',
     'Seconds to reuse a successful moderation result.':
       'Nombre de secondes pendant lesquelles un résultat réussi est réutilisé.',
+    'Moderation sample rate': 'Taux d’échantillonnage de la modération',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      'Pourcentage des utilisateurs non exemptés soumis à la modération. 100 % vérifie tout le monde.',
+    'Exempt user IDs': 'IDs utilisateur exemptés',
+    'One user ID per line': 'Un ID utilisateur par ligne',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      'Ces utilisateurs contournent la modération. Les virgules et retours à la ligne sont acceptés.',
+    'Exempt user groups': 'Groupes utilisateur exemptés',
+    'One group per line': 'Un groupe par ligne',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      'Les utilisateurs de ces groupes contournent la modération. La correspondance ignore la casse.',
+    'Moderation Audit': 'Audit de modération',
+    Decision: 'Décision',
+    Flagged: 'Signalé',
+    Allowed: 'Autorisé',
+    'Submitted content': 'Contenu soumis',
   },
   ja: {
     'Content Moderation': 'コンテンツモデレーション',
@@ -170,6 +234,22 @@ const newKeys = {
     'Moderation cache TTL': 'モデレーションキャッシュ TTL',
     'Seconds to reuse a successful moderation result.':
       '成功したモデレーション結果を再利用する秒数です。',
+    'Moderation sample rate': 'モデレーションサンプル率',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      '除外されていないユーザーのうちモデレーション対象にする割合です。100% は全員を検査します。',
+    'Exempt user IDs': '除外するユーザー ID',
+    'One user ID per line': '1 行に 1 つのユーザー ID',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      'これらのユーザーはモデレーションを回避します。カンマと改行に対応しています。',
+    'Exempt user groups': '除外するユーザーグループ',
+    'One group per line': '1 行に 1 つのグループ',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      'これらのグループのユーザーはモデレーションを回避します。大文字と小文字は区別しません。',
+    'Moderation Audit': 'モデレーション監査',
+    Decision: '判定',
+    Flagged: '違反',
+    Allowed: '許可',
+    'Submitted content': '送信内容',
   },
   ru: {
     'Content Moderation': 'Модерация контента',
@@ -199,6 +279,22 @@ const newKeys = {
     'Moderation cache TTL': 'TTL кэша модерации',
     'Seconds to reuse a successful moderation result.':
       'Количество секунд для повторного использования успешного результата.',
+    'Moderation sample rate': 'Доля выборочной модерации',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      'Процент пользователей без исключений, выбранных для модерации. 100% проверяет всех.',
+    'Exempt user IDs': 'Идентификаторы исключённых пользователей',
+    'One user ID per line': 'Один ID пользователя в строке',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      'Эти пользователи пропускают модерацию. Поддерживаются запятые и переносы строк.',
+    'Exempt user groups': 'Исключённые группы пользователей',
+    'One group per line': 'Одна группа в строке',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      'Пользователи этих групп пропускают модерацию. Регистр не учитывается.',
+    'Moderation Audit': 'Аудит модерации',
+    Decision: 'Решение',
+    Flagged: 'Нарушение',
+    Allowed: 'Разрешено',
+    'Submitted content': 'Отправленное содержимое',
   },
   vi: {
     'Content Moderation': 'Kiểm duyệt nội dung',
@@ -228,6 +324,22 @@ const newKeys = {
     'Moderation cache TTL': 'TTL bộ nhớ đệm kiểm duyệt',
     'Seconds to reuse a successful moderation result.':
       'Số giây tái sử dụng kết quả kiểm duyệt thành công.',
+    'Moderation sample rate': 'Tỷ lệ lấy mẫu kiểm duyệt',
+    'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
+      'Tỷ lệ người dùng không được miễn kiểm duyệt sẽ được chọn. 100% là kiểm tra tất cả.',
+    'Exempt user IDs': 'ID người dùng được miễn',
+    'One user ID per line': 'Mỗi dòng một ID người dùng',
+    'These users bypass moderation. Commas and line breaks are supported.':
+      'Những người dùng này sẽ bỏ qua kiểm duyệt. Hỗ trợ dấu phẩy và xuống dòng.',
+    'Exempt user groups': 'Nhóm người dùng được miễn',
+    'One group per line': 'Mỗi dòng một nhóm',
+    'Users in these groups bypass moderation. Matching is case-insensitive.':
+      'Người dùng trong các nhóm này sẽ bỏ qua kiểm duyệt. Không phân biệt hoa thường.',
+    'Moderation Audit': 'Kiểm tra kiểm duyệt',
+    Decision: 'Kết quả',
+    Flagged: 'Vi phạm',
+    Allowed: 'Được phép',
+    'Submitted content': 'Nội dung đã gửi',
   },
 }
 

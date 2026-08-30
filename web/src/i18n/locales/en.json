@@ -5603,6 +5603,18 @@
     "Moderation alert threshold": "Moderation alert threshold",
     "Failures within 30 minutes before an alert is sent.": "Failures within 30 minutes before an alert is sent.",
     "Moderation cache TTL": "Moderation cache TTL",
-    "Seconds to reuse a successful moderation result.": "Seconds to reuse a successful moderation result."
+    "Seconds to reuse a successful moderation result.": "Seconds to reuse a successful moderation result.",
+    "Moderation sample rate": "Moderation sample rate",
+    "Percentage of non-exempt users selected for moderation. 100% checks everyone.": "Percentage of non-exempt users selected for moderation. 100% checks everyone.",
+    "Exempt user IDs": "Exempt user IDs",
+    "One user ID per line": "One user ID per line",
+    "These users bypass moderation. Commas and line breaks are supported.": "These users bypass moderation. Commas and line breaks are supported.",
+    "Exempt user groups": "Exempt user groups",
+    "One group per line": "One group per line",
+    "Users in these groups bypass moderation. Matching is case-insensitive.": "Users in these groups bypass moderation. Matching is case-insensitive.",
+    "Moderation Audit": "Moderation Audit",
+    "Decision": "Decision",
+    "Flagged": "Flagged",
+    "Submitted content": "Submitted content"
   }
 }

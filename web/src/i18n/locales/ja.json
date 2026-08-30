@@ -5603,6 +5603,18 @@
     "Moderation alert threshold": "モデレーションアラートしきい値",
     "Failures within 30 minutes before an alert is sent.": "アラートを送信するまでの 30 分間の失敗回数です。",
     "Moderation cache TTL": "モデレーションキャッシュ TTL",
-    "Seconds to reuse a successful moderation result.": "成功したモデレーション結果を再利用する秒数です。"
+    "Seconds to reuse a successful moderation result.": "成功したモデレーション結果を再利用する秒数です。",
+    "Moderation sample rate": "モデレーションサンプル率",
+    "Percentage of non-exempt users selected for moderation. 100% checks everyone.": "除外されていないユーザーのうちモデレーション対象にする割合です。100% は全員を検査します。",
+    "Exempt user IDs": "除外するユーザー ID",
+    "One user ID per line": "1 行に 1 つのユーザー ID",
+    "These users bypass moderation. Commas and line breaks are supported.": "これらのユーザーはモデレーションを回避します。カンマと改行に対応しています。",
+    "Exempt user groups": "除外するユーザーグループ",
+    "One group per line": "1 行に 1 つのグループ",
+    "Users in these groups bypass moderation. Matching is case-insensitive.": "これらのグループのユーザーはモデレーションを回避します。大文字と小文字は区別しません。",
+    "Moderation Audit": "モデレーション監査",
+    "Decision": "判定",
+    "Flagged": "違反",
+    "Submitted content": "送信内容"
   }
 }

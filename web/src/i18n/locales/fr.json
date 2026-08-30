@@ -5603,6 +5603,18 @@
     "Moderation alert threshold": "Seuil d’alerte de modération",
     "Failures within 30 minutes before an alert is sent.": "Nombre d’échecs en 30 minutes avant l’envoi d’une alerte.",
     "Moderation cache TTL": "TTL du cache de modération",
-    "Seconds to reuse a successful moderation result.": "Nombre de secondes pendant lesquelles un résultat réussi est réutilisé."
+    "Seconds to reuse a successful moderation result.": "Nombre de secondes pendant lesquelles un résultat réussi est réutilisé.",
+    "Moderation sample rate": "Taux d’échantillonnage de la modération",
+    "Percentage of non-exempt users selected for moderation. 100% checks everyone.": "Pourcentage des utilisateurs non exemptés soumis à la modération. 100 % vérifie tout le monde.",
+    "Exempt user IDs": "IDs utilisateur exemptés",
+    "One user ID per line": "Un ID utilisateur par ligne",
+    "These users bypass moderation. Commas and line breaks are supported.": "Ces utilisateurs contournent la modération. Les virgules et retours à la ligne sont acceptés.",
+    "Exempt user groups": "Groupes utilisateur exemptés",
+    "One group per line": "Un groupe par ligne",
+    "Users in these groups bypass moderation. Matching is case-insensitive.": "Les utilisateurs de ces groupes contournent la modération. La correspondance ignore la casse.",
+    "Moderation Audit": "Audit de modération",
+    "Decision": "Décision",
+    "Flagged": "Signalé",
+    "Submitted content": "Contenu soumis"
   }
 }

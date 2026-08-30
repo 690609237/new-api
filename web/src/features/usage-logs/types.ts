@@ -143,6 +143,12 @@ export interface LogOtherData {
       clamped: number
     }
     task_plugin?: TaskPluginInfo
+    // Content moderation decision and submitted prompt (admin only).
+    moderation?: {
+      prompt?: string
+      flagged?: boolean
+      model?: string
+    }
   }
   root_info?: {
     task_plugin?: TaskPluginRuntimeInfo

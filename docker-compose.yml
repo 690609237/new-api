@@ -49,6 +49,9 @@ services:
       - MODERATION_CACHE_TTL_SECONDS=600  # 相同输入的审核成功结果缓存时间（秒）
       - MODERATION_ALERT_EMAIL=you@example.com  # 审核接口失败告警邮件接收地址
       - MODERATION_ALERT_THRESHOLD=10  # 30 分钟窗口内触发告警的失败次数阈值
+      - MODERATION_SAMPLE_RATE=100  # 非豁免用户的审核采样比例（0-100）
+      - MODERATION_EXEMPT_USER_IDS=  # 免审核用户 ID，支持逗号或换行分隔
+      - MODERATION_EXEMPT_GROUPS=  # 免审核用户组，支持逗号或换行分隔（不区分大小写）
 #      - STREAMING_TIMEOUT=300  # 流模式无响应超时时间，单位秒，默认120秒，如果出现空补全可以尝试改为更大值 （Streaming timeout in seconds, default is 120s. Increase if experiencing empty completions）
 #      - RELAY_IDLE_CONN_TIMEOUT=90  # Relay HTTP 客户端空闲连接超时时间，单位秒，默认跟随 Go 标准库，设置为0表示不限制 (Relay HTTP client idle keep-alive timeout in seconds, defaults to Go standard library; set 0 to disable)
 #      - SESSION_SECRET=random_string  # 多机部署时设置，必须修改这个随机字符串！！ （multi-node deployment, set this to a random string!!!!!!!）
