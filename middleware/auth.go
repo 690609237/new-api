@@ -497,8 +497,21 @@ func TokenAuth() func(c *gin.Context) {
 					}
 				}
 			} else if _, ok := service.GetUserUsableGroups(userGroup)[tokenGroup]; !ok {
-				abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("无权访问 %s 分组", tokenGroup))
-				return
+				// Tokens created before subscription_group was introduced only
+				// persisted the subscription group in token.Group. Preserve their
+				// access while the entitlement is active and supply the missing
+				// binding to downstream billing for this request.
+				active, subErr := model.HasActiveUserSubscriptionGroup(token.UserId, tokenGroup)
+				if subErr != nil {
+					common.SysLog(fmt.Sprintf("TokenAuth legacy subscription group lookup error for user %d: %v", token.UserId, subErr))
+					abortWithOpenAiMessage(c, http.StatusInternalServerError, common.TranslateMessage(c, i18n.MsgDatabaseError))
+					return
+				}
+				if !active {
+					abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("无权访问 %s 分组", tokenGroup))
+					return
+				}
+				token.SubscriptionGroup = tokenGroup
 			}
 			// check group in common.GroupRatio
 			if tokenGroup != "" && !ratio_setting.ContainsGroupRatio(tokenGroup) {
