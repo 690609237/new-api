@@ -300,7 +300,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 		return true
 	}
-	flagged, moderationErr := service.ModeratePrompt(c.Request.Context(), prompt)
+	flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), prompt)
 	if moderationErr != nil {
 		service.RecordModerationAlert(c.Request.Context(), moderationErr)
 		if !service.ShouldSkipModerationError(moderationErr) {
@@ -310,7 +310,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 	}
 	common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 	if flagged {
-		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), flagged)
+		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), flagged, string(moderationSource))
 		count, limit, banned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 		abortWithOpenAiMessage(c, http.StatusBadRequest, service.ModerationViolationMessage(count, limit, banned), types.ErrorCodePromptBlocked)
 		return false

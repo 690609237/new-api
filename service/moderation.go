@@ -20,6 +20,15 @@ import (
 
 const moderationCacheNamespace = "new-api:moderation:v1"
 
+// ModerationResultSource identifies whether a moderation decision came from
+// the configured upstream API or a previously cached result.
+type ModerationResultSource string
+
+const (
+	ModerationResultSourceAPI   ModerationResultSource = "api"
+	ModerationResultSourceCache ModerationResultSource = "cache"
+)
+
 var (
 	moderationCacheOnce sync.Once
 	moderationCache     *cachex.HybridCache[bool]
@@ -112,15 +121,20 @@ func moderationCacheKey(prompt string) string {
 // ModeratePrompt checks the normalized prompt before any model request is
 // sent. The caller must decide whether a flagged prompt should be rejected.
 func ModeratePrompt(ctx context.Context, prompt string) (bool, error) {
+	flagged, _, err := ModeratePromptWithSource(ctx, prompt)
+	return flagged, err
+}
+
+func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, ModerationResultSource, error) {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
-		return false, nil
+		return false, ModerationResultSourceAPI, nil
 	}
 	baseURL := strings.TrimRight(strings.TrimSpace(setting.ModerationBaseURL()), "/")
 	apiKey := strings.TrimSpace(setting.ModerationAPIKey())
 	model := strings.TrimSpace(setting.ModerationModel())
 	if baseURL == "" || apiKey == "" {
-		return false, fmt.Errorf("moderation is enabled but base URL or API key is not configured")
+		return false, ModerationResultSourceAPI, fmt.Errorf("moderation is enabled but base URL or API key is not configured")
 	}
 
 	cache := getModerationCache()
@@ -128,7 +142,7 @@ func ModeratePrompt(ctx context.Context, prompt string) (bool, error) {
 	if flagged, found, err := cache.Get(cacheKey); err != nil {
 		common.SysError(fmt.Sprintf("moderation cache get failed: %v", err))
 	} else if found {
-		return flagged, nil
+		return flagged, ModerationResultSourceCache, nil
 	}
 
 	result, err, _ := moderationRequests.Do(cacheKey, func() (interface{}, error) {
@@ -181,11 +195,11 @@ func ModeratePrompt(ctx context.Context, prompt string) (bool, error) {
 		return flagged, nil
 	})
 	if err != nil {
-		return false, err
+		return false, ModerationResultSourceAPI, err
 	}
 	flagged, ok := result.(bool)
 	if !ok {
-		return false, fmt.Errorf("moderation cache returned invalid result type %T", result)
+		return false, ModerationResultSourceAPI, fmt.Errorf("moderation cache returned invalid result type %T", result)
 	}
-	return flagged, nil
+	return flagged, ModerationResultSourceAPI, nil
 }

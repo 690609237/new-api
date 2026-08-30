@@ -5615,6 +5615,9 @@
     "Moderation Audit": "审核追溯",
     "Decision": "审核结果",
     "Flagged": "违规",
-    "Submitted content": "送审内容"
+    "Submitted content": "送审内容",
+    "Result source": "结果来源",
+    "Cache hit": "命中缓存",
+    "API request": "调用审核接口"
   }
 }

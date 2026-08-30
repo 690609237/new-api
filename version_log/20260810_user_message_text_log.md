@@ -7,7 +7,7 @@
 ## 功能与设计
 
 - 消息日志使用独立的 `user-messages-*.jsonl` 文件，不写入 `oneapi-*.log` 主日志，也不提供前端或 API 查询入口。
-- 每行仅包含 `username`、`created_at`、`content` 三个字段；JSON 转义保证多行输入仍对应一条日志记录。
+- 每行包含 `username`、`token_name`、`created_at`、`content` 四个字段；JSON 转义保证多行输入仍对应一条日志记录。`token_name` 记录当前请求使用的令牌名称，便于同一用户拥有多个令牌时定位来源。
 - OpenAI、Claude、Gemini 和 Responses 请求仅在当前请求的最后一个会话项确实是用户文本时记录；助手续写、工具调用/结果回传等后续请求不会回溯并重复记录历史用户消息。补全、图片、音频、Embedding、Rerank 请求记录对应的最新文本输入。
 - 不记录历史上下文、系统提示词、助手回复、工具调用、图片、音频、文件及 Base64 数据。
 - Codex 请求会识别 `x-openai-subagent` 与 `x-codex-turn-metadata`（包括 Responses `client_metadata` 内的对应字段），跳过子 Agent、内容压缩、预热、记忆整理和自动化任务产生的提示文本。

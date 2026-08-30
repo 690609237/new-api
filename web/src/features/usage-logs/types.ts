@@ -148,6 +148,7 @@ export interface LogOtherData {
       prompt?: string
       flagged?: boolean
       model?: string
+      source?: 'api' | 'cache' | string
     }
   }
   root_info?: {

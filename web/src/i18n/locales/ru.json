@@ -5615,6 +5615,9 @@
     "Moderation Audit": "Аудит модерации",
     "Decision": "Решение",
     "Flagged": "Нарушение",
-    "Submitted content": "Отправленное содержимое"
+    "Submitted content": "Отправленное содержимое",
+    "Result source": "Источник результата",
+    "Cache hit": "Попадание в кэш",
+    "API request": "Запрос к API"
   }
 }

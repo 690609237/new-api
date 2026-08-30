@@ -1,4 +1,5 @@
 .idea
+.pnpm-store/
 docker-compose.yml
 .vscode
 .zed

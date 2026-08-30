@@ -1059,6 +1059,16 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 />
               }
             />
+            {moderationAudit.source && (
+              <DetailRow
+                label={t('Result source')}
+                value={
+                  moderationAudit.source === 'cache'
+                    ? t('Cache hit')
+                    : t('API request')
+                }
+              />
+            )}
             {moderationAudit.model && (
               <DetailRow
                 label={t('Moderation model')}

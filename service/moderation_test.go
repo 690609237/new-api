@@ -34,10 +34,11 @@ func TestModeratePromptSendsOmniModerationRequest(t *testing.T) {
 	t.Setenv("MODERATION_API_KEY", "test-key")
 	t.Setenv("MODERATION_MODEL", "omni-moderation-latest")
 
-	flagged, err := ModeratePrompt(context.Background(), "unsafe prompt")
+	flagged, source, err := ModeratePromptWithSource(context.Background(), "unsafe prompt")
 	require.NoError(t, err)
 	require.NoError(t, handlerErr)
 	require.True(t, flagged)
+	require.Equal(t, ModerationResultSourceAPI, source)
 	require.Equal(t, "Bearer test-key", gotAuth)
 	require.Equal(t, "omni-moderation-latest", gotBody.Model)
 	require.Equal(t, "unsafe prompt", gotBody.Input)
@@ -55,14 +56,16 @@ func TestModeratePromptReusesCachedResult(t *testing.T) {
 	t.Setenv("MODERATION_API_KEY", "test-key")
 	t.Setenv("MODERATION_CACHE_TTL_SECONDS", "600")
 
-	first, err := ModeratePrompt(context.Background(), "retry me")
+	first, firstSource, err := ModeratePromptWithSource(context.Background(), "retry me")
 	require.NoError(t, err)
-	second, err := ModeratePrompt(context.Background(), "  retry me  ")
+	second, secondSource, err := ModeratePromptWithSource(context.Background(), "  retry me  ")
 	require.NoError(t, err)
 	_, err = ModeratePrompt(context.Background(), "different prompt")
 	require.NoError(t, err)
 	require.False(t, first)
 	require.False(t, second)
+	require.Equal(t, ModerationResultSourceAPI, firstSource)
+	require.Equal(t, ModerationResultSourceCache, secondSource)
 	require.Equal(t, int32(2), calls.Load())
 }
 

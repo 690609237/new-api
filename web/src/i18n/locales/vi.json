@@ -5615,6 +5615,9 @@
     "Moderation Audit": "Kiểm tra kiểm duyệt",
     "Decision": "Kết quả",
     "Flagged": "Vi phạm",
-    "Submitted content": "Nội dung đã gửi"
+    "Submitted content": "Nội dung đã gửi",
+    "Result source": "Nguồn kết quả",
+    "Cache hit": "Trúng bộ nhớ đệm",
+    "API request": "Yêu cầu API"
   }
 }

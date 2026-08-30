@@ -5615,6 +5615,9 @@
     "Moderation Audit": "モデレーション監査",
     "Decision": "判定",
     "Flagged": "違反",
-    "Submitted content": "送信内容"
+    "Submitted content": "送信内容",
+    "Result source": "結果ソース",
+    "Cache hit": "キャッシュヒット",
+    "API request": "API リクエスト"
   }
 }

@@ -11,7 +11,7 @@ import (
 // RecordModerationLog stores a flagged moderation decision for administrator
 // review. The submitted prompt and result are nested under admin_info so
 // formatUserLogs removes them from non-admin log responses.
-func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel string, flagged bool) {
+func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel string, flagged bool, source ...string) {
 	if c == nil {
 		return
 	}
@@ -22,6 +22,9 @@ func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel str
 	}
 	if moderationModel != "" {
 		moderationInfo["model"] = moderationModel
+	}
+	if len(source) > 0 && source[0] != "" {
+		moderationInfo["source"] = source[0]
 	}
 	other := map[string]interface{}{
 		"admin_info": map[string]interface{}{

@@ -5615,6 +5615,9 @@
     "Moderation Audit": "審核追溯",
     "Decision": "審核結果",
     "Flagged": "違規",
-    "Submitted content": "送審內容"
+    "Submitted content": "送審內容",
+    "Result source": "結果來源",
+    "Cache hit": "命中快取",
+    "API request": "呼叫審核 API"
   }
 }

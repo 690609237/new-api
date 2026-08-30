@@ -128,7 +128,11 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
-	logger.LogUserMessage(c.GetString("username"), service.ExtractUserMessageForLog(c, request))
+	logger.LogUserMessageWithToken(
+		c.GetString("username"),
+		c.GetString("token_name"),
+		service.ExtractUserMessageForLog(c, request),
+	)
 
 	relayMode := relayconstant.Path2RelayMode(c.Request.URL.Path)
 	moderationGroup := c.GetString("user_group")
@@ -160,7 +164,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	if needModeration && meta != nil && !common.GetContextKeyBool(c, constant.ContextKeyModerationChecked) {
 		moderationText := service.ExtractLatestUserMessageForModeration(request)
-		flagged, moderationErr := service.ModeratePrompt(c.Request.Context(), moderationText)
+		flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), moderationText)
 		if moderationErr != nil {
 			logger.LogWarn(c, fmt.Sprintf("omni moderation request failed: %s", moderationErr.Error()))
 			service.RecordModerationAlert(c.Request.Context(), moderationErr)
@@ -177,7 +181,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			}
 		}
 		if flagged {
-			model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), flagged)
+			model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), flagged, string(moderationSource))
 			violationCount, violationLimit, accountBanned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 			newAPIError = types.NewErrorWithStatusCode(
 				errors.New(service.ModerationViolationMessage(violationCount, violationLimit, accountBanned)),

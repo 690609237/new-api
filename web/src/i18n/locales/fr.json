@@ -5615,6 +5615,9 @@
     "Moderation Audit": "Audit de modération",
     "Decision": "Décision",
     "Flagged": "Signalé",
-    "Submitted content": "Contenu soumis"
+    "Submitted content": "Contenu soumis",
+    "Result source": "Source du résultat",
+    "Cache hit": "Cache utilisé",
+    "API request": "Requête API"
   }
 }

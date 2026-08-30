@@ -27,9 +27,9 @@ func TestUserMessageLogWritesJSONLinesAndRotates(t *testing.T) {
 		now: func() time.Time { return now },
 	}
 
-	require.NoError(t, writer.write("alice", "first message with enough text to rotate the next entry"))
+	require.NoError(t, writer.writeWithToken("alice", "primary", "first message with enough text to rotate the next entry"))
 	now = now.Add(time.Second)
-	require.NoError(t, writer.write("bob", "second message with enough text to rotate into another file"))
+	require.NoError(t, writer.writeWithToken("bob", "backup", "second message with enough text to rotate into another file"))
 	require.NoError(t, writer.file.Close())
 	writer.file = nil
 
@@ -43,6 +43,7 @@ func TestUserMessageLogWritesJSONLinesAndRotates(t *testing.T) {
 	var entry userMessageLogEntry
 	require.NoError(t, common.Unmarshal(bytes.TrimSpace(firstFile), &entry))
 	assert.Equal(t, "alice", entry.Username)
+	assert.Equal(t, "primary", entry.TokenName)
 	assert.Equal(t, int64(1786363200), entry.CreatedAt)
 	assert.Equal(t, "first message with enough text to rotate the next entry", entry.Content)
 }
@@ -96,12 +97,13 @@ func TestUserMessageLogDeduplicatesRepeatedContentWithinWindow(t *testing.T) {
 	}
 
 	repeated := "the same user submission"
-	require.NoError(t, writer.write("alice", repeated))
+	require.NoError(t, writer.writeWithToken("alice", "primary", repeated))
 	now = now.Add(time.Second)
-	require.NoError(t, writer.write("alice", repeated))
-	require.NoError(t, writer.write("bob", repeated))
+	require.NoError(t, writer.writeWithToken("alice", "primary", repeated))
+	require.NoError(t, writer.writeWithToken("alice", "backup", repeated))
+	require.NoError(t, writer.writeWithToken("bob", "primary", repeated))
 	now = now.Add(time.Minute)
-	require.NoError(t, writer.write("alice", repeated))
+	require.NoError(t, writer.writeWithToken("alice", "primary", repeated))
 	require.NoError(t, writer.file.Close())
 	writer.file = nil
 

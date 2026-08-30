@@ -26,7 +26,7 @@ func TestRecordModerationLogKeepsPromptAdminOnly(t *testing.T) {
 	c.Set("group", "default")
 	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
 
-	RecordModerationLog(c, 7, "unsafe prompt", "omni-moderation-latest", true)
+	RecordModerationLog(c, 7, "unsafe prompt", "omni-moderation-latest", true, "cache")
 
 	var log Log
 	require.NoError(t, db.First(&log).Error)
@@ -42,6 +42,7 @@ func TestRecordModerationLogKeepsPromptAdminOnly(t *testing.T) {
 	require.Equal(t, "unsafe prompt", moderation["prompt"])
 	require.Equal(t, true, moderation["flagged"])
 	require.Equal(t, "omni-moderation-latest", moderation["model"])
+	require.Equal(t, "cache", moderation["source"])
 
 	formatUserLogs([]*Log{&log}, 0)
 	userOther, err := common.StrToMap(log.Other)

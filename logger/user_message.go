@@ -29,6 +29,7 @@ const (
 
 type userMessageLogEntry struct {
 	Username  string `json:"username"`
+	TokenName string `json:"token_name"`
 	CreatedAt int64  `json:"created_at"`
 	Content   string `json:"content"`
 }
@@ -120,16 +121,28 @@ func setupUserMessageLogger() {
 
 // LogUserMessage writes one JSON object per line to a dedicated text log.
 // Message content is intentionally kept out of the normal application log.
+// It is retained as a compatibility wrapper for callers that do not have a
+// token name available.
 func LogUserMessage(username string, content string) {
+	LogUserMessageWithToken(username, "", content)
+}
+
+// LogUserMessageWithToken writes a user message together with the token used
+// for the request.
+func LogUserMessageWithToken(username string, tokenName string, content string) {
 	if userMessageLogger == nil || strings.TrimSpace(content) == "" {
 		return
 	}
-	if err := userMessageLogger.write(username, content); err != nil {
+	if err := userMessageLogger.writeWithToken(username, tokenName, content); err != nil {
 		common.SysError("failed to write user message log: " + err.Error())
 	}
 }
 
 func (w *userMessageLogWriter) write(username string, content string) error {
+	return w.writeWithToken(username, "", content)
+}
+
+func (w *userMessageLogWriter) writeWithToken(username string, tokenName string, content string) error {
 	now := w.now()
 
 	w.mu.Lock()
@@ -160,6 +173,7 @@ func (w *userMessageLogWriter) write(username string, content string) error {
 
 	data, err := common.Marshal(userMessageLogEntry{
 		Username:  username,
+		TokenName: tokenName,
 		CreatedAt: now.Unix(),
 		Content:   content,
 	})
