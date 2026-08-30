@@ -50,13 +50,33 @@ func RecordModerationViolation(userID int) (*User, int, bool, error) {
 	return &user, user.ViolationCount, user.APIBlocked, nil
 }
 
-// UpdateViolationLimit changes the per-user automatic-ban threshold.
+// UpdateViolationLimit changes the per-user automatic-ban threshold and
+// reconciles the moderation block with the user's current violation count.
+// This lets an administrator lift a moderation block by raising the limit
+// above the current count, while lowering it to an already-reached count
+// applies the block immediately.
 func UpdateViolationLimit(userID, limit int) error {
 	if userID <= 0 || limit < 1 || limit > 100 {
 		return gorm.ErrInvalidData
 	}
-	if err := DB.Model(&User{}).Where("id = ?", userID).Update("violation_limit", limit).Error; err != nil {
+	var user User
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := lockForUpdate(tx).First(&user, userID).Error; err != nil {
+			return err
+		}
+		updates := map[string]interface{}{"violation_limit": limit}
+		// Only common users are automatically moderation-banned. Keep admin
+		// accounts' API block state under the explicit enable/disable controls.
+		if user.Role < common.RoleAdminUser {
+			updates["api_blocked"] = user.ViolationCount >= limit
+		}
+		return tx.Model(&User{}).Where("id = ?", userID).Updates(updates).Error
+	})
+	if err != nil {
 		return err
 	}
-	return PublishUserAuthCache(userID)
+	if err := PublishUserAuthCache(userID); err != nil {
+		return err
+	}
+	return nil
 }

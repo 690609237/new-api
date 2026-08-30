@@ -851,6 +851,12 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 		"group":        newUser.Group,
 		"remark":       newUser.Remark,
 	}
+	// ViolationLimit is optional for partial edits. Include it when supplied so
+	// administrator user updates can persist a changed moderation threshold,
+	// while an omitted (zero) value does not overwrite the existing setting.
+	if newUser.ViolationLimit > 0 {
+		updates["violation_limit"] = newUser.ViolationLimit
+	}
 	if updatePassword {
 		updates["password"] = newUser.Password
 	}
@@ -858,6 +864,9 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 	current := User{}
 	if err = tx.First(&current, user.Id).Error; err != nil {
 		return err
+	}
+	if newUser.ViolationLimit > 0 && newUser.ViolationLimit != current.ViolationLimit && current.Role < common.RoleAdminUser {
+		updates["api_blocked"] = current.ViolationCount >= newUser.ViolationLimit
 	}
 	authChanged := (updatePassword && current.Password != newUser.Password) || current.Group != newUser.Group
 	if authChanged {

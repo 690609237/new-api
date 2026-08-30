@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -87,6 +88,72 @@ func TestUserUpdateDoesNotOverwriteConcurrentAccountingOrTokenChanges(t *testing
 	assert.Equal(t, 300, got.AffQuota)
 	assert.Equal(t, 1700, got.AffHistoryQuota)
 	assert.Equal(t, "rotated-token", got.GetAccessToken())
+}
+
+func TestEditUserPersistsViolationLimit(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Id:             1,
+		Username:       "moderation-limit-user",
+		Password:       "password",
+		DisplayName:    "before",
+		Status:         common.UserStatusEnabled,
+		ViolationCount: 3,
+		ViolationLimit: 3,
+		APIBlocked:     true,
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	user.Username = "moderation-limit-user"
+	user.DisplayName = "after"
+	user.ViolationLimit = 7
+	require.NoError(t, user.Edit(false))
+
+	var got User
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Equal(t, "after", got.DisplayName)
+	assert.Equal(t, 7, got.ViolationLimit)
+	assert.False(t, got.APIBlocked)
+
+	// A partial edit that omits the optional field must preserve the setting.
+	user.DisplayName = "partial"
+	user.ViolationLimit = 0
+	require.NoError(t, user.Edit(false))
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Equal(t, "partial", got.DisplayName)
+	assert.Equal(t, 7, got.ViolationLimit)
+	assert.False(t, got.APIBlocked)
+}
+
+func TestUpdateViolationLimitReconcilesModerationBlock(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Id:                   1,
+		Username:             "moderation-reconcile-user",
+		Password:             "password",
+		Role:                 common.RoleCommonUser,
+		Status:               common.UserStatusEnabled,
+		ViolationCount:       3,
+		ViolationLimit:       3,
+		ViolationWindowStart: time.Now().Unix(),
+		APIBlocked:           true,
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	// Raising the threshold above the current count lifts the moderation block.
+	require.NoError(t, UpdateViolationLimit(user.Id, 5))
+	var got User
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Equal(t, 5, got.ViolationLimit)
+	assert.False(t, got.APIBlocked)
+
+	// Lowering it back to the reached count applies the block again.
+	require.NoError(t, UpdateViolationLimit(user.Id, 2))
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Equal(t, 2, got.ViolationLimit)
+	assert.True(t, got.APIBlocked)
 }
 
 func TestUsageAccountingSupportsSignedDirectAndBatchDeltas(t *testing.T) {
