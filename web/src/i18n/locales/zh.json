@@ -5618,6 +5618,9 @@
     "Submitted content": "送审内容",
     "Result source": "结果来源",
     "Cache hit": "命中缓存",
-    "API request": "调用审核接口"
+    "API request": "调用审核接口",
+    "Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com": "支持的邮箱类型有：gmail.com、163.com、126.com、qq.com、outlook.com、hotmail.com、icloud.com、yahoo.com、foxmail.com、yeah.net、aliyun.com、sina.com、sina.cn、sohu.com、tom.com、21cn.com",
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.": "如果收不到验证码，请检查邮件垃圾箱；如果仍然找不到，请联系作者。",
+    "Violation limit updated successfully": "违规限制更新成功"
   }
 }

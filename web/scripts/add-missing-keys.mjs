@@ -73,6 +73,12 @@ const newKeys = {
     Flagged: 'Flagged',
     Allowed: 'Allowed',
     'Submitted content': 'Submitted content',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.",
+    'Violation limit updated successfully':
+      'Violation limit updated successfully',
   },
   zh: {
     'Content Moderation': '内容审核',
@@ -121,6 +127,11 @@ const newKeys = {
     Flagged: '违规',
     Allowed: '通过',
     'Submitted content': '送审内容',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      '支持的邮箱类型有：gmail.com、163.com、126.com、qq.com、outlook.com、hotmail.com、icloud.com、yahoo.com、foxmail.com、yeah.net、aliyun.com、sina.com、sina.cn、sohu.com、tom.com、21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      '如果收不到验证码，请检查邮件垃圾箱；如果仍然找不到，请联系作者。',
+    'Violation limit updated successfully': '违规限制更新成功',
   },
   'zh-TW': {
     'Content Moderation': '內容審核',
@@ -169,6 +180,11 @@ const newKeys = {
     Flagged: '違規',
     Allowed: '通過',
     'Submitted content': '送審內容',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      '支援的電子郵件類型有：gmail.com、163.com、126.com、qq.com、outlook.com、hotmail.com、icloud.com、yahoo.com、foxmail.com、yeah.net、aliyun.com、sina.com、sina.cn、sohu.com、tom.com、21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      '如果收不到驗證碼，請檢查郵件垃圾箱；如果仍然找不到，請聯絡作者。',
+    'Violation limit updated successfully': '違規限制更新成功',
   },
   fr: {
     'Content Moderation': 'Modération du contenu',
@@ -217,6 +233,11 @@ const newKeys = {
     Flagged: 'Signalé',
     Allowed: 'Autorisé',
     'Submitted content': 'Contenu soumis',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      'Domaines e-mail pris en charge : gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      "Si vous ne recevez pas le code de vérification, vérifiez vos spams. Si vous ne le trouvez toujours pas, contactez l'auteur.",
+    'Violation limit updated successfully': 'Limite de violations mise à jour',
   },
   ja: {
     'Content Moderation': 'コンテンツモデレーション',
@@ -265,6 +286,11 @@ const newKeys = {
     Flagged: '違反',
     Allowed: '許可',
     'Submitted content': '送信内容',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      '対応しているメールドメイン：gmail.com、163.com、126.com、qq.com、outlook.com、hotmail.com、icloud.com、yahoo.com、foxmail.com、yeah.net、aliyun.com、sina.com、sina.cn、sohu.com、tom.com、21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      '認証コードが届かない場合は迷惑メールフォルダーを確認してください。それでも見つからない場合は作者にお問い合わせください。',
+    'Violation limit updated successfully': '違反上限を更新しました',
   },
   ru: {
     'Content Moderation': 'Модерация контента',
@@ -313,6 +339,11 @@ const newKeys = {
     Flagged: 'Нарушение',
     Allowed: 'Разрешено',
     'Submitted content': 'Отправленное содержимое',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      'Поддерживаемые почтовые домены: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      'Если вы не получили код подтверждения, проверьте папку «Спам». Если найти его не удалось, обратитесь к автору.',
+    'Violation limit updated successfully': 'Лимит нарушений обновлён',
   },
   vi: {
     'Content Moderation': 'Kiểm duyệt nội dung',
@@ -361,6 +392,11 @@ const newKeys = {
     Flagged: 'Vi phạm',
     Allowed: 'Được phép',
     'Submitted content': 'Nội dung đã gửi',
+    'Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com':
+      'Các miền email được hỗ trợ: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com',
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
+      'Nếu không nhận được mã xác minh, hãy kiểm tra thư mục spam. Nếu vẫn không tìm thấy, vui lòng liên hệ tác giả.',
+    'Violation limit updated successfully': 'Đã cập nhật giới hạn vi phạm',
   },
 }
 

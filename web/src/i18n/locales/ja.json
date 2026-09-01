@@ -5618,6 +5618,9 @@
     "Submitted content": "送信内容",
     "Result source": "結果ソース",
     "Cache hit": "キャッシュヒット",
-    "API request": "API リクエスト"
+    "API request": "API リクエスト",
+    "Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com": "対応しているメールドメイン：gmail.com、163.com、126.com、qq.com、outlook.com、hotmail.com、icloud.com、yahoo.com、foxmail.com、yeah.net、aliyun.com、sina.com、sina.cn、sohu.com、tom.com、21cn.com",
+    "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.": "認証コードが届かない場合は迷惑メールフォルダーを確認してください。それでも見つからない場合は作者にお問い合わせください。",
+    "Violation limit updated successfully": "違反上限を更新しました"
   }
 }
