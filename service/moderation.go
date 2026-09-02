@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -67,26 +65,10 @@ func (e *moderationStatusError) Error() string {
 }
 
 func ShouldSkipModerationError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	var transportErr *moderationTransportError
-	if errors.As(err, &transportErr) {
-		return true
-	}
-
-	var statusErr *moderationStatusError
-	if errors.As(err, &statusErr) {
-		return statusErr.statusCode == http.StatusTooManyRequests || statusErr.statusCode >= http.StatusInternalServerError
-	}
-
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return netErr.Timeout()
-	}
-
-	return false
+	// Moderation is deliberately fail-open: any upstream, transport, decode,
+	// or configuration failure must not block the user's model request. The
+	// caller records the error and the alert aggregator notifies operators.
+	return err != nil
 }
 
 func getModerationCache() *cachex.HybridCache[bool] {

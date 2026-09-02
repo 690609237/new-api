@@ -2,11 +2,14 @@ package model
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
@@ -49,4 +52,11 @@ func TestRecordModerationLogKeepsPromptAdminOnly(t *testing.T) {
 	require.NoError(t, err)
 	_, hasAdminInfo := userOther["admin_info"]
 	require.False(t, hasAdminInfo)
+}
+
+func TestModerationLogTruncatesLargePrompt(t *testing.T) {
+	prompt := strings.Repeat("敏感", moderationLogPromptMaxRunes)
+	got := moderationLogPrompt(prompt)
+	assert.LessOrEqual(t, utf8.RuneCountInString(got), moderationLogPromptMaxRunes+len("…[truncated]"))
+	assert.True(t, strings.HasSuffix(got, "…[truncated]"))
 }

@@ -2,11 +2,24 @@ package model
 
 import (
 	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/gin-gonic/gin"
 )
+
+const moderationLogPromptMaxRunes = 4096
+
+func moderationLogPrompt(prompt string) string {
+	prompt = strings.TrimSpace(prompt)
+	if utf8.RuneCountInString(prompt) <= moderationLogPromptMaxRunes {
+		return prompt
+	}
+	runes := []rune(prompt)
+	return string(runes[:moderationLogPromptMaxRunes]) + "…[truncated]"
+}
 
 // RecordModerationLog stores a flagged moderation decision for administrator
 // review. The submitted prompt and result are nested under admin_info so
@@ -17,7 +30,7 @@ func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel str
 	}
 
 	moderationInfo := map[string]interface{}{
-		"prompt":  prompt,
+		"prompt":  moderationLogPrompt(prompt),
 		"flagged": flagged,
 	}
 	if moderationModel != "" {

@@ -174,14 +174,11 @@ func ExtractLatestUserMessage(request dto.Request) string {
 	return ""
 }
 
-// ExtractLatestUserMessageForModeration is tolerant of Responses API
-// continuations. A Responses input may end in a tool output or reasoning item
-// without a user role; moderation should still inspect the most recent user
-// text earlier in the input sequence.
+// ExtractLatestUserMessageForModeration returns only the user text added by the
+// current request. Continuation requests that end in a tool/assistant item do
+// not introduce a new user message and therefore return an empty string rather
+// than re-moderating historical input.
 func ExtractLatestUserMessageForModeration(request dto.Request) string {
-	if req, ok := request.(*dto.OpenAIResponsesRequest); ok {
-		return latestResponsesUserMessageForModeration(req.Input)
-	}
 	return ExtractLatestUserMessage(request)
 }
 
@@ -254,59 +251,4 @@ func latestResponsesUserMessage(input []byte) string {
 		}
 	}
 	return strings.Join(texts, "\n")
-}
-
-func latestResponsesUserMessageForModeration(input []byte) string {
-	if len(input) == 0 {
-		return ""
-	}
-	if common.GetJsonType(input) == "string" {
-		var text string
-		if err := common.Unmarshal(input, &text); err == nil {
-			return text
-		}
-		return ""
-	}
-	var inputs []struct {
-		Type    string          `json:"type"`
-		Role    string          `json:"role"`
-		Content json.RawMessage `json:"content"`
-		Text    string          `json:"text"`
-	}
-	if err := common.Unmarshal(input, &inputs); err != nil {
-		return ""
-	}
-	for i := len(inputs) - 1; i >= 0; i-- {
-		item := inputs[i]
-		if item.Type == "input_text" {
-			if strings.TrimSpace(item.Text) != "" {
-				return item.Text
-			}
-			continue
-		}
-		if !strings.EqualFold(item.Role, "user") {
-			continue
-		}
-		if common.GetJsonType(item.Content) == "string" {
-			var text string
-			if err := common.Unmarshal(item.Content, &text); err == nil && strings.TrimSpace(text) != "" {
-				return text
-			}
-			continue
-		}
-		var parts []dto.MediaInput
-		if err := common.Unmarshal(item.Content, &parts); err != nil {
-			continue
-		}
-		texts := make([]string, 0)
-		for _, part := range parts {
-			if part.Type == "input_text" && part.Text != "" {
-				texts = append(texts, part.Text)
-			}
-		}
-		if text := strings.Join(texts, "\n"); strings.TrimSpace(text) != "" {
-			return text
-		}
-	}
-	return ""
 }

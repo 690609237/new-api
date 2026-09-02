@@ -557,7 +557,7 @@ func buildSelfUserData(user *model.User) map[string]interface{} {
 		"request_count":          user.RequestCount,
 		"violation_count":        user.ViolationCount,
 		"violation_limit":        user.ViolationLimit,
-		"api_blocked":             user.APIBlocked,
+		"api_blocked":            user.APIBlocked,
 		"violation_window_start": user.ViolationWindowStart,
 		"aff_code":               user.AffCode,
 		"aff_count":              user.AffCount,
@@ -1260,7 +1260,7 @@ func ManageUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
 		return
 	case "reset_violations":
-		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(map[string]interface{}{"violation_count": 0, "violation_window_start": 0}).Error; err != nil {
+		if err := model.ResetModerationViolations(user.Id); err != nil {
 			common.ApiError(c, err)
 			return
 		}
@@ -1301,6 +1301,10 @@ func ManageUser(c *gin.Context) {
 		}
 		if req.Action == "enable" {
 			if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("api_blocked", false).Error; err != nil {
+				common.ApiError(c, err)
+				return
+			}
+			if err := model.PublishUserAuthCache(user.Id); err != nil {
 				common.ApiError(c, err)
 				return
 			}

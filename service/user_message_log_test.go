@@ -145,7 +145,7 @@ func TestExtractLatestUserMessageFromResponsesTopLevelInputText(t *testing.T) {
 	assert.Equal(t, "fresh user input", ExtractLatestUserMessage(request))
 }
 
-func TestExtractLatestUserMessageForModerationFindsUserBeforeContinuation(t *testing.T) {
+func TestExtractLatestUserMessageForModerationSkipsContinuation(t *testing.T) {
 	input := []byte(`[
 		{"role":"user","content":[{"type":"input_text","text":"check this command"}]},
 		{"type":"function_call","name":"read_file","arguments":"{}"},
@@ -153,7 +153,64 @@ func TestExtractLatestUserMessageForModerationFindsUserBeforeContinuation(t *tes
 	]`)
 	request := &dto.OpenAIResponsesRequest{Input: input}
 
-	assert.Equal(t, "check this command", ExtractLatestUserMessageForModeration(request))
+	assert.Empty(t, ExtractLatestUserMessageForModeration(request))
+}
+
+func TestExtractLatestUserMessageForModerationOnlyUsesCurrentUserTurn(t *testing.T) {
+	tests := []struct {
+		name    string
+		request dto.Request
+		want    string
+	}{
+		{
+			name: "openai latest user only",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{
+				{Role: "system", Content: "system must not be moderated"},
+				{Role: "user", Content: "historical user input"},
+				{Role: "user", Content: "current user input"},
+			}},
+			want: "current user input",
+		},
+		{
+			name: "openai assistant continuation",
+			request: &dto.GeneralOpenAIRequest{Messages: []dto.Message{
+				{Role: "user", Content: "historical user input"},
+				{Role: "assistant", Content: "assistant continuation"},
+			}},
+		},
+		{
+			name: "claude latest user only",
+			request: &dto.ClaudeRequest{Messages: []dto.ClaudeMessage{
+				{Role: "user", Content: "historical user input"},
+				{Role: "assistant", Content: "assistant response"},
+				{Role: "user", Content: []any{map[string]any{"type": "text", "text": "current claude input"}}},
+			}},
+			want: "current claude input",
+		},
+		{
+			name: "gemini latest user only",
+			request: &dto.GeminiChatRequest{Contents: []dto.GeminiChatContent{
+				{Role: "user", Parts: []dto.GeminiPart{{Text: "historical user input"}}},
+				{Role: "model", Parts: []dto.GeminiPart{{Text: "model continuation"}}},
+				{Role: "user", Parts: []dto.GeminiPart{{Text: "current gemini input"}}},
+			}},
+			want: "current gemini input",
+		},
+		{
+			name: "responses latest user only",
+			request: &dto.OpenAIResponsesRequest{Input: []byte(`[
+				{"role":"user","content":[{"type":"input_text","text":"historical user input"}]},
+				{"role":"user","content":[{"type":"input_text","text":"current responses input"}]}
+			]`)},
+			want: "current responses input",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, ExtractLatestUserMessageForModeration(test.request))
+		})
+	}
 }
 
 func TestExtractUserMessageForLogExcludesAutomatedCodexRequests(t *testing.T) {

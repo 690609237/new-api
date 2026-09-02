@@ -274,14 +274,12 @@ func runPreChannelModeration(c *gin.Context) bool {
 		return true
 	}
 	if setting.ShouldCheckPromptSensitive() {
-		meta := request.GetTokenCountMeta()
-		if meta != nil {
-			contains, _ := service.CheckSensitiveText(meta.CombineText)
-			common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
-			if contains {
-				abortWithOpenAiMessage(c, http.StatusBadRequest, "sensitive content detected", types.ErrorCodeSensitiveWordsDetected)
-				return false
-			}
+		currentUserPrompt := service.ExtractLatestUserMessageForModeration(request)
+		contains, _ := service.CheckSensitiveText(currentUserPrompt)
+		common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
+		if contains {
+			abortWithOpenAiMessage(c, http.StatusBadRequest, "sensitive content detected", types.ErrorCodeSensitiveWordsDetected)
+			return false
 		}
 	}
 	if !setting.ShouldModeratePrompt() {
@@ -303,9 +301,8 @@ func runPreChannelModeration(c *gin.Context) bool {
 	flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), prompt)
 	if moderationErr != nil {
 		service.RecordModerationAlert(c.Request.Context(), moderationErr)
-		if !service.ShouldSkipModerationError(moderationErr) {
-			abortWithOpenAiMessage(c, http.StatusServiceUnavailable, moderationErr.Error(), types.ErrorCodeDoRequestFailed)
-			return false
+		if service.ShouldSkipModerationError(moderationErr) {
+			logger.LogWarn(c, fmt.Sprintf("skip omni moderation after upstream failure: %s", moderationErr.Error()))
 		}
 	}
 	common.SetContextKey(c, constant.ContextKeyModerationChecked, true)

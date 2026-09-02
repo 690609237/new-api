@@ -189,7 +189,9 @@ func releaseModerationAlertCooldown(now time.Time) {
 
 func recordModerationAlertObservationRedis(now time.Time, summary string, threshold int) (int, []string, bool, error) {
 	ctx := context.Background()
-	cutoff := now.Add(-moderationAlertWindow).Unix()
+	// ZSET scores are stored as Unix nanoseconds below, so use the same unit
+	// when removing observations outside the rolling window.
+	cutoff := now.Add(-moderationAlertWindow).UnixNano()
 	member := fmt.Sprintf("%d-%s", now.UnixNano(), common.GetRandomString(8))
 	pipe := common.RDB.TxPipeline()
 	pipe.ZRemRangeByScore(ctx, moderationAlertZSetKey(), "0", fmt.Sprintf("%d", cutoff))

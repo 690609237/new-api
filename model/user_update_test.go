@@ -156,6 +156,53 @@ func TestUpdateViolationLimitReconcilesModerationBlock(t *testing.T) {
 	assert.True(t, got.APIBlocked)
 }
 
+func TestUpdateViolationLimitIgnoresExpiredViolationWindow(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Username:             "expired-moderation-window-user",
+		Password:             "password",
+		Role:                 common.RoleCommonUser,
+		Status:               common.UserStatusEnabled,
+		ViolationCount:       3,
+		ViolationLimit:       5,
+		ViolationWindowStart: time.Now().Add(-moderationViolationWindow).Add(-time.Second).Unix(),
+		APIBlocked:           true,
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	require.NoError(t, UpdateViolationLimit(user.Id, 2))
+	var got User
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Equal(t, 2, got.ViolationLimit)
+	assert.Zero(t, got.ViolationCount)
+	assert.Zero(t, got.ViolationWindowStart)
+	assert.False(t, got.APIBlocked)
+}
+
+func TestResetModerationViolationsClearsCountAndBlock(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Username:             "moderation-reset-user",
+		Password:             "password",
+		Role:                 common.RoleCommonUser,
+		Status:               common.UserStatusEnabled,
+		ViolationCount:       3,
+		ViolationLimit:       3,
+		ViolationWindowStart: time.Now().Unix(),
+		APIBlocked:           true,
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	require.NoError(t, ResetModerationViolations(user.Id))
+	var got User
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Zero(t, got.ViolationCount)
+	assert.Zero(t, got.ViolationWindowStart)
+	assert.False(t, got.APIBlocked)
+}
+
 func TestUsageAccountingSupportsSignedDirectAndBatchDeltas(t *testing.T) {
 	setupUserUpdateTestState(t)
 	resetBatchUpdateTestState(t)

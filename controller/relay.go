@@ -144,17 +144,21 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		relayMode != relayconstant.RelayModeModerations
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
 	needCountToken := constant.CountToken
-	// Avoid building huge CombineText (strings.Join) when token counting,
-	// sensitive-word checking, and moderation are all disabled.
+	// Avoid building huge CombineText when token counting is disabled; the
+	// guards below inspect only the current user turn for policy checks.
 	var meta *types.TokenCountMeta
-	if needSensitiveCheck || needModeration || needCountToken {
+	if needCountToken {
 		meta = request.GetTokenCountMeta()
 	} else {
 		meta = fastTokenCountMetaForPricing(request)
 	}
 
-	if needSensitiveCheck && meta != nil && !common.GetContextKeyBool(c, constant.ContextKeySensitiveChecked) {
-		contains, words := service.CheckSensitiveText(meta.CombineText)
+	var currentUserPrompt string
+	if needSensitiveCheck || needModeration {
+		currentUserPrompt = service.ExtractLatestUserMessageForModeration(request)
+	}
+	if needSensitiveCheck && !common.GetContextKeyBool(c, constant.ContextKeySensitiveChecked) {
+		contains, words := service.CheckSensitiveText(currentUserPrompt)
 		if contains {
 			logger.LogWarn(c, fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", ")))
 			newAPIError = types.NewError(err, types.ErrorCodeSensitiveWordsDetected)
@@ -162,22 +166,17 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		}
 	}
 
-	if needModeration && meta != nil && !common.GetContextKeyBool(c, constant.ContextKeyModerationChecked) {
-		moderationText := service.ExtractLatestUserMessageForModeration(request)
+	if needModeration && !common.GetContextKeyBool(c, constant.ContextKeyModerationChecked) {
+		moderationText := currentUserPrompt
 		flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), moderationText)
 		if moderationErr != nil {
 			logger.LogWarn(c, fmt.Sprintf("omni moderation request failed: %s", moderationErr.Error()))
 			service.RecordModerationAlert(c.Request.Context(), moderationErr)
+			// Moderation is a best-effort guard. If the upstream service is
+			// unavailable or returns an unusable response, allow the request to
+			// proceed and rely on the aggregated alert for operator visibility.
 			if service.ShouldSkipModerationError(moderationErr) {
-				logger.LogWarn(c, fmt.Sprintf("skip omni moderation because upstream request failed: %s", moderationErr.Error()))
-			} else {
-				newAPIError = types.NewErrorWithStatusCode(
-					moderationErr,
-					types.ErrorCodeDoRequestFailed,
-					http.StatusServiceUnavailable,
-					types.ErrOptionWithSkipRetry(),
-				)
-				return
+				logger.LogWarn(c, fmt.Sprintf("skip omni moderation after upstream failure: %s", moderationErr.Error()))
 			}
 		}
 		if flagged {

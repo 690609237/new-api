@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
@@ -866,7 +867,13 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 		return err
 	}
 	if newUser.ViolationLimit > 0 && newUser.ViolationLimit != current.ViolationLimit && current.Role < common.RoleAdminUser {
-		updates["api_blocked"] = current.ViolationCount >= newUser.ViolationLimit
+		activeCount := current.ViolationCount
+		if !moderationViolationWindowActive(&current, time.Now().Unix()) {
+			activeCount = 0
+			updates["violation_count"] = 0
+			updates["violation_window_start"] = 0
+		}
+		updates["api_blocked"] = activeCount >= newUser.ViolationLimit
 	}
 	authChanged := (updatePassword && current.Password != newUser.Password) || current.Group != newUser.Group
 	if authChanged {

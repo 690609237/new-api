@@ -101,6 +101,7 @@ func TestShouldSkipModerationError(t *testing.T) {
 	require.True(t, ShouldSkipModerationError(&moderationTransportError{err: errors.New("dial tcp: connection refused")}))
 	require.True(t, ShouldSkipModerationError(&moderationStatusError{statusCode: http.StatusTooManyRequests}))
 	require.True(t, ShouldSkipModerationError(&moderationStatusError{statusCode: http.StatusBadGateway}))
-	require.False(t, ShouldSkipModerationError(&moderationStatusError{statusCode: http.StatusBadRequest}))
+	require.True(t, ShouldSkipModerationError(&moderationStatusError{statusCode: http.StatusBadRequest}))
+	require.True(t, ShouldSkipModerationError(errors.New("invalid moderation response")))
 	require.False(t, ShouldSkipModerationError(nil))
 }
