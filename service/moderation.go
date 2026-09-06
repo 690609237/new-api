@@ -60,6 +60,56 @@ type moderationStatusError struct {
 	statusCode int
 }
 
+const moderationTestPrompt = "Hello, this is a moderation connectivity test."
+
+// TestModerationEndpoint sends a one-off request to the supplied moderation
+// endpoint without using the configured moderation cache or global settings.
+func TestModerationEndpoint(ctx context.Context, baseURL, apiKey, model string) (bool, error) {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	apiKey = strings.TrimSpace(apiKey)
+	model = strings.TrimSpace(model)
+	if baseURL == "" || apiKey == "" {
+		return false, fmt.Errorf("moderation base URL and API key are required")
+	}
+	if model == "" {
+		model = "omni-moderation-latest"
+	}
+	return requestModeration(ctx, baseURL, apiKey, model, moderationTestPrompt)
+}
+
+func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt string) (bool, error) {
+	payload, marshalErr := common.Marshal(moderationRequest{Model: model, Input: prompt})
+	if marshalErr != nil {
+		return false, fmt.Errorf("marshal moderation request: %w", marshalErr)
+	}
+	req, requestErr := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/moderations", bytes.NewReader(payload))
+	if requestErr != nil {
+		return false, fmt.Errorf("create moderation request: %w", requestErr)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	client := GetHttpClient()
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, requestErr := client.Do(req)
+	if requestErr != nil {
+		return false, &moderationTransportError{err: requestErr}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return false, &moderationStatusError{statusCode: resp.StatusCode}
+	}
+	var moderationResult moderationResponse
+	if decodeErr := common.DecodeJson(resp.Body, &moderationResult); decodeErr != nil {
+		return false, fmt.Errorf("decode moderation response: %w", decodeErr)
+	}
+	if len(moderationResult.Results) == 0 {
+		return false, fmt.Errorf("moderation response contains no results")
+	}
+	return moderationResult.Results[0].Flagged, nil
+}
+
 func (e *moderationStatusError) Error() string {
 	return fmt.Sprintf("moderation upstream returned status %d", e.statusCode)
 }
@@ -134,43 +184,10 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 			return flagged, nil
 		}
 
-		payload, marshalErr := common.Marshal(moderationRequest{
-			Model: model,
-			Input: prompt,
-		})
-		if marshalErr != nil {
-			return false, fmt.Errorf("marshal moderation request: %w", marshalErr)
-		}
-
-		req, requestErr := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/moderations", bytes.NewReader(payload))
+		flagged, requestErr := requestModeration(ctx, baseURL, apiKey, model, prompt)
 		if requestErr != nil {
-			return false, fmt.Errorf("create moderation request: %w", requestErr)
+			return false, requestErr
 		}
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-		req.Header.Set("Content-Type", "application/json")
-
-		client := GetHttpClient()
-		if client == nil {
-			client = http.DefaultClient
-		}
-		resp, requestErr := client.Do(req)
-		if requestErr != nil {
-			return false, &moderationTransportError{err: requestErr}
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-			return false, &moderationStatusError{statusCode: resp.StatusCode}
-		}
-
-		var moderationResult moderationResponse
-		if decodeErr := common.DecodeJson(resp.Body, &moderationResult); decodeErr != nil {
-			return false, fmt.Errorf("decode moderation response: %w", decodeErr)
-		}
-		if len(moderationResult.Results) == 0 {
-			return false, fmt.Errorf("moderation response contains no results")
-		}
-		flagged := moderationResult.Results[0].Flagged
 		if cacheErr := cache.SetWithTTL(cacheKey, flagged, setting.ModerationCacheTTL()); cacheErr != nil {
 			common.SysError(fmt.Sprintf("moderation cache set failed: %v", cacheErr))
 		}

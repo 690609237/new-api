@@ -17,11 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
+import { CheckCircle2, ExternalLink, Loader2, XCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
 
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -35,6 +37,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 
+import { testModerationEndpoint } from '../api'
 import {
   SettingsForm,
   SettingsSwitchContent,
@@ -73,6 +76,10 @@ type ModerationSectionProps = {
 export function ModerationSection({ defaultValues }: ModerationSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const [testState, setTestState] = useState<
+    'idle' | 'testing' | 'success' | 'error'
+  >('idle')
+  const [testMessage, setTestMessage] = useState('')
   const schema = createModerationSchema(t)
   const form = useForm<ModerationFormValues>({
     resolver: zodResolver(schema),
@@ -83,6 +90,43 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
   useEffect(() => {
     form.reset(defaultValues)
   }, [defaultValues, form])
+
+  const handleTestConnection = async () => {
+    const values = form.getValues()
+    if (!values.ModerationBaseURL.trim() || !values.ModerationAPIKey.trim()) {
+      setTestState('error')
+      setTestMessage(t('Enter a moderation base URL and API key first.'))
+      return
+    }
+
+    setTestState('testing')
+    setTestMessage('')
+    try {
+      const response = await testModerationEndpoint({
+        base_url: values.ModerationBaseURL,
+        api_key: values.ModerationAPIKey,
+        model: values.ModerationModel,
+      })
+      if (!response.success) {
+        throw new Error(
+          response.message || t('Moderation connection test failed.')
+        )
+      }
+      setTestState('success')
+      setTestMessage(
+        response.data?.flagged
+          ? t('Connection succeeded; the test text was flagged.')
+          : t('Connection succeeded; the test text was allowed.')
+      )
+    } catch (error) {
+      setTestState('error')
+      setTestMessage(
+        error instanceof Error
+          ? error.message
+          : t('Moderation connection test failed.')
+      )
+    }
+  }
 
   const onSubmit = async (values: ModerationFormValues) => {
     const updates = Object.entries(values).filter(([key, value]) => {
@@ -313,6 +357,48 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                 </FormItem>
               )}
             />
+          </div>
+
+          <div className='flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => void handleTestConnection()}
+              disabled={testState === 'testing'}
+            >
+              {testState === 'testing' ? (
+                <Loader2 className='animate-spin' />
+              ) : (
+                <CheckCircle2 />
+              )}
+              {t('Test moderation connection')}
+            </Button>
+            <a
+              href='https://platform.openai.com/usage'
+              target='_blank'
+              rel='noreferrer'
+              className='text-primary inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline'
+            >
+              {t('View OpenAI usage statistics')}
+              <ExternalLink className='size-3' aria-hidden='true' />
+            </a>
+            {testState !== 'idle' && testMessage && (
+              <div
+                className={`inline-flex items-center gap-1 text-sm ${
+                  testState === 'success'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-destructive'
+                }`}
+                role='status'
+              >
+                {testState === 'success' ? (
+                  <CheckCircle2 className='size-4' aria-hidden='true' />
+                ) : (
+                  <XCircle className='size-4' aria-hidden='true' />
+                )}
+                <span>{testMessage}</span>
+              </div>
+            )}
           </div>
 
           <div className='grid gap-4 md:grid-cols-2'>

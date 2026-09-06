@@ -39,6 +39,12 @@ export type UpdateOptionResponse = {
   message: string
 }
 
+export type ModerationTestResponse = {
+  success: boolean
+  message: string
+  data?: { flagged: boolean }
+}
+
 export type ConfirmPaymentComplianceResponse = {
   success: boolean
   message: string

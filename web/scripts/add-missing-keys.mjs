@@ -27,6 +27,8 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Use responsibly; breaking limits is strictly prohibited!':
+      'Use responsibly; breaking limits is strictly prohibited!',
     'Content Moderation': 'Content Moderation',
     'Save moderation settings': 'Save moderation settings',
     'Enable content moderation': 'Enable content moderation',
@@ -79,8 +81,18 @@ const newKeys = {
       "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.",
     'Violation limit updated successfully':
       'Violation limit updated successfully',
+    'Test moderation connection': 'Test moderation connection',
+    'View OpenAI usage statistics': 'View OpenAI usage statistics',
+    'Enter a moderation base URL and API key first.':
+      'Enter a moderation base URL and API key first.',
+    'Moderation connection test failed.': 'Moderation connection test failed.',
+    'Connection succeeded; the test text was flagged.':
+      'Connection succeeded; the test text was flagged.',
+    'Connection succeeded; the test text was allowed.':
+      'Connection succeeded; the test text was allowed.',
   },
   zh: {
+    'Use responsibly; breaking limits is strictly prohibited!': '文明使用，严禁破限！',
     'Content Moderation': '内容审核',
     'Save moderation settings': '保存审核设置',
     'Enable content moderation': '启用内容审核',
@@ -132,8 +144,15 @@ const newKeys = {
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
       '如果收不到验证码，请检查邮件垃圾箱；如果仍然找不到，请联系作者。',
     'Violation limit updated successfully': '违规限制更新成功',
+    'Test moderation connection': '测试审核接口连接',
+    'View OpenAI usage statistics': '查看 OpenAI 使用统计',
+    'Enter a moderation base URL and API key first.': '请先填写审核接口地址和 API 密钥。',
+    'Moderation connection test failed.': '审核接口连接测试失败。',
+    'Connection succeeded; the test text was flagged.': '连接成功，测试文本被判定为违规。',
+    'Connection succeeded; the test text was allowed.': '连接成功，测试文本通过审核。',
   },
   'zh-TW': {
+    'Use responsibly; breaking limits is strictly prohibited!': '請文明使用，嚴禁突破限制！',
     'Content Moderation': '內容審核',
     'Save moderation settings': '儲存審核設定',
     'Enable content moderation': '啟用內容審核',
@@ -185,8 +204,16 @@ const newKeys = {
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
       '如果收不到驗證碼，請檢查郵件垃圾箱；如果仍然找不到，請聯絡作者。',
     'Violation limit updated successfully': '違規限制更新成功',
+    'Test moderation connection': '審核連線測試',
+    'View OpenAI usage statistics': '查看 OpenAI 使用統計',
+    'Enter a moderation base URL and API key first.': '請先填寫審核端點位址和 API 金鑰。',
+    'Moderation connection test failed.': '審核連線測試失敗。',
+    'Connection succeeded; the test text was flagged.': '連線成功，測試文字被判定為違規。',
+    'Connection succeeded; the test text was allowed.': '連線成功，測試文字通過審核。',
   },
   fr: {
+    'Use responsibly; breaking limits is strictly prohibited!':
+      'Utilisez le service de manière responsable ; tout contournement des limites est strictement interdit !',
     'Content Moderation': 'Modération du contenu',
     'Save moderation settings': 'Enregistrer les paramètres de modération',
     'Enable content moderation': 'Activer la modération du contenu',
@@ -238,8 +265,16 @@ const newKeys = {
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
       "Si vous ne recevez pas le code de vérification, vérifiez vos spams. Si vous ne le trouvez toujours pas, contactez l'auteur.",
     'Violation limit updated successfully': 'Limite de violations mise à jour',
+    'Test moderation connection': 'Tester la connexion de modération',
+    'View OpenAI usage statistics': 'Voir les statistiques d’utilisation OpenAI',
+    'Enter a moderation base URL and API key first.': 'Saisissez d’abord une URL de base et une clé API de modération.',
+    'Moderation connection test failed.': 'Échec du test de connexion de modération.',
+    'Connection succeeded; the test text was flagged.': 'Connexion réussie ; le texte de test a été signalé.',
+    'Connection succeeded; the test text was allowed.': 'Connexion réussie ; le texte de test a été autorisé.',
   },
   ja: {
+    'Use responsibly; breaking limits is strictly prohibited!':
+      '責任を持って利用し、制限の突破は固く禁止します！',
     'Content Moderation': 'コンテンツモデレーション',
     'Save moderation settings': 'モデレーション設定を保存',
     'Enable content moderation': 'コンテンツモデレーションを有効化',
@@ -291,8 +326,16 @@ const newKeys = {
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
       '認証コードが届かない場合は迷惑メールフォルダーを確認してください。それでも見つからない場合は作者にお問い合わせください。',
     'Violation limit updated successfully': '違反上限を更新しました',
+    'Test moderation connection': 'モデレーション接続をテスト',
+    'View OpenAI usage statistics': 'OpenAI の利用統計を表示',
+    'Enter a moderation base URL and API key first.': '先にモデレーションのベース URL と API キーを入力してください。',
+    'Moderation connection test failed.': 'モデレーション接続テストに失敗しました。',
+    'Connection succeeded; the test text was flagged.': '接続に成功しました。テスト文は違反として判定されました。',
+    'Connection succeeded; the test text was allowed.': '接続に成功しました。テスト文は許可されました。',
   },
   ru: {
+    'Use responsibly; breaking limits is strictly prohibited!':
+      'Используйте сервис ответственно; обход ограничений строго запрещён!',
     'Content Moderation': 'Модерация контента',
     'Save moderation settings': 'Сохранить настройки модерации',
     'Enable content moderation': 'Включить модерацию контента',
@@ -344,8 +387,16 @@ const newKeys = {
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
       'Если вы не получили код подтверждения, проверьте папку «Спам». Если найти его не удалось, обратитесь к автору.',
     'Violation limit updated successfully': 'Лимит нарушений обновлён',
+    'Test moderation connection': 'Проверить подключение модерации',
+    'View OpenAI usage statistics': 'Просмотреть статистику использования OpenAI',
+    'Enter a moderation base URL and API key first.': 'Сначала укажите базовый URL и API-ключ модерации.',
+    'Moderation connection test failed.': 'Не удалось проверить подключение модерации.',
+    'Connection succeeded; the test text was flagged.': 'Подключение успешно; тестовый текст отмечен как нарушающий правила.',
+    'Connection succeeded; the test text was allowed.': 'Подключение успешно; тестовый текст разрешён.',
   },
   vi: {
+    'Use responsibly; breaking limits is strictly prohibited!':
+      'Vui lòng sử dụng có trách nhiệm; nghiêm cấm vượt qua giới hạn!',
     'Content Moderation': 'Kiểm duyệt nội dung',
     'Save moderation settings': 'Lưu cài đặt kiểm duyệt',
     'Enable content moderation': 'Bật kiểm duyệt nội dung',
@@ -397,6 +448,12 @@ const newKeys = {
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.":
       'Nếu không nhận được mã xác minh, hãy kiểm tra thư mục spam. Nếu vẫn không tìm thấy, vui lòng liên hệ tác giả.',
     'Violation limit updated successfully': 'Đã cập nhật giới hạn vi phạm',
+    'Test moderation connection': 'Kiểm tra kết nối kiểm duyệt',
+    'View OpenAI usage statistics': 'Xem thống kê sử dụng OpenAI',
+    'Enter a moderation base URL and API key first.': 'Vui lòng nhập URL cơ sở và API key kiểm duyệt trước.',
+    'Moderation connection test failed.': 'Kiểm tra kết nối kiểm duyệt thất bại.',
+    'Connection succeeded; the test text was flagged.': 'Kết nối thành công; văn bản kiểm tra bị đánh dấu vi phạm.',
+    'Connection succeeded; the test text was allowed.': 'Kết nối thành công; văn bản kiểm tra được cho phép.',
   },
 }
 

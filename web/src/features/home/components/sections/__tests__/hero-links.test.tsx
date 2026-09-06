@@ -62,4 +62,23 @@ describe('Hero documentation link', () => {
       '/docs'
     )
   })
+
+  test('shows the responsible-use notice above the hero content', () => {
+    const { container } = render(<Hero />)
+
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Use responsibly; breaking limits is strictly prohibited!'
+    )
+    expect(screen.getByRole('note').parentElement).toContainElement(
+      screen.getByText('AI Application Infrastructure Foundation')
+    )
+    expect(container.querySelector('section')).toHaveClass(
+      'pt-16',
+      'pb-10',
+      'md:pt-20',
+      'md:pb-14',
+      'lg:pt-24',
+      'lg:pb-16'
+    )
+  })
 })

@@ -5624,6 +5624,13 @@
     "API request": "呼叫審核 API",
     "Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com": "支援的電子郵件類型有：gmail.com、163.com、126.com、qq.com、outlook.com、hotmail.com、icloud.com、yahoo.com、foxmail.com、yeah.net、aliyun.com、sina.com、sina.cn、sohu.com、tom.com、21cn.com",
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.": "如果收不到驗證碼，請檢查郵件垃圾箱；如果仍然找不到，請聯絡作者。",
-    "Violation limit updated successfully": "違規限制更新成功"
+    "Violation limit updated successfully": "違規限制更新成功",
+    "Test moderation connection": "審核連線測試",
+    "View OpenAI usage statistics": "查看 OpenAI 使用統計",
+    "Enter a moderation base URL and API key first.": "請先填寫審核端點位址和 API 金鑰。",
+    "Moderation connection test failed.": "審核連線測試失敗。",
+    "Connection succeeded; the test text was flagged.": "連線成功，測試文字被判定為違規。",
+    "Connection succeeded; the test text was allowed.": "連線成功，測試文字通過審核。",
+    "Use responsibly; breaking limits is strictly prohibited!": "請文明使用，嚴禁突破限制！"
   }
 }

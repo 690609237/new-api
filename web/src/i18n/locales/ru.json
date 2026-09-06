@@ -5624,6 +5624,13 @@
     "API request": "Запрос к API",
     "Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com": "Поддерживаемые почтовые домены: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com",
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.": "Если вы не получили код подтверждения, проверьте папку «Спам». Если найти его не удалось, обратитесь к автору.",
-    "Violation limit updated successfully": "Лимит нарушений обновлён"
+    "Violation limit updated successfully": "Лимит нарушений обновлён",
+    "Test moderation connection": "Проверить подключение модерации",
+    "View OpenAI usage statistics": "Просмотреть статистику использования OpenAI",
+    "Enter a moderation base URL and API key first.": "Сначала укажите базовый URL и API-ключ модерации.",
+    "Moderation connection test failed.": "Не удалось проверить подключение модерации.",
+    "Connection succeeded; the test text was flagged.": "Подключение успешно; тестовый текст отмечен как нарушающий правила.",
+    "Connection succeeded; the test text was allowed.": "Подключение успешно; тестовый текст разрешён.",
+    "Use responsibly; breaking limits is strictly prohibited!": "Используйте сервис ответственно; обход ограничений строго запрещён!"
   }
 }

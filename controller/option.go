@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
@@ -22,6 +24,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+type moderationTestRequest struct {
+	BaseURL string `json:"base_url"`
+	APIKey  string `json:"api_key"`
+	Model   string `json:"model"`
+}
+
+func TestModeration(c *gin.Context) {
+	var request moderationTestRequest
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+	flagged, err := service.TestModerationEndpoint(ctx, request.BaseURL, request.APIKey, request.Model)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, gin.H{"flagged": flagged})
+}
 
 var completionRatioMetaOptionKeys = []string{
 	"ModelPrice",

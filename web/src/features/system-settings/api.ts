@@ -22,6 +22,7 @@ import type {
   ConfirmPaymentComplianceResponse,
   FetchUpstreamRatiosRequest,
   LogCleanupTask,
+  ModerationTestResponse,
   SystemOptionsResponse,
   SystemTaskListResponse,
   SystemTaskResponse,
@@ -30,6 +31,18 @@ import type {
   UpstreamChannelsResponse,
   UpstreamRatiosResponse,
 } from './types'
+
+export async function testModerationEndpoint(request: {
+  base_url: string
+  api_key: string
+  model: string
+}) {
+  const res = await api.post<ModerationTestResponse>(
+    '/api/option/moderation_test',
+    request
+  )
+  return res.data
+}
 
 export async function getSystemOptions() {
   const res = await api.get<SystemOptionsResponse>('/api/option/')

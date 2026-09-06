@@ -44,6 +44,26 @@ func TestModeratePromptSendsOmniModerationRequest(t *testing.T) {
 	require.Equal(t, "unsafe prompt", gotBody.Input)
 }
 
+func TestTestModerationEndpointUsesSuppliedConfiguration(t *testing.T) {
+	var gotAuth string
+	var gotBody moderationRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.NoError(t, common.Unmarshal(body, &gotBody))
+		_, _ = w.Write([]byte(`{"results":[{"flagged":false}]}`))
+	}))
+	defer server.Close()
+
+	flagged, err := TestModerationEndpoint(context.Background(), server.URL+"/v1/", "supplied-key", "custom-model")
+	require.NoError(t, err)
+	require.False(t, flagged)
+	require.Equal(t, "Bearer supplied-key", gotAuth)
+	require.Equal(t, "custom-model", gotBody.Model)
+	require.Equal(t, moderationTestPrompt, gotBody.Input)
+}
+
 func TestModeratePromptReusesCachedResult(t *testing.T) {
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -5624,6 +5624,13 @@
     "API request": "Requête API",
     "Supported email domains: gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com": "Domaines e-mail pris en charge : gmail.com, 163.com, 126.com, qq.com, outlook.com, hotmail.com, icloud.com, yahoo.com, foxmail.com, yeah.net, aliyun.com, sina.com, sina.cn, sohu.com, tom.com, 21cn.com",
     "If you don't receive the verification code, check your spam folder. If you still can't find it, please contact the author.": "Si vous ne recevez pas le code de vérification, vérifiez vos spams. Si vous ne le trouvez toujours pas, contactez l'auteur.",
-    "Violation limit updated successfully": "Limite de violations mise à jour"
+    "Violation limit updated successfully": "Limite de violations mise à jour",
+    "Test moderation connection": "Tester la connexion de modération",
+    "View OpenAI usage statistics": "Voir les statistiques d’utilisation OpenAI",
+    "Enter a moderation base URL and API key first.": "Saisissez d’abord une URL de base et une clé API de modération.",
+    "Moderation connection test failed.": "Échec du test de connexion de modération.",
+    "Connection succeeded; the test text was flagged.": "Connexion réussie ; le texte de test a été signalé.",
+    "Connection succeeded; the test text was allowed.": "Connexion réussie ; le texte de test a été autorisé.",
+    "Use responsibly; breaking limits is strictly prohibited!": "Utilisez le service de manière responsable ; tout contournement des limites est strictement interdit !"
   }
 }
