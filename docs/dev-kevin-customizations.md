@@ -119,6 +119,10 @@ funding: &SubscriptionFunding{
 - 每个用户、订阅分组、订阅周期和通知阶段组成唯一事件键，并由 `NotificationDelivery.EventKey` 唯一索引配合 `ON CONFLICT DO NOTHING` 保证幂等。重复结算或认证重试只会命中同一事件，不会新增通知；发送失败则由持久化队列重试。
 - 通知发送沿用用户选择的 Email、Webhook、Bark 或 Gotify 渠道。通知内容不把用户默认分组改成订阅分组。
 
+### 前置审核统计
+
+前置审核的聚合统计接口为 `GET /api/moderation/stats`，仅 Root 可访问，默认返回最近 24 小时数据，也支持 `start_timestamp` 和 `end_timestamp` 查询时间范围。统计按 5 分钟时间桶保存，返回实际调用审核 API 的次数、通过次数、违规次数、失败次数、缓存命中次数和平均响应耗时；不保存通过请求的 prompt 明细，违规 prompt 仍通过管理员审核日志查看。
+
 ### 后续解决冲突的检查清单
 
 每次从 `main` 同步后，先按文件所属边界处理：

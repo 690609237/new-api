@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	moderationmodel "github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/cachex"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/samber/hot"
 	"golang.org/x/sync/singleflight"
 )
@@ -174,6 +177,7 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 	if flagged, found, err := cache.Get(cacheKey); err != nil {
 		common.SysError(fmt.Sprintf("moderation cache get failed: %v", err))
 	} else if found {
+		recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{CacheHits: 1})
 		return flagged, ModerationResultSourceCache, nil
 	}
 
@@ -181,10 +185,24 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 		// A second lookup closes the race between callers that missed the cache
 		// before the first caller completed the upstream request.
 		if flagged, found, cacheErr := cache.Get(cacheKey); cacheErr == nil && found {
+			recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{CacheHits: 1})
 			return flagged, nil
 		}
 
+		startedAt := time.Now()
 		flagged, requestErr := requestModeration(ctx, baseURL, apiKey, model, prompt)
+		delta := moderationmodel.ModerationUsageStatDelta{
+			APIRequests:       1,
+			APILatencyTotalMs: time.Since(startedAt).Milliseconds(),
+		}
+		if requestErr != nil {
+			delta.APIFailed = 1
+		} else if flagged {
+			delta.APIViolations = 1
+		} else {
+			delta.APIPassed = 1
+		}
+		recordModerationUsage(startedAt.Unix(), delta)
 		if requestErr != nil {
 			return false, requestErr
 		}
@@ -201,4 +219,12 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 		return false, ModerationResultSourceAPI, fmt.Errorf("moderation cache returned invalid result type %T", result)
 	}
 	return flagged, ModerationResultSourceAPI, nil
+}
+
+func recordModerationUsage(timestamp int64, delta moderationmodel.ModerationUsageStatDelta) {
+	gopool.Go(func() {
+		if err := moderationmodel.RecordModerationUsage(timestamp, delta); err != nil {
+			common.SysError(fmt.Sprintf("failed to record moderation usage: %v", err))
+		}
+	})
 }
