@@ -93,6 +93,32 @@ funding: &SubscriptionFunding{
 
 `GetBillingModelName()` 保证模型别名/计费身份正确；`subscriptionGroup` 保证订阅分组倍率和订阅额度扣减正确。缺任何一个都会导致订阅计费走错模型或丢失订阅分组约束。
 
+### 本次同步冲突分析（2026-09-08）
+
+本次合并 `main`（`ea7cb0ba4`）产生 14 个未解决文件，其中只有订阅额度通知涉及需要业务取舍的关键冲突；其余冲突均可依据现有定制边界直接合并：
+
+| 文件 | 冲突内容 | 处理决定 |
+| --- | --- | --- |
+| `controller/user.go` | 上游登录安全/`has_password`/安全 DTO 与本分支违规次数、API 封禁、管理员额度及违规操作 | 合并两侧；保留上游安全登录与密码校验，保留定制字段和管理动作。自我用户查询补齐违规字段，避免 DTO 返回零值。 |
+| `model/user.go` | 上游 `HasPassword`、`AccessTokenCreatedAt` 与本分支 `APIBlocked`、违规窗口字段 | 合并全部字段；密码上限采用上游 128 位，违规上限仍由定制接口限制为 1–100。 |
+| `middleware/distributor.go` | 本分支选渠道前审核/高级自定义路径检查，与上游任务插件无可用渠道提示 | 合并两套逻辑；审核仍只取最后一条 user 输入并 fail-open，任务插件提示保留。 |
+| `model/option.go` | 仅导入冲突：`fmt` 与 `maps` | 两个导入均保留。 |
+| `router/api-router.go` | 仅路由冲突：审核测试与模型定价配置 | 两组路由均保留。 |
+| `web/src/features/subscriptions/components/subscriptions-mutate-drawer.tsx` | 上游将分组控件统一为 `Combobox`，本分支增加 `subscription_group` 且互斥清空升级/降级组 | 采用 `Combobox`，保留订阅权益分组及三者互斥行为。 |
+| `web/src/i18n/locales/*.json` | 上游新增翻译键，本分支审核、品牌、帮助页和邮箱提示翻译 | 合并全部键；保留本分支定制翻译，并运行 i18n 同步检查。 |
+| `service/quota.go` | 订阅额度用尽/预警通知策略不同 | 保留订阅专用持久化通知队列和 warning/exhausted 两阶段；吸收上游的用户通知渠道和绝对额度预警阈值配置。通过事件键幂等，重复结算、认证重试和服务重启不会重复创建同一周期同一阶段的通知。 |
+
+#### 已确认：订阅额度通知策略
+
+订阅不修改用户默认分组，而是使用独立的 `subscription_group` 和对应倍率。订阅有效期内按订阅分组倍率消耗订阅额度；订阅到期或额度耗尽后，相关 token 回退到用户分组，后续钱包计费使用用户分组倍率。订阅剩余额度不会因到期返还。
+
+通知策略如下：
+
+- 订阅额度降至预警阈值时发送一次 `warning` 通知；阈值优先使用用户设置中的 `QuotaWarningThreshold`（绝对额度），未配置时使用总额度的 2% 作为默认阈值。
+- 订阅额度耗尽时发送一次 `exhausted` 通知，说明倍率已切换或后续请求将按当前用户计费策略处理。
+- 每个用户、订阅分组、订阅周期和通知阶段组成唯一事件键，并由 `NotificationDelivery.EventKey` 唯一索引配合 `ON CONFLICT DO NOTHING` 保证幂等。重复结算或认证重试只会命中同一事件，不会新增通知；发送失败则由持久化队列重试。
+- 通知发送沿用用户选择的 Email、Webhook、Bark 或 Gotify 渠道。通知内容不把用户默认分组改成订阅分组。
+
 ### 后续解决冲突的检查清单
 
 每次从 `main` 同步后，先按文件所属边界处理：

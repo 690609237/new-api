@@ -49,11 +49,11 @@ func TestSubscriptionQuotaNotificationStage(t *testing.T) {
 			want:              subscriptionQuotaNotificationExhausted,
 		},
 		{
-			name:      "exhausted quota without a new fallback does not repeat notice",
+			name:      "exhausted quota sends notice without token fallback",
 			total:     10_000,
 			remaining: 0,
 			consumed:  100,
-			want:      subscriptionQuotaNotificationNone,
+			want:      subscriptionQuotaNotificationExhausted,
 		},
 	}
 
@@ -125,4 +125,22 @@ func TestFinalizeSubscriptionGroupQuotaAndNotifyQueuesExhaustedFallback(t *testi
 	assert.Equal(t, "订阅套餐额度已用尽", delivery.Title)
 	assert.Contains(t, delivery.Content, "轻享月卡")
 	assert.Equal(t, model.NotificationDeliveryPending, delivery.Status)
+
+	// A repeated enqueue attempt must be collapsed by the unique event key.
+	state, err := model.FinalizeSubscriptionGroupQuota(user.Id, "month_a")
+	require.NoError(t, err)
+	require.NoError(t, queueSubscriptionQuotaNotification(
+		user.Id,
+		"month_a",
+		user.Group,
+		"轻享月卡",
+		1,
+		state,
+		subscriptionQuotaNotificationExhausted,
+	))
+	var deliveryCount int64
+	require.NoError(t, model.DB.Model(&model.NotificationDelivery{}).
+		Where("user_id = ?", user.Id).
+		Count(&deliveryCount).Error)
+	assert.Equal(t, int64(1), deliveryCount)
 }

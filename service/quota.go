@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -491,7 +492,7 @@ func checkAndSendQuotaNotify(relayInfo *relaycommon.RelayInfo, quota int, preCon
 
 			// 根据通知方式生成不同的内容格式
 			var content string
-			var values []interface{}
+			var values []any
 
 			notifyType := userSetting.NotifyType
 			if notifyType == "" {
@@ -501,14 +502,14 @@ func checkAndSendQuotaNotify(relayInfo *relaycommon.RelayInfo, quota int, preCon
 			if notifyType == dto.NotifyTypeBark {
 				// Bark推送使用简短文本，不支持HTML
 				content = "{{value}}，剩余额度：{{value}}，请及时充值"
-				values = []interface{}{prompt, logger.FormatQuota(relayInfo.UserQuota)}
+				values = []any{prompt, logger.FormatQuota(relayInfo.UserQuota)}
 			} else if notifyType == dto.NotifyTypeGotify {
 				content = "{{value}}，当前剩余额度为 {{value}}，请及时充值。"
-				values = []interface{}{prompt, logger.FormatQuota(relayInfo.UserQuota)}
+				values = []any{prompt, logger.FormatQuota(relayInfo.UserQuota)}
 			} else {
 				// 默认内容格式，适用于Email和Webhook（支持HTML）
 				content = "{{value}}，当前剩余额度为 {{value}}，为了不影响您的使用，请及时充值。<br/>充值链接：<a href='{{value}}'>{{value}}</a>"
-				values = []interface{}{prompt, logger.FormatQuota(relayInfo.UserQuota), topUpLink, topUpLink}
+				values = []any{prompt, logger.FormatQuota(relayInfo.UserQuota), topUpLink, topUpLink}
 			}
 
 			err := NotifyUser(relayInfo.UserId, relayInfo.UserEmail, relayInfo.UserSetting, dto.NewNotify(dto.NotifyTypeQuotaExceed, prompt, content, values))
@@ -527,24 +528,44 @@ const (
 	subscriptionQuotaNotificationExhausted subscriptionQuotaNotificationStage = "exhausted"
 )
 
-func getSubscriptionQuotaNotificationStage(total, remaining, consumed int64, reboundTokenCount int) subscriptionQuotaNotificationStage {
+func subscriptionQuotaWarningThreshold(total int64, configured float64) int64 {
+	if total <= 0 {
+		return 0
+	}
+	if configured > 0 && !math.IsNaN(configured) {
+		if math.IsInf(configured, 1) || configured >= float64(math.MaxInt64) {
+			return math.MaxInt64
+		}
+		threshold := int64(math.Trunc(configured))
+		if threshold > 0 {
+			return threshold
+		}
+	}
+	threshold := total / 50
+	if total%50 != 0 {
+		threshold++
+	}
+	return threshold
+}
+
+func getSubscriptionQuotaNotificationStageWithThreshold(total, remaining, consumed int64, _ int, configuredThreshold float64) subscriptionQuotaNotificationStage {
 	if total <= 0 || remaining < 0 || consumed <= 0 {
 		return subscriptionQuotaNotificationNone
 	}
-	if remaining == 0 {
-		if reboundTokenCount > 0 {
-			return subscriptionQuotaNotificationExhausted
-		}
-		return subscriptionQuotaNotificationNone
+	if remaining <= 0 {
+		// EventKey-based persistence makes repeated settlement/authentication
+		// attempts idempotent while still notifying when no token needs rebinding.
+		return subscriptionQuotaNotificationExhausted
 	}
-	warningThreshold := total / 50
-	if total%50 != 0 {
-		warningThreshold++
-	}
+	warningThreshold := subscriptionQuotaWarningThreshold(total, configuredThreshold)
 	if remaining <= warningThreshold {
 		return subscriptionQuotaNotificationWarning
 	}
 	return subscriptionQuotaNotificationNone
+}
+
+func getSubscriptionQuotaNotificationStage(total, remaining, consumed int64, reboundTokenCount int) subscriptionQuotaNotificationStage {
+	return getSubscriptionQuotaNotificationStageWithThreshold(total, remaining, consumed, reboundTokenCount, 0)
 }
 
 func checkAndQueueSubscriptionQuotaNotify(relayInfo *relaycommon.RelayInfo, consumed int64) {
@@ -565,6 +586,15 @@ func checkAndQueueSubscriptionQuotaNotify(relayInfo *relaycommon.RelayInfo, cons
 		consumed,
 		quotaState.ReboundTokenCount,
 	)
+	if relayInfo.UserSetting.QuotaWarningThreshold > 0 {
+		stage = getSubscriptionQuotaNotificationStageWithThreshold(
+			quotaState.Total,
+			quotaState.Remaining,
+			consumed,
+			quotaState.ReboundTokenCount,
+			relayInfo.UserSetting.QuotaWarningThreshold,
+		)
+	}
 	if stage == subscriptionQuotaNotificationNone {
 		return
 	}
@@ -594,7 +624,7 @@ func FinalizeSubscriptionGroupQuotaAndNotify(userId int, subscriptionGroup, user
 	if err != nil {
 		return 0, err
 	}
-	if quotaState.Unlimited || quotaState.Total <= 0 || quotaState.Remaining != 0 || quotaState.ReboundTokenCount == 0 {
+	if quotaState.Unlimited || quotaState.Total <= 0 || quotaState.Remaining != 0 {
 		return quotaState.ReboundTokenCount, nil
 	}
 
@@ -646,13 +676,20 @@ func queueSubscriptionQuotaNotification(
 	)
 	if stage == subscriptionQuotaNotificationExhausted {
 		title = "订阅套餐额度已用尽"
-		content = fmt.Sprintf(
-			"您的订阅套餐「%s」额度已用尽，相关 API Key 已自动从 %s 倍率切换为用户分组「%s」的 %s 倍率，后续请求将按新倍率扣除余额。",
-			planTitle,
-			oldRatioText,
-			userGroup,
-			newRatioText,
-		)
+		if quotaState.ReboundTokenCount > 0 {
+			content = fmt.Sprintf(
+				"您的订阅套餐「%s」额度已用尽，相关 API Key 已自动从 %s 倍率切换为用户分组「%s」的 %s 倍率，后续请求将按新倍率扣除余额。",
+				planTitle,
+				oldRatioText,
+				userGroup,
+				newRatioText,
+			)
+		} else {
+			content = fmt.Sprintf(
+				"您的订阅套餐「%s」额度已用尽，后续请求将按用户当前计费策略处理。",
+				planTitle,
+			)
+		}
 	}
 
 	eventData := fmt.Sprintf(
