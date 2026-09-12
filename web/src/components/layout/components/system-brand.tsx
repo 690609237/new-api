@@ -63,11 +63,11 @@ export function SystemBrand(props: SystemBrandProps) {
         to='/'
         aria-label={t('Go to home')}
         className={cn(
-          'text-foreground inline-flex h-9 items-center gap-2 rounded-md px-1.5 text-sm font-medium transition-colors outline-none select-none',
+          'text-foreground inline-flex h-9 min-w-0 items-center gap-2 rounded-md px-1.5 text-sm font-medium transition-colors outline-none select-none',
           'hover:bg-accent focus-visible:ring-ring/40 focus-visible:ring-2'
         )}
       >
-        <div className='flex size-6 items-center justify-center overflow-hidden rounded-md'>
+        <div className='flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md'>
           <img
             src={logo}
             alt={t('Logo')}
@@ -79,7 +79,7 @@ export function SystemBrand(props: SystemBrandProps) {
           <BrandContactLine className='mt-1 hidden xl:block' />
           <BrandContactLine
             variant='compact'
-            className='absolute end-2 bottom-1 start-[3.75rem] lg:hidden'
+            className='absolute start-[3.75rem] end-2 bottom-1 lg:hidden'
           />
         </span>
       </Link>

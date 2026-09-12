@@ -21,12 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
 import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const contacts = [
   { label: 'QQ', value: '1549277597', icon: MessageCircle },
@@ -100,7 +95,9 @@ export function About() {
                         <CardTitle className='flex items-center gap-2'>
                           {t(contact.label)}
                           {'recommended' in contact && (
-                            <Badge variant='secondary'>{t('Recommended')}</Badge>
+                            <Badge variant='secondary'>
+                              {t('Recommended')}
+                            </Badge>
                           )}
                         </CardTitle>
                       </CardHeader>
@@ -129,7 +126,6 @@ export function About() {
               })}
             </ul>
           </address>
-
         </section>
       </main>
     </PublicLayout>

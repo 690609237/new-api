@@ -27,6 +27,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SystemUpdateAction } from '@/features/system-update/system-update-action'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { useTopNavLinks } from '@/hooks/use-top-nav-links'
@@ -218,42 +219,48 @@ export function PublicHeader(props: PublicHeaderProps) {
         >
           <nav
             className={cn(
-              'flex items-center justify-between transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+              'flex items-center justify-between gap-2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
               scrolled
                 ? 'bg-background/60 ring-border/50 h-12 rounded-2xl pr-1.5 pl-4 shadow-[0_2px_16px_-6px_rgba(0,0,0,0.08),0_0_0_0.5px_rgba(0,0,0,0.02)] ring-[0.5px] backdrop-blur-2xl dark:shadow-[0_2px_16px_-6px_rgba(0,0,0,0.4)]'
                 : 'h-16 px-2'
             )}
           >
             {/* Logo */}
-            <Link
-              to={homeUrl}
-              className='group flex min-w-0 flex-1 items-center gap-2 lg:flex-none lg:shrink-0'
-            >
-              <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
-                {headerLogo}
-              </div>
-              <span className='flex min-w-0 flex-col justify-center'>
-                <span className='text-sm leading-none font-semibold tracking-tight'>
-                  {loading ? (
-                    <Skeleton className='h-4 w-16' />
-                  ) : (
-                    displaySiteName
+            <div className='@container/system-brand flex min-w-0 flex-1 items-center gap-1 lg:min-w-36'>
+              <Link
+                to={homeUrl}
+                className='group flex min-w-0 items-center gap-2.5'
+              >
+                <div className='flex size-7 shrink-0 items-center justify-center transition-all duration-300 group-hover:scale-105'>
+                  {headerLogo}
+                </div>
+                <span className='flex min-w-0 flex-col justify-center'>
+                  <span
+                    className='max-w-48 truncate text-sm leading-none font-semibold tracking-tight'
+                    title={displaySiteName}
+                  >
+                    {loading ? (
+                      <Skeleton className='h-4 w-16' />
+                    ) : (
+                      displaySiteName
+                    )}
+                  </span>
+                  {!loading && !scrolled && (
+                    <>
+                      <BrandContactLine className='mt-1 hidden xl:block' />
+                      <BrandContactLine
+                        variant='compact'
+                        className='mt-1 lg:hidden'
+                      />
+                    </>
                   )}
                 </span>
-                {!loading && !scrolled && (
-                  <>
-                    <BrandContactLine className='mt-1 hidden xl:block' />
-                    <BrandContactLine
-                      variant='compact'
-                      className='mt-1 lg:hidden'
-                    />
-                  </>
-                )}
-              </span>
-            </Link>
+              </Link>
+              <SystemUpdateAction presentation='version' />
+            </div>
 
             {/* Desktop nav */}
-            <div className='hidden items-center gap-0.5 lg:flex'>
+            <div className='hidden min-w-0 items-center gap-0.5 lg:flex'>
               {links.map((link) => {
                 const isActive = pathname === link.href
                 const linkKey = `${link.href}-${link.title}`
@@ -262,6 +269,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                     <a
                       key={linkKey}
                       href={link.href}
+                      title={t(link.title)}
                       target='_blank'
                       rel='noopener noreferrer'
                       aria-disabled={link.disabled}
@@ -280,6 +288,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                   <Link
                     key={linkKey}
                     to={link.href}
+                    title={t(link.title)}
                     disabled={link.disabled}
                     onClick={(event) => handleNavLinkClick(event, link)}
                     className={cn(
@@ -325,7 +334,7 @@ export function PublicHeader(props: PublicHeaderProps) {
             </div>
 
             {/* Mobile: compact actions + hamburger */}
-            <div className='flex items-center gap-2 lg:hidden'>
+            <div className='flex shrink-0 items-center gap-2 lg:hidden'>
               {showThemeSwitch && <ThemeSwitch />}
               {showAuthButtons && !loading && isAuthenticated && (
                 <ProfileDropdown />
