@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import {
   Activity,
+  BarChart3,
   Box,
   ClipboardList,
   CreditCard,
@@ -174,6 +175,12 @@ export function useSidebarData(): SidebarData {
             url: '/system-settings/site',
             activeUrls: ['/system-settings'],
             icon: Settings,
+          },
+          {
+            title: t('Moderation Statistics'),
+            url: '/moderation-stats',
+            icon: BarChart3,
+            requiredRole: ROLE.SUPER_ADMIN,
           },
         ],
       },

@@ -186,6 +186,11 @@ func InitOptionMap() {
 	common.OptionMap["ModerationExemptUserIDs"] = setting.ModerationExemptUserIDs()
 	common.OptionMap["ModerationExemptGroups"] = setting.ModerationExemptGroups()
 	common.OptionMap["ModerationSampleRate"] = strconv.Itoa(setting.ModerationSampleRate())
+	common.OptionMap["ModerationForceTokenIDs"] = setting.ModerationForceTokenIDs()
+	common.OptionMap["ModerationTimeoutSeconds"] = strconv.Itoa(int(setting.ModerationTimeout().Seconds()))
+	common.OptionMap["ModerationTimeoutWindowSeconds"] = strconv.Itoa(int(setting.ModerationTimeoutWindow().Seconds()))
+	common.OptionMap["ModerationTimeoutThreshold"] = strconv.Itoa(setting.ModerationTimeoutThreshold())
+	common.OptionMap["ModerationTimeoutPauseSeconds"] = strconv.Itoa(int(setting.ModerationTimeoutPause().Seconds()))
 	common.OptionMap["DemoSiteEnabled"] = strconv.FormatBool(operation_setting.DemoSiteEnabled)
 	common.OptionMap["SelfUseModeEnabled"] = strconv.FormatBool(operation_setting.SelfUseModeEnabled)
 	common.OptionMap["ModelRequestRateLimitEnabled"] = strconv.FormatBool(setting.ModelRequestRateLimitEnabled)
@@ -234,7 +239,7 @@ func validateOptionValue(key string, value string) error {
 	if key == "MaxTokenAutoGroups" {
 		return setting.ValidateMaxTokenAutoGroups(value)
 	}
-	if key == "ModerationAlertThreshold" || key == "ModerationCacheTTLSeconds" {
+	if key == "ModerationAlertThreshold" || key == "ModerationCacheTTLSeconds" || key == "ModerationTimeoutSeconds" || key == "ModerationTimeoutWindowSeconds" || key == "ModerationTimeoutThreshold" || key == "ModerationTimeoutPauseSeconds" {
 		parsed, err := strconv.Atoi(strings.TrimSpace(value))
 		if err != nil || parsed <= 0 {
 			return fmt.Errorf("%s must be a positive integer", key)
@@ -245,11 +250,23 @@ func validateOptionValue(key string, value string) error {
 		if key == "ModerationCacheTTLSeconds" && parsed > 86400 {
 			return fmt.Errorf("%s exceeds the maximum allowed value", key)
 		}
+		limits := map[string]int{"ModerationTimeoutSeconds": 300, "ModerationTimeoutWindowSeconds": 86400, "ModerationTimeoutThreshold": 100, "ModerationTimeoutPauseSeconds": 86400}
+		if max, ok := limits[key]; ok && parsed > max {
+			return fmt.Errorf("%s exceeds the maximum allowed value", key)
+		}
 	}
 	if key == "ModerationSampleRate" {
 		parsed, err := strconv.Atoi(strings.TrimSpace(value))
 		if err != nil || parsed < 0 || parsed > 100 {
 			return fmt.Errorf("%s must be between 0 and 100", key)
+		}
+	}
+	if key == "ModerationForceTokenIDs" {
+		for _, item := range strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == '\n' || r == '\r' }) {
+			parsed, err := strconv.Atoi(strings.TrimSpace(item))
+			if err != nil || parsed <= 0 {
+				return fmt.Errorf("%s must contain positive token IDs", key)
+			}
 		}
 	}
 	return nil

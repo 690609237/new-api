@@ -357,6 +357,9 @@ func is64BitIntegerType(dbType common.DatabaseType, dataType string) bool {
 }
 
 func migrateDB() error {
+	if err := migrateModerationUsageDimensions(); err != nil {
+		return err
+	}
 	if err := migrateTokenKeyUniqueness(DB); err != nil {
 		return err
 	}
@@ -428,6 +431,18 @@ func migrateDB() error {
 		}
 	}
 	return nil
+}
+
+func migrateModerationUsageDimensions() error {
+	if DB == nil || !DB.Migrator().HasTable("moderation_usage_stats") {
+		return nil
+	}
+	// The first version used a bucket-only unique index. Remove it before
+	// AutoMigrate creates the dimension-aware composite index.
+	if !DB.Migrator().HasIndex(&ModerationUsageStat{}, "idx_moderation_usage_bucket") {
+		return nil
+	}
+	return DB.Migrator().DropIndex(&ModerationUsageStat{}, "idx_moderation_usage_bucket")
 }
 
 func migrateLOGDB() error {

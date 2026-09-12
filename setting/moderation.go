@@ -13,32 +13,42 @@ import (
 // treated as a sensitive option by the admin API and is never returned in the
 // options list.
 const (
-	moderationEnabledEnv        = "MODERATION_ENABLED"
-	moderationBaseURLEnv        = "MODERATION_BASE_URL"
-	moderationAPIKeyEnv         = "MODERATION_API_KEY"
-	moderationModelEnv          = "MODERATION_MODEL"
-	moderationAlertEmailEnv     = "MODERATION_ALERT_EMAIL"
-	moderationAlertThresholdEnv = "MODERATION_ALERT_THRESHOLD"
-	moderationCacheTTLEnv       = "MODERATION_CACHE_TTL_SECONDS"
-	moderationBeforeChannelEnv  = "MODERATION_BEFORE_CHANNEL"
-	moderationExemptUserIDsEnv  = "MODERATION_EXEMPT_USER_IDS"
-	moderationExemptGroupsEnv   = "MODERATION_EXEMPT_GROUPS"
-	moderationSampleRateEnv     = "MODERATION_SAMPLE_RATE"
+	moderationEnabledEnv          = "MODERATION_ENABLED"
+	moderationBaseURLEnv          = "MODERATION_BASE_URL"
+	moderationAPIKeyEnv           = "MODERATION_API_KEY"
+	moderationModelEnv            = "MODERATION_MODEL"
+	moderationAlertEmailEnv       = "MODERATION_ALERT_EMAIL"
+	moderationAlertThresholdEnv   = "MODERATION_ALERT_THRESHOLD"
+	moderationCacheTTLEnv         = "MODERATION_CACHE_TTL_SECONDS"
+	moderationBeforeChannelEnv    = "MODERATION_BEFORE_CHANNEL"
+	moderationExemptUserIDsEnv    = "MODERATION_EXEMPT_USER_IDS"
+	moderationExemptGroupsEnv     = "MODERATION_EXEMPT_GROUPS"
+	moderationSampleRateEnv       = "MODERATION_SAMPLE_RATE"
+	moderationTimeoutEnv          = "MODERATION_TIMEOUT_SECONDS"
+	moderationTimeoutWindowEnv    = "MODERATION_TIMEOUT_WINDOW_SECONDS"
+	moderationTimeoutThresholdEnv = "MODERATION_TIMEOUT_THRESHOLD"
+	moderationTimeoutPauseEnv     = "MODERATION_TIMEOUT_PAUSE_SECONDS"
+	moderationForceTokenIDsEnv    = "MODERATION_FORCE_TOKEN_IDS"
 )
 
 var (
-	moderationEnabled         = envBool(moderationEnabledEnv)
-	moderationBeforeChannel   = envBool(moderationBeforeChannelEnv)
-	moderationBaseURL         = os.Getenv(moderationBaseURLEnv)
-	moderationAPIKey          = os.Getenv(moderationAPIKeyEnv)
-	moderationModel           = os.Getenv(moderationModelEnv)
-	moderationAlertEmail      = strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
-	moderationAlertThreshold  = envPositiveInt(moderationAlertThresholdEnv, 20)
-	moderationCacheTTL        = envPositiveInt(moderationCacheTTLEnv, 600)
-	moderationExemptUserIDs   = strings.TrimSpace(os.Getenv(moderationExemptUserIDsEnv))
-	moderationExemptGroups    = strings.TrimSpace(os.Getenv(moderationExemptGroupsEnv))
-	moderationSampleRate      = envBoundedInt(moderationSampleRateEnv, 100, 0, 100)
-	moderationOptionOverrides = map[string]bool{}
+	moderationEnabled              = envBool(moderationEnabledEnv)
+	moderationBeforeChannel        = envBool(moderationBeforeChannelEnv)
+	moderationBaseURL              = os.Getenv(moderationBaseURLEnv)
+	moderationAPIKey               = os.Getenv(moderationAPIKeyEnv)
+	moderationModel                = os.Getenv(moderationModelEnv)
+	moderationAlertEmail           = strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
+	moderationAlertThreshold       = envPositiveInt(moderationAlertThresholdEnv, 20)
+	moderationCacheTTL             = envPositiveInt(moderationCacheTTLEnv, 600)
+	moderationExemptUserIDs        = strings.TrimSpace(os.Getenv(moderationExemptUserIDsEnv))
+	moderationExemptGroups         = strings.TrimSpace(os.Getenv(moderationExemptGroupsEnv))
+	moderationSampleRate           = envBoundedInt(moderationSampleRateEnv, 100, 0, 100)
+	moderationTimeoutSeconds       = envBoundedInt(moderationTimeoutEnv, 10, 1, 300)
+	moderationTimeoutWindowSeconds = envBoundedInt(moderationTimeoutWindowEnv, 300, 1, 86400)
+	moderationTimeoutThreshold     = envBoundedInt(moderationTimeoutThresholdEnv, 3, 1, 100)
+	moderationTimeoutPauseSeconds  = envBoundedInt(moderationTimeoutPauseEnv, 300, 1, 86400)
+	moderationForceTokenIDs        = strings.TrimSpace(os.Getenv(moderationForceTokenIDsEnv))
+	moderationOptionOverrides      = map[string]bool{}
 )
 
 func envBool(key string) bool {
@@ -147,9 +157,44 @@ func ModerationSampleRate() int {
 	return moderationSampleRate
 }
 
+func ModerationTimeout() time.Duration {
+	return time.Duration(moderationTimeoutValue("ModerationTimeoutSeconds", moderationTimeoutEnv, moderationTimeoutSeconds, 10, 1, 300)) * time.Second
+}
+func ModerationTimeoutWindow() time.Duration {
+	return time.Duration(moderationTimeoutValue("ModerationTimeoutWindowSeconds", moderationTimeoutWindowEnv, moderationTimeoutWindowSeconds, 300, 1, 86400)) * time.Second
+}
+func ModerationTimeoutThreshold() int {
+	return moderationTimeoutValue("ModerationTimeoutThreshold", moderationTimeoutThresholdEnv, moderationTimeoutThreshold, 3, 1, 100)
+}
+func ModerationTimeoutPause() time.Duration {
+	return time.Duration(moderationTimeoutValue("ModerationTimeoutPauseSeconds", moderationTimeoutPauseEnv, moderationTimeoutPauseSeconds, 300, 1, 86400)) * time.Second
+}
+func ModerationForceTokenIDs() string {
+	if !moderationOptionOverrides["ModerationForceTokenIDs"] {
+		return strings.TrimSpace(os.Getenv(moderationForceTokenIDsEnv))
+	}
+	return moderationForceTokenIDs
+}
+
+func moderationTimeoutValue(optionKey, envKey string, value, fallback, min, max int) int {
+	if !moderationOptionOverrides[optionKey] {
+		return envBoundedInt(envKey, fallback, min, max)
+	}
+	return value
+}
+
 // ShouldModeratePromptForUser applies the configured user/group exemptions and
 // stable user sampling before an OpenAI moderation request is sent.
-func ShouldModeratePromptForUser(userID int, group string) bool {
+func ShouldModeratePromptForUser(userID int, group string, tokenID ...int) bool {
+	for _, id := range tokenID {
+		if id > 0 {
+			for _, value := range splitModerationList(ModerationForceTokenIDs()) {
+				if parsed, err := strconv.Atoi(value); err == nil && parsed == id {
+					return true
+				}
+			}
+		}
+	}
 	for _, value := range splitModerationList(ModerationExemptUserIDs()) {
 		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 && parsed == userID {
 			return false
@@ -223,9 +268,27 @@ func UpdateModerationOption(key, value string) bool {
 		} else {
 			moderationSampleRate = 100
 		}
+	case "ModerationTimeoutSeconds":
+		moderationTimeoutSeconds = parseModerationBoundedInt(value, 10, 1, 300)
+	case "ModerationTimeoutWindowSeconds":
+		moderationTimeoutWindowSeconds = parseModerationBoundedInt(value, 300, 1, 86400)
+	case "ModerationTimeoutThreshold":
+		moderationTimeoutThreshold = parseModerationBoundedInt(value, 3, 1, 100)
+	case "ModerationTimeoutPauseSeconds":
+		moderationTimeoutPauseSeconds = parseModerationBoundedInt(value, 300, 1, 86400)
+	case "ModerationForceTokenIDs":
+		moderationForceTokenIDs = strings.TrimSpace(value)
 	default:
 		return false
 	}
 	moderationOptionOverrides[key] = true
 	return true
+}
+
+func parseModerationBoundedInt(value string, fallback, min, max int) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed < min || parsed > max {
+		return fallback
+	}
+	return parsed
 }

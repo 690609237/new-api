@@ -140,7 +140,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		moderationGroup = c.GetString("group")
 	}
 	needModeration := setting.ShouldModeratePrompt() &&
-		setting.ShouldModeratePromptForUser(c.GetInt("id"), moderationGroup) &&
+		setting.ShouldModeratePromptForUser(c.GetInt("id"), moderationGroup, c.GetInt("token_id")) &&
 		relayMode != relayconstant.RelayModeModerations
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
 	needCountToken := constant.CountToken
@@ -168,7 +168,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	if needModeration && !common.GetContextKeyBool(c, constant.ContextKeyModerationChecked) {
 		moderationText := currentUserPrompt
-		flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), moderationText)
+		flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), moderationText, service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
 		if moderationErr != nil {
 			logger.LogWarn(c, fmt.Sprintf("omni moderation request failed: %s", moderationErr.Error()))
 			service.RecordModerationAlert(c.Request.Context(), moderationErr)

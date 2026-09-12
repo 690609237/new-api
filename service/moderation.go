@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -31,14 +32,20 @@ const (
 )
 
 var (
-	moderationCacheOnce sync.Once
-	moderationCache     *cachex.HybridCache[bool]
-	moderationRequests  singleflight.Group
+	moderationCacheOnce      sync.Once
+	moderationCache          *cachex.HybridCache[bool]
+	moderationRequests       singleflight.Group
+	moderationTimeoutCircuit = moderationTimeoutCircuitState{}
 )
 
 type moderationRequest struct {
 	Model string `json:"model"`
 	Input string `json:"input"`
+}
+
+type ModerationIdentity struct {
+	UserID  int
+	TokenID int
 }
 
 type moderationResponse struct {
@@ -62,6 +69,8 @@ func (e *moderationTransportError) Unwrap() error {
 type moderationStatusError struct {
 	statusCode int
 }
+
+const ModerationResultSourceCircuitBreaker ModerationResultSource = "circuit_breaker"
 
 const moderationTestPrompt = "Hello, this is a moderation connectivity test."
 
@@ -160,7 +169,11 @@ func ModeratePrompt(ctx context.Context, prompt string) (bool, error) {
 	return flagged, err
 }
 
-func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, ModerationResultSource, error) {
+func ModeratePromptWithSource(ctx context.Context, prompt string, identities ...ModerationIdentity) (bool, ModerationResultSource, error) {
+	userID, tokenID := 0, 0
+	if len(identities) > 0 {
+		userID, tokenID = identities[0].UserID, identities[0].TokenID
+	}
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
 		return false, ModerationResultSourceAPI, nil
@@ -177,23 +190,35 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 	if flagged, found, err := cache.Get(cacheKey); err != nil {
 		common.SysError(fmt.Sprintf("moderation cache get failed: %v", err))
 	} else if found {
-		recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{CacheHits: 1})
+		recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{UserID: userID, TokenID: tokenID, CacheHits: 1})
 		return flagged, ModerationResultSourceCache, nil
 	}
 
-	result, err, _ := moderationRequests.Do(cacheKey, func() (interface{}, error) {
+	result, err, _ := moderationRequests.Do(cacheKey, func() (any, error) {
 		// A second lookup closes the race between callers that missed the cache
 		// before the first caller completed the upstream request.
 		if flagged, found, cacheErr := cache.Get(cacheKey); cacheErr == nil && found {
-			recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{CacheHits: 1})
+			recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{UserID: userID, TokenID: tokenID, CacheHits: 1})
 			return flagged, nil
+		}
+		if !moderationTimeoutCircuit.allow(time.Now()) {
+			recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{UserID: userID, TokenID: tokenID, CircuitSkips: 1})
+			return moderationCircuitResult{}, nil
 		}
 
 		startedAt := time.Now()
-		flagged, requestErr := requestModeration(ctx, baseURL, apiKey, model, prompt)
+		requestCtx, cancel := context.WithTimeout(ctx, setting.ModerationTimeout())
+		flagged, requestErr := requestModeration(requestCtx, baseURL, apiKey, model, prompt)
+		cancel()
 		delta := moderationmodel.ModerationUsageStatDelta{
+			UserID:            userID,
+			TokenID:           tokenID,
 			APIRequests:       1,
 			APILatencyTotalMs: time.Since(startedAt).Milliseconds(),
+		}
+		timedOut := errors.Is(requestErr, context.DeadlineExceeded) && requestCtx.Err() == context.DeadlineExceeded
+		if timedOut {
+			delta.APITimeouts = 1
 		}
 		if requestErr != nil {
 			delta.APIFailed = 1
@@ -202,6 +227,7 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 		} else {
 			delta.APIPassed = 1
 		}
+		moderationTimeoutCircuit.observe(time.Now(), timedOut)
 		recordModerationUsage(startedAt.Unix(), delta)
 		if requestErr != nil {
 			return false, requestErr
@@ -214,11 +240,57 @@ func ModeratePromptWithSource(ctx context.Context, prompt string) (bool, Moderat
 	if err != nil {
 		return false, ModerationResultSourceAPI, err
 	}
+	if _, ok := result.(moderationCircuitResult); ok {
+		return false, ModerationResultSourceCircuitBreaker, nil
+	}
 	flagged, ok := result.(bool)
 	if !ok {
 		return false, ModerationResultSourceAPI, fmt.Errorf("moderation cache returned invalid result type %T", result)
 	}
 	return flagged, ModerationResultSourceAPI, nil
+}
+
+type moderationCircuitResult struct{}
+
+type moderationTimeoutCircuitState struct {
+	sync.Mutex
+	timeouts  []time.Time
+	openUntil time.Time
+}
+
+func (c *moderationTimeoutCircuitState) allow(now time.Time) bool {
+	c.Lock()
+	defer c.Unlock()
+	if !c.openUntil.IsZero() {
+		if now.Before(c.openUntil) {
+			return false
+		}
+		c.openUntil = time.Time{}
+		c.timeouts = nil
+	}
+	return true
+}
+
+func (c *moderationTimeoutCircuitState) observe(now time.Time, timedOut bool) {
+	c.Lock()
+	defer c.Unlock()
+	if !timedOut {
+		c.timeouts = nil
+		return
+	}
+	window := setting.ModerationTimeoutWindow()
+	cutoff := now.Add(-window)
+	kept := c.timeouts[:0]
+	for _, at := range c.timeouts {
+		if at.After(cutoff) {
+			kept = append(kept, at)
+		}
+	}
+	c.timeouts = append(kept, now)
+	if len(c.timeouts) >= setting.ModerationTimeoutThreshold() {
+		c.openUntil = now.Add(setting.ModerationTimeoutPause())
+		c.timeouts = nil
+	}
 }
 
 func recordModerationUsage(timestamp int64, delta moderationmodel.ModerationUsageStatDelta) {

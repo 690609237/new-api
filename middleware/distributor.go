@@ -288,7 +288,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 	if moderationGroup == "" {
 		moderationGroup = c.GetString("group")
 	}
-	if !setting.ShouldModeratePromptForUser(c.GetInt("id"), moderationGroup) {
+	if !setting.ShouldModeratePromptForUser(c.GetInt("id"), moderationGroup, c.GetInt("token_id")) {
 		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 		return true
 	}
@@ -297,7 +297,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 		return true
 	}
-	flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), prompt)
+	flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), prompt, service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
 	if moderationErr != nil {
 		service.RecordModerationAlert(c.Request.Context(), moderationErr)
 		if service.ShouldSkipModerationError(moderationErr) {

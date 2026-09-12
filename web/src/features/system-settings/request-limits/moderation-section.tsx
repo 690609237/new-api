@@ -65,6 +65,11 @@ const createModerationSchema = (t: (key: string) => string) =>
     ModerationExemptUserIDs: z.string(),
     ModerationExemptGroups: z.string(),
     ModerationSampleRate: z.number().int().min(0).max(100),
+    ModerationForceTokenIDs: z.string(),
+    ModerationTimeoutSeconds: z.number().int().min(1).max(300),
+    ModerationTimeoutWindowSeconds: z.number().int().min(1).max(86400),
+    ModerationTimeoutThreshold: z.number().int().min(1).max(100),
+    ModerationTimeoutPauseSeconds: z.number().int().min(1).max(86400),
   })
 
 type ModerationFormValues = z.infer<ReturnType<typeof createModerationSchema>>
@@ -357,6 +362,96 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                 </FormItem>
               )}
             />
+          </div>
+
+          <div className='grid gap-4 md:grid-cols-2'>
+            <FormField
+              control={form.control}
+              name='ModerationForceTokenIDs'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Required moderation token IDs')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder={t('One token ID per line')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'These tokens are always moderated, even when their user or group is exempt.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className='text-muted-foreground rounded-lg border border-dashed p-3 text-sm'>
+              {t(
+                'Timeout protection pauses moderation temporarily when the upstream service is unstable.'
+              )}
+            </div>
+          </div>
+
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            {(
+              [
+                [
+                  'ModerationTimeoutSeconds',
+                  'Moderation request timeout',
+                  1,
+                  300,
+                  'Seconds before a moderation request is skipped.',
+                ],
+                [
+                  'ModerationTimeoutWindowSeconds',
+                  'Timeout judgment window',
+                  1,
+                  86400,
+                  'Window used to count consecutive timeouts.',
+                ],
+                [
+                  'ModerationTimeoutThreshold',
+                  'Consecutive timeout threshold',
+                  1,
+                  100,
+                  'Open the pause after this many timeouts.',
+                ],
+                [
+                  'ModerationTimeoutPauseSeconds',
+                  'Moderation pause duration',
+                  1,
+                  86400,
+                  'Seconds to pause moderation after the threshold.',
+                ],
+              ] as const
+            ).map(([name, label, min, max, description]) => (
+              <FormField
+                key={name}
+                control={form.control}
+                name={name}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t(label)}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={min}
+                        max={max}
+                        step={1}
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(Number.parseInt(e.target.value) || min)
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>{t(description)}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
           </div>
 
           <div className='flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3'>

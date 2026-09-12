@@ -27,6 +27,7 @@ import { Route as errors404RouteImport } from './routes/(errors)/404'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as AuthenticatedChat2linkRouteImport } from './routes/_authenticated/chat2link'
+import { Route as AuthenticatedModerationStatsRouteImport } from './routes/_authenticated/moderation-stats'
 import { Route as AuthenticatedSystemSettingsRouteRouteImport } from './routes/_authenticated/system-settings/route'
 import { Route as AboutIndexRouteImport } from './routes/about/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
@@ -160,6 +161,12 @@ const AuthenticatedChat2linkRoute = AuthenticatedChat2linkRouteImport.update({
   path: '/chat2link',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedModerationStatsRoute =
+  AuthenticatedModerationStatsRouteImport.update({
+    id: '/moderation-stats',
+    path: '/moderation-stats',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSystemSettingsRouteRoute =
   AuthenticatedSystemSettingsRouteRouteImport.update({
     id: '/system-settings',
@@ -432,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat2link': typeof AuthenticatedChat2linkRoute
+  '/moderation-stats': typeof AuthenticatedModerationStatsRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about/': typeof AboutIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -493,6 +501,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat2link': typeof AuthenticatedChat2linkRoute
+  '/moderation-stats': typeof AuthenticatedModerationStatsRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about': typeof AboutIndexRoute
   '/docs': typeof DocsIndexRoute
@@ -558,6 +567,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/chat2link': typeof AuthenticatedChat2linkRoute
+  '/_authenticated/moderation-stats': typeof AuthenticatedModerationStatsRoute
   '/oauth/$provider': typeof OauthProviderRoute
   '/about/': typeof AboutIndexRoute
   '/docs/': typeof DocsIndexRoute
@@ -622,6 +632,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/chat2link'
+    | '/moderation-stats'
     | '/oauth/$provider'
     | '/about/'
     | '/docs/'
@@ -683,6 +694,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/chat2link'
+    | '/moderation-stats'
     | '/oauth/$provider'
     | '/about'
     | '/docs'
@@ -747,6 +759,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/chat2link'
+    | '/_authenticated/moderation-stats'
     | '/oauth/$provider'
     | '/about/'
     | '/docs/'
@@ -938,6 +951,13 @@ declare module '@tanstack/react-router' {
       path: '/chat2link'
       fullPath: '/chat2link'
       preLoaderRoute: typeof AuthenticatedChat2linkRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/moderation-stats': {
+      id: '/_authenticated/moderation-stats'
+      path: '/moderation-stats'
+      fullPath: '/moderation-stats'
+      preLoaderRoute: typeof AuthenticatedModerationStatsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/system-settings': {
@@ -1337,6 +1357,7 @@ const AuthenticatedSystemSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSystemSettingsRouteRoute: typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   AuthenticatedChat2linkRoute: typeof AuthenticatedChat2linkRoute
+  AuthenticatedModerationStatsRoute: typeof AuthenticatedModerationStatsRoute
   AuthenticatedChatChatIdRoute: typeof AuthenticatedChatChatIdRoute
   AuthenticatedDashboardSectionRoute: typeof AuthenticatedDashboardSectionRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
@@ -1363,6 +1384,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSystemSettingsRouteRoute:
     AuthenticatedSystemSettingsRouteRouteWithChildren,
   AuthenticatedChat2linkRoute: AuthenticatedChat2linkRoute,
+  AuthenticatedModerationStatsRoute: AuthenticatedModerationStatsRoute,
   AuthenticatedChatChatIdRoute: AuthenticatedChatChatIdRoute,
   AuthenticatedDashboardSectionRoute: AuthenticatedDashboardSectionRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,

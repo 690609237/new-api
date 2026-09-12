@@ -19,21 +19,27 @@ func TestRecordModerationUsageAggregatesByBucket(t *testing.T) {
 
 	const timestamp = int64(1_700_000_123)
 	require.NoError(t, RecordModerationUsage(timestamp, ModerationUsageStatDelta{
+		UserID:            7,
+		TokenID:           9,
 		APIRequests:       1,
 		APIPassed:         1,
 		APILatencyTotalMs: 12,
 	}))
 	require.NoError(t, RecordModerationUsage(timestamp+60, ModerationUsageStatDelta{
+		UserID:            7,
+		TokenID:           9,
 		APIRequests:       1,
 		APIViolations:     1,
 		APILatencyTotalMs: 18,
 	}))
 	require.NoError(t, RecordModerationUsage(timestamp+360, ModerationUsageStatDelta{
+		UserID:      8,
+		TokenID:     10,
 		APIRequests: 1,
 		APIFailed:   1,
 	}))
 
-	summary, buckets, err := GetModerationUsageStats(timestamp-300, timestamp+600)
+	summary, buckets, dimensions, err := GetModerationUsageStats(timestamp-300, timestamp+600, 0, 0)
 	require.NoError(t, err)
 	require.Len(t, buckets, 2)
 	require.Equal(t, int64(3), summary.APIRequests)
@@ -41,4 +47,9 @@ func TestRecordModerationUsageAggregatesByBucket(t *testing.T) {
 	require.Equal(t, int64(1), summary.APIViolations)
 	require.Equal(t, int64(1), summary.APIFailed)
 	require.Equal(t, int64(30), summary.APILatencyTotalMs)
+	require.Len(t, dimensions, 2)
+	filtered, _, filteredDimensions, err := GetModerationUsageStats(timestamp-300, timestamp+600, 7, 9)
+	require.NoError(t, err)
+	require.Equal(t, int64(2), filtered.APIRequests)
+	require.Len(t, filteredDimensions, 1)
 }
