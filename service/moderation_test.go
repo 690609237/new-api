@@ -7,14 +7,42 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/stretchr/testify/require"
 )
+
+func TestModeratePromptSkipsBlankInput(t *testing.T) {
+	flagged, err := ModeratePrompt(context.Background(), " \n\t ")
+	require.NoError(t, err)
+	require.False(t, flagged)
+}
+
+func TestModeratePromptTruncatesFromEnd(t *testing.T) {
+	var gotBody moderationRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.NoError(t, common.Unmarshal(body, &gotBody))
+		_, _ = w.Write([]byte(`{"results":[{"flagged":false}]}`))
+	}))
+	defer server.Close()
+
+	t.Setenv("MODERATION_BASE_URL", server.URL)
+	t.Setenv("MODERATION_API_KEY", "test-key")
+	prompt := strings.Repeat("旧内容", 100) + strings.Repeat("中", common.ModerationPromptMaxRunes) + "最新内容"
+	_, err := ModeratePrompt(context.Background(), prompt)
+	require.NoError(t, err)
+	require.Equal(t, common.ModerationPromptMaxRunes, utf8.RuneCountInString(gotBody.Input))
+	require.True(t, strings.HasSuffix(gotBody.Input, "最新内容"))
+	require.NotContains(t, gotBody.Input, strings.Repeat("旧内容", 100))
+}
 
 func TestModerationTimeoutCircuitOpensAndRecovers(t *testing.T) {
 	oldThreshold := setting.ModerationTimeoutThreshold()

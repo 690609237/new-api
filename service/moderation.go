@@ -90,6 +90,11 @@ func TestModerationEndpoint(ctx context.Context, baseURL, apiKey, model string) 
 }
 
 func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt string) (bool, error) {
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		return false, nil
+	}
+	prompt = common.TruncateStringFromEnd(prompt, common.ModerationPromptMaxRunes)
 	payload, marshalErr := common.Marshal(moderationRequest{Model: model, Input: prompt})
 	if marshalErr != nil {
 		return false, fmt.Errorf("marshal moderation request: %w", marshalErr)
@@ -178,6 +183,7 @@ func ModeratePromptWithSource(ctx context.Context, prompt string, identities ...
 	if prompt == "" {
 		return false, ModerationResultSourceAPI, nil
 	}
+	prompt = common.TruncateStringFromEnd(prompt, common.ModerationPromptMaxRunes)
 	baseURL := strings.TrimRight(strings.TrimSpace(setting.ModerationBaseURL()), "/")
 	apiKey := strings.TrimSpace(setting.ModerationAPIKey())
 	model := strings.TrimSpace(setting.ModerationModel())

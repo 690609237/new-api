@@ -1,165 +1,94 @@
-# dev/kevin 分支定制功能与合并参考
+# 当前业务定制与状态
 
-本文记录 `dev/kevin` 相对于 `prod/kevin` 的业务定制，作为后续同步 `main`、处理冲突和代码评审的参考。
+## 业务状态总览
 
-## 使用原则
+| 业务域 | 当前生效状态 |
+| --- | --- |
+| 订阅与计费 | 订阅使用独立的订阅分组和倍率，不修改用户默认分组；订阅有效期内扣减订阅额度，失效或耗尽后按既定用户分组/钱包规则计费。 |
+| 内容审核 | 支持本地敏感词检查、兼容 OpenAI 的审核 API、用户/分组豁免、采样率、强制审核令牌、缓存、告警及超时熔断。审核只针对当前请求新增的用户内容。 |
+| 违规与封禁 | 违规次数按 24 小时窗口统计；达到用户设置的上限后自动 API 封禁。管理员可调整上限、重置违规次数并解除普通用户的审核封禁。 |
+| 用户输入日志 | 记录当前用户轮次和使用的令牌名称，不记录 system prompt、历史上下文或 assistant/tool continuation；自动化 Codex 请求不重复写入。 |
+| 品牌与帮助 | 保留 Logo、联系方式、关于页、帮助文档入口、帮助内容和截图资源。 |
+| 注册提示 | 注册页保留邮箱支持/用途说明，并以气泡提示方式展示。 |
+| 支付与订单 | 充值支付方式校验、额度安全保护和待处理订单清理保持启用。 |
 
-同步上游时，先判断冲突文件是否属于下面的业务边界。涉及业务边界的文件不能直接使用 `main` 版本覆盖，应保留当前分支的业务字段、状态流转和前端入口，再吸收上游的兼容性修复。
+## 订阅与计费
 
-对于只涉及性能、驱动兼容性或安全修复的上游改动，可以优先采用 `main` 版本，但要重新检查它是否删除了本分支的业务字段或迁移项。合并后至少执行：
+- 订阅分组独立于用户默认分组，不能通过修改用户 `group` 实现订阅分组。
+- 订阅有效时，相关请求使用订阅分组倍率并优先扣减订阅额度；订阅到期或额度耗尽后，回退到用户分组和钱包计费规则。
+- 旧 token 的 `token.Group` 仍可兼容为订阅分组。
+- 模型别名计费身份与订阅分组信息同时参与结算，不能互相替代。
+- 订阅额度预警与耗尽通知按用户、订阅分组、订阅周期和阶段幂等发送；通知沿用用户配置的 Email、Webhook、Bark 或 Gotify 渠道，不修改用户默认分组。
 
-```bash
-git diff --check
-go test ./service ./model ./controller ./middleware
-```
+## 内容审核
 
-前端变更需要在 `web/` 下执行 `bun run build` 或项目对应的前端检查。
+### 输入与执行顺序
 
-## 业务定制清单
-
-主要业务提交（便于 `git show` 定位）：
-
-- `de0eb4e34`：官方审核、违规计数/封禁、审核告警、用户输入日志，以及支付/订单安全改动。
-- `679338de4`、`63a45399f`：审核管理界面、白名单/采样、审核日志详情。
-- `48f3610ff`：审核调用聚合统计（按用户/令牌维度、超时/熔断指标及管理端统计页面）。
-- `2025a2fc7`：管理员修改违规上限并联动封禁状态。
-- `e9865cad4`：兼容旧订阅分组 token。
-- `429a8bc4a`：用户输入日志增加 token 名称。
-- `e48d1be2f`：注册提示改为气泡提示。
-- `2f812d794`：上述功能的修复和边界补强。
-
-Logo、关于页和帮助页的基础改动来自 `prod/kevin` 上的 `da6ccfb06`，同步其他分支时也要将它视为本项目定制基线。
-
-| 功能 | 关键代码 | 合并时必须保留的行为 |
-| --- | --- | --- |
-| 订阅分组与倍率 | `middleware/auth.go`、`relay/common/relay_info.go`、`service/billing_session.go`、`service/quota.go`、`model/subscription*.go`、相关前端订阅页面 | 订阅分组独立于用户默认分组；不要通过修改用户 `group` 实现订阅分组。订阅有效时按订阅分组倍率计费，失效后按既定回退逻辑使用用户分组/钱包。旧 token 的 `token.Group` 需要兼容为订阅分组。`SubscriptionFunding.subscriptionGroup` 和 `RelayInfo.GetBillingModelName()` 都不能丢。 |
-| Logo、联系方式、关于页 | `web/src/features/about/index.tsx`、`web/src/features/home/components/sections/hero.tsx`、导航相关 hooks、`web/src/routes/docs/index.tsx`、`web/public/help/*`、各语言 locale | 保留联系方式、品牌展示、首页入口和帮助文档入口；删除或覆盖这些文件会使 Logo 联系方式、关于页或帮助页回退到上游内容。 |
-| 文档/帮助页 | `web/src/features/help/index.tsx`、`web/src/features/help/sections/*`、`web/public/help/*`、`web/src/routes/docs/index.tsx` | 保留自定义帮助内容、截图资源、文档路由和导航链接；新增上游导航时应与现有入口合并。 |
-| 用户输入交互日志 | `logger/user_message.go`、`service/user_message_log.go`、`controller/relay.go`、`logger/user_message_test.go`、`service/user_message_log_test.go` | 记录用户本轮输入和使用的 token 名称，不把 system prompt、历史上下文、assistant/tool continuation 作为本轮输入；日志文件要有大小、数量、保留期和重复内容去重限制；自动生成标题、压缩、memory、subagent、automation 请求不应重复记录。 |
-| 内容审核 | `service/moderation.go`、`service/moderation_alert.go`、`controller/relay.go`、`middleware/distributor.go`、`setting/moderation.go`、审核前端设置页 | 审核只取当前请求最后一条 user 输入，不审核 system prompt、历史消息、工具定义和 continuation。审核服务异常采用 fail-open，网络错误、429、5xx、配置/解析异常均放行模型请求，同时记录聚合告警。审核成功命中才阻断并记违规。用户/分组豁免在没有强制令牌时跳过审核，非豁免用户再按采样率决定是否调用；`ModerationForceTokenIDs` 中的令牌 ID 始终强制审核并优先于所有豁免和采样规则。启用 `ModerationBeforeChannel` 时，前置审核与普通 Relay 共用 `moderation_checked` 上下文标记，避免同一请求重复调用审核 API。 |
-| 违规次数与账号封禁 | `model/moderation_violation.go`、`model/user.go`、`middleware/auth.go`、`controller/user.go`、`model/moderation_log.go`、用户管理/个人资料前端 | 在事务和行锁内递增 24 小时窗口内的违规次数；达到用户上限后设置 `api_blocked`。管理员可以修改上限、重置次数并解除普通用户的审核封禁；修改/重置后必须刷新认证缓存。管理员账号的显式 API 封禁状态不能被违规重置逻辑误清除。 |
-| 注册页邮箱说明 | `web/src/features/auth/sign-up/components/sign-up-form.tsx`、用户操作文案和各语言 locale | 保留注册页面关于邮箱支持/用途的提示，以及气泡提示交互和所有语言翻译。 |
-
-## 代码中发现的其他定制
-
-除已知功能外，提交记录还显示以下改动，后续合并时也应确认是否仍需要：
-
-- 支付与订单：充值支付方式校验、额度安全保护、待处理订单定期清理，涉及 `model/topup.go`、`model/subscription.go`、`service/payment_order_cleanup.go`、`controller/topup*.go` 等。
-- Docker/部署配置：`docker-compose.yml`、`.env.example` 中增加或调整了运行参数；其中审核配置、日志配置和密钥相关配置不能被上游覆盖。
-- 移除或隐藏旧的 `sk` 配置：涉及 Docker 配置和部分前端/后端选项，合并时需确认部署环境是否仍依赖旧变量。
-- 审核设置白名单、采样率、用户/分组豁免、强制令牌 ID、缓存 TTL、告警邮箱和阈值等运行时参数，主要位于 `setting/moderation.go` 和管理端安全设置页面。
-- 审核超时保护配置为 `ModerationTimeoutSeconds`、`ModerationTimeoutWindowSeconds`、`ModerationTimeoutThreshold`、`ModerationTimeoutPauseSeconds`（分别是单次超时上限、超时判断周期、连续超时次数阈值和暂停时长），也可在前端“内容审核”设置中修改。超时按 fail-open 处理；在周期内达到连续超时阈值后，进程内熔断审核调用，暂停结束后自动恢复，期间主业务请求继续执行。
-- 部署环境对应变量为 `MODERATION_FORCE_TOKEN_IDS`、`MODERATION_TIMEOUT_SECONDS`、`MODERATION_TIMEOUT_WINDOW_SECONDS`、`MODERATION_TIMEOUT_THRESHOLD`、`MODERATION_TIMEOUT_PAUSE_SECONDS`；系统选项保存后会覆盖环境变量，并通过管理端选项接口回显（API Key 仍按敏感配置处理）。
-- 用户日志查询详情中增加 token 信息，涉及日志 DTO、详情弹窗和多语言文案。
-
-此外，`dev/kevin` 期间还合入了多个上游 `main` 提交（relaykit、任务插件、Responses、计费安全、前端测试等）。这些不属于本分支最初的业务定制，处理冲突时应以提交来源和文件边界为准，不要把它们误判为订阅分组或审核需求。
-
-需要区分“审计日志”和“审核调用统计”：通用安全审计日志（登录、令牌/额度等管理操作）来自上游 `main` 的 `d8cb17744`、`3f8a50cf8` 等提交，写入审计日志链路；本分支定制的内容审核调用统计是 `moderation_usage_stats` 表及 `/api/moderation/stats` 页面，二者数据和查询入口独立。
-
-## 已确认的冲突合并规则
-
-### 本次同步 `main` 的影响结论
-
-本次三个冲突点不属于审核、违规封禁、用户输入日志或前端品牌页面的核心执行链路，因此按下面方式合并不会改变这些定制功能：
-
-- `common/database.go` 只调整 SQLite 并发连接参数，不改变数据库类型选择、表结构或业务数据；启用 WAL/`BEGIN IMMEDIATE` 后，SQLite 并发写入的失败概率更低。
-- `model/main.go` 保留顺序迁移和当前分支的迁移项；不启用未被调用的并发迁移函数，避免 SQLite `AutoMigrate` 并发执行导致锁冲突。迁移项不能因解决冲突而删掉，否则升级后可能缺少订阅、认证缓存或额度安全字段。
-- `service/billing_session.go` 同时保留上游的模型计费身份和本分支的订阅分组字段。只采用一侧会分别造成模型别名计费错误或订阅分组倍率/额度约束丢失。
-
-因此，合并后对既有系统功能的预期影响是：SQLite 并发可靠性改善，订阅计费逻辑保持不变；审核、日志、封禁和页面定制不应受到影响。真正需要重点回归的是订阅有效/过期回退、钱包/订阅扣费，以及数据库升级启动流程。
-
-### `common/database.go`
-
-采用上游较新的 SQLite DSN：
-
-```go
-one-api.db?_pragma=busy_timeout(30000)&_pragma=journal_mode(WAL)&_txlock=immediate
-```
-
-它修复纯 Go SQLite 驱动对旧 `_busy_timeout` 参数不生效以及事务快照升级导致 `SQLITE_BUSY_SNAPSHOT` 的问题。该冲突不涉及上述业务功能。
-
-### `model/main.go`
-
-保留顺序执行的 `migrateDB()`，删除未被调用且会并发执行 `AutoMigrate` 的 `migrateDBFast()`。同时检查并保留当前分支新增的迁移项和字段，特别是订阅分组、用户认证缓存、额度安全相关迁移。
-
-### `service/billing_session.go`
-
-两侧逻辑必须合并，不能二选一：
-
-```go
-funding: &SubscriptionFunding{
-    requestId:         relayInfo.RequestId,
-    userId:            relayInfo.UserId,
-    modelName:         relayInfo.GetBillingModelName(),
-    subscriptionGroup: relayInfo.SubscriptionGroup,
-    amount:            subConsume,
-},
-```
-
-`GetBillingModelName()` 保证模型别名/计费身份正确；`subscriptionGroup` 保证订阅分组倍率和订阅额度扣减正确。缺任何一个都会导致订阅计费走错模型或丢失订阅分组约束。
-
-### 本次同步冲突分析（2026-09-08）
-
-本次合并 `main`（`ea7cb0ba4`）产生 14 个未解决文件，其中只有订阅额度通知涉及需要业务取舍的关键冲突；其余冲突均可依据现有定制边界直接合并：
-
-| 文件 | 冲突内容 | 处理决定 |
-| --- | --- | --- |
-| `controller/user.go` | 上游登录安全/`has_password`/安全 DTO 与本分支违规次数、API 封禁、管理员额度及违规操作 | 合并两侧；保留上游安全登录与密码校验，保留定制字段和管理动作。自我用户查询补齐违规字段，避免 DTO 返回零值。 |
-| `model/user.go` | 上游 `HasPassword`、`AccessTokenCreatedAt` 与本分支 `APIBlocked`、违规窗口字段 | 合并全部字段；密码上限采用上游 128 位，违规上限仍由定制接口限制为 1–100。 |
-| `middleware/distributor.go` | 本分支选渠道前审核/高级自定义路径检查，与上游任务插件无可用渠道提示 | 合并两套逻辑；审核仍只取最后一条 user 输入并 fail-open，任务插件提示保留。 |
-| `model/option.go` | 仅导入冲突：`fmt` 与 `maps` | 两个导入均保留。 |
-| `router/api-router.go` | 仅路由冲突：审核测试与模型定价配置 | 两组路由均保留。 |
-| `web/src/features/subscriptions/components/subscriptions-mutate-drawer.tsx` | 上游将分组控件统一为 `Combobox`，本分支增加 `subscription_group` 且互斥清空升级/降级组 | 采用 `Combobox`，保留订阅权益分组及三者互斥行为。 |
-| `web/src/i18n/locales/*.json` | 上游新增翻译键，本分支审核、品牌、帮助页和邮箱提示翻译 | 合并全部键；保留本分支定制翻译，并运行 i18n 同步检查。 |
-| `service/quota.go` | 订阅额度用尽/预警通知策略不同 | 保留订阅专用持久化通知队列和 warning/exhausted 两阶段；吸收上游的用户通知渠道和绝对额度预警阈值配置。通过事件键幂等，重复结算、认证重试和服务重启不会重复创建同一周期同一阶段的通知。 |
-
-#### 已确认：订阅额度通知策略
-
-订阅不修改用户默认分组，而是使用独立的 `subscription_group` 和对应倍率。订阅有效期内按订阅分组倍率消耗订阅额度；订阅到期或额度耗尽后，相关 token 回退到用户分组，后续钱包计费使用用户分组倍率。订阅剩余额度不会因到期返还。
-
-通知策略如下：
-
-- 订阅额度降至预警阈值时发送一次 `warning` 通知；阈值优先使用用户设置中的 `QuotaWarningThreshold`（绝对额度），未配置时使用总额度的 2% 作为默认阈值。
-- 订阅额度耗尽时发送一次 `exhausted` 通知，说明倍率已切换或后续请求将按当前用户计费策略处理。
-- 每个用户、订阅分组、订阅周期和通知阶段组成唯一事件键，并由 `NotificationDelivery.EventKey` 唯一索引配合 `ON CONFLICT DO NOTHING` 保证幂等。重复结算或认证重试只会命中同一事件，不会新增通知；发送失败则由持久化队列重试。
-- 通知发送沿用用户选择的 Email、Webhook、Bark 或 Gotify 渠道。通知内容不把用户默认分组改成订阅分组。
-
-### 审核调用统计
-
-审核调用的聚合统计接口为 `GET /api/moderation/stats`，仅 Root 可访问，默认返回最近 24 小时数据，也支持 `start_timestamp`、`end_timestamp`、`user_id` 和 `token_id` 查询时间范围及维度筛选。统计结果存储在主数据库的 `moderation_usage_stats` 表中（SQLite/MySQL/PostgreSQL 均使用 GORM 迁移），不是审计日志表，也不写入单独的日志数据库；按 5 分钟时间桶聚合，唯一维度为 `bucket_start + user_id + token_id`。接口同时返回时间桶列表和按用户/令牌汇总的 `dimensions`，页面入口为 `/moderation-stats`。该统计覆盖普通 Relay 和启用 `ModerationBeforeChannel` 的前置审核；后置阶段会依据上下文标记跳过已完成的前置审核。
-
-记录字段包括：实际发出的审核 API 请求数 `api_requests`、通过数 `api_passed`、违规数 `api_violations`、失败数 `api_failed`、缓存命中 `cache_hits`、累计/平均耗时 `api_latency_total_ms` / `api_latency_average_ms`、超时数 `api_timeouts` 和熔断跳过数 `circuit_skips`。`api_succeeded` 是 `api_passed + api_violations`，不把失败、超时或熔断跳过计为成功；熔断跳过也不增加 `api_requests`。统计只保存聚合数据，不保存通过请求的 prompt 明细，违规 prompt 仍通过管理员审核日志查看。
-
-### 审核超时与熔断约定
-
-每次真实 API 调用使用 `context.WithTimeout` 限制时长。超时、网络错误、429、5xx、配置或响应解析异常都记录失败并放行主流程（fail-open）；超时另外递增 `api_timeouts`。在配置的判断周期内连续超时达到阈值后，熔断器暂停调用指定时长，暂停期间返回 `circuit_breaker` 来源并递增 `circuit_skips`，不产生外部请求；暂停结束后自动清空超时窗口并恢复调用。熔断状态是当前进程内共享状态，重启进程会重置。
-
-缓存命中只递增 `cache_hits`，不会递增 `api_requests` 或耗时；singleflight 合并的并发请求同样只由实际发出请求的执行者计一次 API 调用。前置审核完成后设置 `ContextKeyModerationChecked`，普通 Relay 阶段必须检查该标记，防止 `ModerationBeforeChannel` 与常规审核重复计数或重复阻断。
-
-### 后续解决冲突的检查清单
-
-每次从 `main` 同步后，先按文件所属边界处理：
-
-1. 先保留本分支的业务字段、状态机和入口，再逐段吸收上游修复；不要对业务文件直接执行 `checkout --theirs`。
-2. 全局搜索冲突标记，并检查定制关键字是否仍存在：`SubscriptionGroup`、`GetBillingModelName`、`Moderation`、`ApiBlocked`、`UserMessage`、`token name`。
-3. 审核链路确认只取最后一条 user 输入；审核服务异常仍按 fail-open 放行并产生聚合告警，不能恢复成 503 阻断策略。
-4. 强制审核令牌 ID 必须继续覆盖用户/分组豁免和采样率；合并设置项或前端表单时不能丢失 `ModerationForceTokenIDs` 及其环境变量。
-5. 四个超时配置及 fail-open/熔断状态机必须保持；不能把超时恢复成阻断 5xx，也不能让熔断跳过计入真实 API 请求。
-6. 违规次数递增、修改上限、重置解封必须在事务/行锁内完成，操作后刷新认证缓存；管理员显式 API 封禁不能被重置逻辑清除。
-7. `moderation_usage_stats` 的复合唯一索引必须包含时间桶、用户 ID 和令牌 ID；迁移时删除旧的 bucket-only 索引，并在 SQLite、MySQL、PostgreSQL 上验证升级和幂等启动。
-8. 前置审核与普通 Relay 必须通过 `ContextKeyModerationChecked` 去重；不要在两个阶段各自重复调用或重复记录统计。
-9. 前端检查 Logo/联系方式、关于/帮助文档、注册邮箱提示、审核管理入口和所有 locale 翻译没有被上游覆盖。
-10. 合并完成后运行 `git diff --check`、后端相关包测试和前端构建；最后由操作者执行 `git add`，确认冲突状态从 `UU` 变为已解决后再提交。
-
-## 审核功能的当前约定
-
-审核链路应保持为：
+审核链路为：
 
 ```text
-请求 DTO
-  -> ExtractLatestUserMessageForModeration
-  -> 本地敏感词检查 / 官方 moderation API
-  -> 命中时记录审核日志和违规次数
+请求解析
+  -> 提取当前请求最后一条 user 输入
+  -> 本地敏感词检查
+  -> 官方审核 API（满足豁免、采样和配置条件时）
+  -> 命中时记录审核日志并累计违规次数
 ```
 
-不要改回使用 `TokenCountMeta.CombineText` 作为官方审核输入，因为它包含 system prompt、历史消息、工具定义和其他计费文本。`CombineText` 仍可继续用于 token 统计，但不应作为本轮用户输入审核的来源。
+- 审核只取本次请求新增的最后一条 `user` 内容，不包含 system prompt、历史消息、工具定义、assistant/tool continuation、图片或音频内容。
+- 如果提取到的内容去除首尾空白后为空，则跳过审核 API，继续正常请求流程。
+- 本地敏感词命中后立即终止当前请求，不再调用审核 API、计费或上游模型。
+- 开启 `ModerationBeforeChannel` 时，渠道选择前执行一次审核；普通 Relay 通过 `moderation_checked` 标记跳过重复审核。
+
+### 长度与数据边界
+
+- 审核 API 输入最多保留 4096 个 rune；超长时从前往后丢弃旧内容，优先保留最新内容。
+- 违规审核日志使用相同的 4096 rune 上限和末尾保留策略。
+- 该截断只发生在审核 API 请求和违规审核日志路径，不改变正常 Relay、敏感词检查、token 统计、计费或上游模型请求使用的原始内容。
+
+### 豁免、强制与失败策略
+
+- 用户豁免和用户组豁免在没有强制审核令牌时生效。
+- `ModerationForceTokenIDs` 中的令牌始终审核，并优先于用户豁免、用户组豁免和采样率。
+- 非豁免请求按 `ModerationSampleRate` 决定是否调用审核 API。
+- 审核 API 的网络错误、429、5xx、配置错误、超时和响应解析错误均采用 fail-open：放行模型请求，同时记录告警和聚合统计。
+- 连续超时达到阈值后进入进程内熔断暂停；暂停期间不发起审核 API 请求，主业务请求继续执行，暂停结束后自动恢复。
+
+### 审核统计
+
+- `GET /api/moderation/stats` 仅 Root 可访问，支持时间范围、用户 ID 和令牌 ID 筛选。
+- 统计按 5 分钟时间桶、用户和令牌聚合，记录实际 API 请求、通过、违规、失败、缓存命中、延迟、超时和熔断跳过等指标。
+- 缓存命中和熔断跳过不计入实际 API 请求数；统计只保存聚合数据，不保存通过请求的 prompt 明细。
+
+## 违规次数与账号封禁
+
+- 违规次数在 24 小时窗口内累计，并在事务和行锁保护下更新。
+- 达到用户配置的违规上限后设置 `api_blocked`，后续 API 请求被拒绝。
+- 管理员可以修改违规上限、重置违规次数并解除普通用户的审核封禁；操作后刷新认证缓存。
+- 管理员显式设置的 API 封禁状态不能被普通违规重置逻辑清除。
+- 违规审核内容仅放在管理员可见的 `admin_info` 中，普通用户日志视图不会返回 prompt。
+
+## 用户输入日志
+
+- 记录当前用户轮次和使用的 token 名称。
+- 不记录 system prompt、历史上下文、assistant/tool continuation、文件、图片或音频内容。
+- 自动生成标题、压缩、memory、subagent 和 automation 请求不重复记录。
+- 日志内容具备大小、数量、保留期和重复内容去重限制。
+
+## 管理端审核设置页
+
+- “测试审核接口连接”紧邻“审核 API 密钥”输入，填写凭据后可以立即测试，结果在同一区域反馈。
+- “必须审核的令牌 ID”与“豁免用户 ID”“豁免用户组”集中在同一策略区域。
+- 两项豁免并列展示，强制审核令牌放在区域末尾并独占一行，用阅读顺序表达其覆盖优先级。
+
+## 配置边界
+
+- 审核支持环境变量和系统选项两种来源；系统选项保存后覆盖环境变量。
+- 主要配置包括审核开关、基础 URL、API Key、模型、前置审核开关、用户/分组豁免、采样率、强制令牌、缓存 TTL、告警邮箱与阈值，以及超时窗口、超时阈值和暂停时长。
+- 审核 API Key 按敏感配置处理，只写入不回显。
+- `MODERATION_FORCE_TOKEN_IDS`、`MODERATION_TIMEOUT_SECONDS`、`MODERATION_TIMEOUT_WINDOW_SECONDS`、`MODERATION_TIMEOUT_THRESHOLD` 和 `MODERATION_TIMEOUT_PAUSE_SECONDS` 用于部署环境配置。
+
+## 审计日志与审核统计的边界
+
+- 通用安全审计日志记录登录、令牌、额度等管理操作。
+- 内容审核统计记录审核 API 的聚合调用指标。
+- 两者数据、用途和查询入口相互独立；违规 prompt 仅通过管理员审核日志查看。

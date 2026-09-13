@@ -38,9 +38,9 @@ func TestRecordModerationLogKeepsPromptAdminOnly(t *testing.T) {
 
 	other, err := common.StrToMap(log.Other)
 	require.NoError(t, err)
-	adminInfo, ok := other["admin_info"].(map[string]interface{})
+	adminInfo, ok := other["admin_info"].(map[string]any)
 	require.True(t, ok)
-	moderation, ok := adminInfo["moderation"].(map[string]interface{})
+	moderation, ok := adminInfo["moderation"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "unsafe prompt", moderation["prompt"])
 	require.Equal(t, true, moderation["flagged"])
@@ -55,8 +55,10 @@ func TestRecordModerationLogKeepsPromptAdminOnly(t *testing.T) {
 }
 
 func TestModerationLogTruncatesLargePrompt(t *testing.T) {
-	prompt := strings.Repeat("敏感", moderationLogPromptMaxRunes)
+	prompt := strings.Repeat("旧内容", 100) + strings.Repeat("中", moderationLogPromptMaxRunes) + "最新内容"
 	got := moderationLogPrompt(prompt)
-	assert.LessOrEqual(t, utf8.RuneCountInString(got), moderationLogPromptMaxRunes+len("…[truncated]"))
+	assert.Equal(t, moderationLogPromptMaxRunes+utf8.RuneCountInString("…[truncated]"), utf8.RuneCountInString(got))
 	assert.True(t, strings.HasSuffix(got, "…[truncated]"))
+	assert.Contains(t, got, "最新内容")
+	assert.NotContains(t, got, strings.Repeat("旧内容", 100))
 }

@@ -10,15 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const moderationLogPromptMaxRunes = 4096
+const moderationLogPromptMaxRunes = common.ModerationPromptMaxRunes
 
 func moderationLogPrompt(prompt string) string {
 	prompt = strings.TrimSpace(prompt)
 	if utf8.RuneCountInString(prompt) <= moderationLogPromptMaxRunes {
 		return prompt
 	}
-	runes := []rune(prompt)
-	return string(runes[:moderationLogPromptMaxRunes]) + "…[truncated]"
+	return common.TruncateStringFromEnd(prompt, moderationLogPromptMaxRunes) + "…[truncated]"
 }
 
 // RecordModerationLog stores a flagged moderation decision for administrator
@@ -29,7 +28,7 @@ func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel str
 		return
 	}
 
-	moderationInfo := map[string]interface{}{
+	moderationInfo := map[string]any{
 		"prompt":  moderationLogPrompt(prompt),
 		"flagged": flagged,
 	}
@@ -39,8 +38,8 @@ func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel str
 	if len(source) > 0 && source[0] != "" {
 		moderationInfo["source"] = source[0]
 	}
-	other := map[string]interface{}{
-		"admin_info": map[string]interface{}{
+	other := map[string]any{
+		"admin_info": map[string]any{
 			"moderation": moderationInfo,
 		},
 	}

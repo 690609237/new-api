@@ -237,29 +237,72 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name='ModerationAPIKey'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Moderation API key')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type='password'
-                      autoComplete='new-password'
-                      placeholder={t('Leave blank to keep the existing key')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'The key is write-only and is never shown after saving.'
+            <div className='space-y-3' data-moderation-layout='connection'>
+              <FormField
+                control={form.control}
+                name='ModerationAPIKey'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Moderation API key')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='password'
+                        autoComplete='new-password'
+                        placeholder={t('Leave blank to keep the existing key')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'The key is write-only and is never shown after saving.'
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className='flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => void handleTestConnection()}
+                  disabled={testState === 'testing'}
+                >
+                  {testState === 'testing' ? (
+                    <Loader2 className='animate-spin' />
+                  ) : (
+                    <CheckCircle2 />
+                  )}
+                  {t('Test moderation connection')}
+                </Button>
+                <a
+                  href='https://platform.openai.com/usage'
+                  target='_blank'
+                  rel='noreferrer'
+                  className='text-primary inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline'
+                >
+                  {t('View OpenAI usage statistics')}
+                  <ExternalLink className='size-3' aria-hidden='true' />
+                </a>
+                {testState !== 'idle' && testMessage && (
+                  <div
+                    className={`inline-flex items-center gap-1 text-sm ${
+                      testState === 'success'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-destructive'
+                    }`}
+                    role='status'
+                  >
+                    {testState === 'success' ? (
+                      <CheckCircle2 className='size-4' aria-hidden='true' />
+                    ) : (
+                      <XCircle className='size-4' aria-hidden='true' />
                     )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <span>{testMessage}</span>
+                  </div>
+                )}
+              </div>
+            </div>
             <FormField
               control={form.control}
               name='ModerationAlertEmail'
@@ -364,34 +407,10 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
             />
           </div>
 
-          <div className='grid gap-4 md:grid-cols-2'>
-            <FormField
-              control={form.control}
-              name='ModerationForceTokenIDs'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Required moderation token IDs')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={5}
-                      placeholder={t('One token ID per line')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'These tokens are always moderated, even when their user or group is exempt.'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className='text-muted-foreground rounded-lg border border-dashed p-3 text-sm'>
-              {t(
-                'Timeout protection pauses moderation temporarily when the upstream service is unstable.'
-              )}
-            </div>
+          <div className='text-muted-foreground rounded-lg border border-dashed p-3 text-sm'>
+            {t(
+              'Timeout protection pauses moderation temporarily when the upstream service is unstable.'
+            )}
           </div>
 
           <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
@@ -454,49 +473,10 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
             ))}
           </div>
 
-          <div className='flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => void handleTestConnection()}
-              disabled={testState === 'testing'}
-            >
-              {testState === 'testing' ? (
-                <Loader2 className='animate-spin' />
-              ) : (
-                <CheckCircle2 />
-              )}
-              {t('Test moderation connection')}
-            </Button>
-            <a
-              href='https://platform.openai.com/usage'
-              target='_blank'
-              rel='noreferrer'
-              className='text-primary inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline'
-            >
-              {t('View OpenAI usage statistics')}
-              <ExternalLink className='size-3' aria-hidden='true' />
-            </a>
-            {testState !== 'idle' && testMessage && (
-              <div
-                className={`inline-flex items-center gap-1 text-sm ${
-                  testState === 'success'
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-destructive'
-                }`}
-                role='status'
-              >
-                {testState === 'success' ? (
-                  <CheckCircle2 className='size-4' aria-hidden='true' />
-                ) : (
-                  <XCircle className='size-4' aria-hidden='true' />
-                )}
-                <span>{testMessage}</span>
-              </div>
-            )}
-          </div>
-
-          <div className='grid gap-4 md:grid-cols-2'>
+          <div
+            className='grid gap-4 md:grid-cols-2'
+            data-moderation-layout='audience-rules'
+          >
             <FormField
               control={form.control}
               name='ModerationExemptUserIDs'
@@ -535,6 +515,28 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                   <FormDescription>
                     {t(
                       'Users in these groups bypass moderation. Matching is case-insensitive.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='ModerationForceTokenIDs'
+              render={({ field }) => (
+                <FormItem className='md:col-span-2'>
+                  <FormLabel>{t('Required moderation token IDs')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder={t('One token ID per line')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'These tokens are always moderated, even when their user or group is exempt.'
                     )}
                   </FormDescription>
                   <FormMessage />

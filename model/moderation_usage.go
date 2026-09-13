@@ -102,14 +102,14 @@ func RecordModerationUsage(timestamp int64, delta ModerationUsageStatDelta) erro
 	return DB.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "bucket_start"}, {Name: "user_id"}, {Name: "token_id"}},
 		DoUpdates: clause.Assignments(map[string]any{
-			"api_requests":         gorm.Expr("api_requests + ?", delta.APIRequests),
-			"api_passed":           gorm.Expr("api_passed + ?", delta.APIPassed),
-			"api_violations":       gorm.Expr("api_violations + ?", delta.APIViolations),
-			"api_failed":           gorm.Expr("api_failed + ?", delta.APIFailed),
-			"cache_hits":           gorm.Expr("cache_hits + ?", delta.CacheHits),
-			"api_latency_total_ms": gorm.Expr("api_latency_total_ms + ?", delta.APILatencyTotalMs),
-			"api_timeouts":         gorm.Expr("api_timeouts + ?", delta.APITimeouts),
-			"circuit_skips":        gorm.Expr("circuit_skips + ?", delta.CircuitSkips),
+			"api_requests":         gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_requests"}, delta.APIRequests),
+			"api_passed":           gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_passed"}, delta.APIPassed),
+			"api_violations":       gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_violations"}, delta.APIViolations),
+			"api_failed":           gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_failed"}, delta.APIFailed),
+			"cache_hits":           gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "cache_hits"}, delta.CacheHits),
+			"api_latency_total_ms": gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_latency_total_ms"}, delta.APILatencyTotalMs),
+			"api_timeouts":         gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_timeouts"}, delta.APITimeouts),
+			"circuit_skips":        gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "circuit_skips"}, delta.CircuitSkips),
 			"updated_at":           now,
 		}),
 	}).Create(stat).Error
