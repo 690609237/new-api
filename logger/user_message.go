@@ -2,6 +2,7 @@ package logger
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 
@@ -25,6 +27,8 @@ const (
 	userMessageLogCleanupInterval  = 6 * time.Hour
 	userMessageLogFilePermission   = 0600
 	userMessageLogDedupMaxEntries  = 100000
+	userMessageLogMaxContentBytes  = 1 << 20
+	userMessageLogTruncatedMarker  = "…[truncated]"
 )
 
 type userMessageLogEntry struct {
@@ -143,6 +147,7 @@ func (w *userMessageLogWriter) write(username string, content string) error {
 }
 
 func (w *userMessageLogWriter) writeWithToken(username string, tokenName string, content string) error {
+	content = truncateUserMessageLogContent(content, userMessageLogMaxContentBytes)
 	now := w.now()
 
 	w.mu.Lock()
@@ -171,16 +176,15 @@ func (w *userMessageLogWriter) writeWithToken(username string, tokenName string,
 		}
 	}
 
-	data, err := common.Marshal(userMessageLogEntry{
+	data, err := marshalUserMessageLogEntry(userMessageLogEntry{
 		Username:  username,
 		TokenName: tokenName,
 		CreatedAt: now.Unix(),
 		Content:   content,
-	})
+	}, w.config.maxSizeBytes)
 	if err != nil {
 		return fmt.Errorf("marshal entry: %w", err)
 	}
-	data = append(data, '\n')
 
 	day := now.Format("20060102")
 	if w.file == nil || w.openedDay != day || (w.currentSize > 0 && w.currentSize+int64(len(data)) > w.config.maxSizeBytes) {
@@ -208,6 +212,69 @@ func (w *userMessageLogWriter) writeWithToken(username string, tokenName string,
 		}
 	}
 	return nil
+}
+
+func marshalUserMessageLogEntry(entry userMessageLogEntry, maxSizeBytes int64) ([]byte, error) {
+	if maxSizeBytes <= 0 {
+		return nil, errors.New("user message log maximum size must be positive")
+	}
+	entry.Content = truncateUserMessageLogContent(entry.Content, userMessageLogMaxContentBytes)
+	data, err := common.Marshal(entry)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)+1) <= maxSizeBytes {
+		return append(data, '\n'), nil
+	}
+
+	emptyEntry := entry
+	emptyEntry.Content = ""
+	emptyData, err := common.Marshal(emptyEntry)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(emptyData)+1) > maxSizeBytes {
+		return nil, fmt.Errorf("user message log metadata exceeds maximum size of %d bytes", maxSizeBytes)
+	}
+
+	originalContent := entry.Content
+	low, high := 0, len(originalContent)
+	var best []byte
+	for low <= high {
+		mid := low + (high-low)/2
+		entry.Content = truncateUserMessageLogContent(originalContent, mid)
+		candidate, marshalErr := common.Marshal(entry)
+		if marshalErr != nil {
+			return nil, marshalErr
+		}
+		if int64(len(candidate)+1) <= maxSizeBytes {
+			best = candidate
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+	if best == nil {
+		return nil, fmt.Errorf("user message log entry exceeds maximum size of %d bytes", maxSizeBytes)
+	}
+	return append(best, '\n'), nil
+}
+
+func truncateUserMessageLogContent(content string, maxBytes int) string {
+	if maxBytes <= 0 {
+		return ""
+	}
+	if len(content) <= maxBytes {
+		return content
+	}
+	if maxBytes <= len(userMessageLogTruncatedMarker) {
+		return ""
+	}
+	start := len(content) - (maxBytes - len(userMessageLogTruncatedMarker))
+	for start < len(content) && !utf8.RuneStart(content[start]) {
+		start++
+	}
+	return userMessageLogTruncatedMarker + content[start:]
 }
 
 func (w *userMessageLogWriter) rotateLocked(now time.Time) error {

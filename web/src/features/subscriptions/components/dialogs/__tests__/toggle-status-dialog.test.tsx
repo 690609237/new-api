@@ -15,17 +15,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import assert from 'node:assert/strict'
+import { afterEach, expect, test } from 'vitest'
 
 import { Window } from 'happy-dom'
 
 import type { PlanRecord } from '../../../types'
-
-const bunTestModule = 'bun:test'
-const { afterEach, test } = (await import(bunTestModule)) as {
-  afterEach: typeof import('node:test').afterEach
-  test: typeof import('node:test').test
-}
 
 const domWindow = new Window()
 const domGlobals = [
@@ -155,5 +149,5 @@ test('disabling an enabled plan warns that subscriptions are terminated irrevers
     )
   })
 
-  assert.match(document.body.textContent ?? '', new RegExp(warning))
+  expect(document.body.textContent).toContain(warning)
 })

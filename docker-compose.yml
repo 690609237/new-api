@@ -41,10 +41,10 @@ services:
       - ERROR_LOG_ENABLED=true # 是否启用错误日志记录 (Whether to enable error log recording)
       - BATCH_UPDATE_ENABLED=true  # 是否启用批量更新 (Whether to enable batch update)
       - NODE_NAME=new-api-node-1  # 节点名称，用于审计日志中标识节点身份；多节点/容器部署时建议设置 (Node name used in audit logs; recommended when running multiple instances or in containers)
-      - MODERATION_ENABLED=true  # 请求进入大模型前使用 OpenAI Omni Moderation 审核
+      - MODERATION_ENABLED=${MODERATION_ENABLED:-false}  # 请求进入大模型前使用 OpenAI Omni Moderation 审核
       - MODERATION_BEFORE_CHANNEL=false  # 是否先于渠道选择执行审核
       - MODERATION_BASE_URL=https://api.openai.com/v1
-      - MODERATION_API_KEY=${KEY}
+      - MODERATION_API_KEY=${MODERATION_API_KEY:-}
       - MODERATION_MODEL=omni-moderation-latest
       - MODERATION_CACHE_TTL_SECONDS=600  # 相同输入的审核成功结果缓存时间（秒）
       - MODERATION_ALERT_EMAIL=you@example.com  # 审核接口失败告警邮件接收地址

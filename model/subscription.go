@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -146,6 +148,16 @@ func InvalidateSubscriptionPlanCache(planId int) {
 // also ends its active subscriptions immediately and moves subscription-bound
 // tokens back to each user's account group.
 func SetSubscriptionPlanEnabled(planId int, enabled bool) error {
+	return updateSubscriptionPlan(planId, nil, enabled)
+}
+
+// UpdateSubscriptionPlan atomically updates a plan and applies the lifecycle
+// effects of enabling or disabling it.
+func UpdateSubscriptionPlan(planId int, updates map[string]any, enabled bool) error {
+	return updateSubscriptionPlan(planId, updates, enabled)
+}
+
+func updateSubscriptionPlan(planId int, updates map[string]any, enabled bool) error {
 	if planId <= 0 {
 		return errors.New("invalid plan id")
 	}
@@ -158,10 +170,11 @@ func SetSubscriptionPlanEnabled(planId int, enabled bool) error {
 		if err := lockForUpdate(tx).Where("id = ?", planId).First(&plan).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&plan).Updates(map[string]interface{}{
-			"enabled":    enabled,
-			"updated_at": now,
-		}).Error; err != nil {
+		changes := make(map[string]any, len(updates)+2)
+		maps.Copy(changes, updates)
+		changes["enabled"] = enabled
+		changes["updated_at"] = now
+		if err := tx.Model(&plan).Updates(changes).Error; err != nil {
 			return err
 		}
 		if enabled {
@@ -180,7 +193,7 @@ func SetSubscriptionPlanEnabled(planId int, enabled bool) error {
 		}
 		if err := tx.Model(&UserSubscription{}).
 			Where("plan_id = ? AND status = ?", planId, "active").
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"status":     "cancelled",
 				"end_time":   now,
 				"updated_at": now,
@@ -1089,7 +1102,8 @@ func UserActiveSubscriptionsAllowWalletOverflow(userId int) (bool, error) {
 	}
 	now := common.GetTimestamp()
 	var strictCount int64
-	if err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
+	if err := DB.Model(&UserSubscription{}).
+		Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
 		Where("allow_wallet_overflow = ?", false).
 		Count(&strictCount).Error; err != nil {
 		return false, err
@@ -1105,7 +1119,11 @@ func UserActiveSubscriptionGroupAllowsWalletOverflow(userId int, group string) (
 	}
 	now := common.GetTimestamp()
 	var strictCount int64
-	if err := usableActiveUserSubscriptions(DB.Model(&UserSubscription{}), userId, now).
+	// Do not use usableActiveUserSubscriptions here: an exhausted subscription
+	// is intentionally excluded by that helper, but its snapshot setting still
+	// governs whether wallet overflow is permitted for the current request.
+	if err := DB.Model(&UserSubscription{}).
+		Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
 		Where("(subscription_group = ? OR (subscription_group = ? AND upgrade_group = ?)) AND allow_wallet_overflow = ?",
 			group, "", group, false).
 		Count(&strictCount).Error; err != nil {
@@ -1239,6 +1257,56 @@ func RebindUnavailableSubscriptionTokens(userId int, subscriptionGroup string) (
 	return len(reboundTokens), nil
 }
 
+// RebindSubscriptionTokenForWalletFallback moves one API token back to the
+// user's account group when its remaining subscription quota cannot cover the
+// next request. The caller must retry so routing and pricing are recalculated
+// with the persisted account group.
+func RebindSubscriptionTokenForWalletFallback(tokenId, userId int, subscriptionGroup string) (bool, error) {
+	subscriptionGroup = strings.TrimSpace(subscriptionGroup)
+	if tokenId <= 0 || userId <= 0 || subscriptionGroup == "" {
+		return false, errors.New("invalid subscription token fallback")
+	}
+
+	var token Token
+	rebound := false
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := lockForUpdate(tx).
+			Where("id = ? AND user_id = ?", tokenId, userId).
+			First(&token).Error; err != nil {
+			return err
+		}
+		boundGroup := strings.TrimSpace(token.SubscriptionGroup)
+		if boundGroup != "" {
+			if boundGroup != subscriptionGroup {
+				return nil
+			}
+		} else if strings.TrimSpace(token.Group) != subscriptionGroup {
+			return nil
+		}
+		userGroup, err := getUserGroupByIdTx(tx, userId)
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&Token{}).
+			Where("id = ? AND user_id = ?", tokenId, userId).
+			Updates(map[string]any{
+				"group":              userGroup,
+				"subscription_group": "",
+			}).Error; err != nil {
+			return err
+		}
+		rebound = true
+		return nil
+	})
+	if err != nil || !rebound {
+		return rebound, err
+	}
+	if err := invalidateTokenCacheForMutation(token.Key); err != nil {
+		common.SysError(fmt.Sprintf("failed to invalidate subscription token %d cache after wallet fallback: %v", token.Id, err))
+	}
+	return true, nil
+}
+
 type SubscriptionGroupQuotaState struct {
 	Total             int64
 	Remaining         int64
@@ -1302,7 +1370,7 @@ func FinalizeSubscriptionGroupQuota(userId int, subscriptionGroup string) (*Subs
 			}
 		}
 		state.CycleKey = strings.Join(cycleParts, ",")
-		if state.Unlimited || state.Total == 0 || state.Remaining > 0 {
+		if state.Unlimited || state.Remaining > 0 {
 			return nil
 		}
 		var err error
@@ -1836,7 +1904,7 @@ func RefundSubscriptionPreConsume(requestId string) error {
 			record.Status = "refunded"
 			return tx.Save(&record).Error
 		}
-		if err := PostConsumeUserSubscriptionDelta(record.UserSubscriptionId, -record.PreConsumed); err != nil {
+		if err := postConsumeUserSubscriptionDeltaTx(tx, record.UserSubscriptionId, -record.PreConsumed); err != nil {
 			return err
 		}
 		record.Status = "refunded"
@@ -1935,17 +2003,37 @@ func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error
 		return nil
 	}
 	return DB.Transaction(func(tx *gorm.DB) error {
-		var sub UserSubscription
-		if err := lockForUpdate(tx).
-			Where("id = ?", userSubscriptionId).
-			First(&sub).Error; err != nil {
-			return err
-		}
-		newUsed := max(sub.AmountUsed+delta, 0)
-		if sub.AmountTotal > 0 && newUsed > sub.AmountTotal {
-			return fmt.Errorf("subscription used exceeds total, used=%d total=%d", newUsed, sub.AmountTotal)
-		}
-		sub.AmountUsed = newUsed
-		return tx.Save(&sub).Error
+		return postConsumeUserSubscriptionDeltaTx(tx, userSubscriptionId, delta)
 	})
+}
+
+func postConsumeUserSubscriptionDeltaTx(tx *gorm.DB, userSubscriptionId int, delta int64) error {
+	if tx == nil {
+		return errors.New("subscription transaction is nil")
+	}
+	var sub UserSubscription
+	if err := lockForUpdate(tx).
+		Where("id = ?", userSubscriptionId).
+		First(&sub).Error; err != nil {
+		return err
+	}
+	if sub.AmountUsed < 0 {
+		return fmt.Errorf("subscription used amount is negative: %d", sub.AmountUsed)
+	}
+	var newUsed int64
+	if delta > 0 {
+		if sub.AmountUsed > math.MaxInt64-delta {
+			return errors.New("subscription used amount overflow")
+		}
+		newUsed = sub.AmountUsed + delta
+	} else if delta == math.MinInt64 || -delta >= sub.AmountUsed {
+		newUsed = 0
+	} else {
+		newUsed = sub.AmountUsed + delta
+	}
+	if sub.AmountTotal > 0 && newUsed > sub.AmountTotal {
+		return fmt.Errorf("subscription used exceeds total, used=%d total=%d", newUsed, sub.AmountTotal)
+	}
+	sub.AmountUsed = newUsed
+	return tx.Save(&sub).Error
 }

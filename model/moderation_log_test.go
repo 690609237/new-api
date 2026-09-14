@@ -57,8 +57,8 @@ func TestRecordModerationLogKeepsPromptAdminOnly(t *testing.T) {
 func TestModerationLogTruncatesLargePrompt(t *testing.T) {
 	prompt := strings.Repeat("旧内容", 100) + strings.Repeat("中", moderationLogPromptMaxRunes) + "最新内容"
 	got := moderationLogPrompt(prompt)
-	assert.Equal(t, moderationLogPromptMaxRunes+utf8.RuneCountInString("…[truncated]"), utf8.RuneCountInString(got))
-	assert.True(t, strings.HasSuffix(got, "…[truncated]"))
+	assert.Equal(t, moderationLogPromptMaxRunes, utf8.RuneCountInString(got))
+	assert.True(t, strings.HasSuffix(got, moderationLogTruncatedMarker))
 	assert.Contains(t, got, "最新内容")
 	assert.NotContains(t, got, strings.Repeat("旧内容", 100))
 }

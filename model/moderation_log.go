@@ -12,12 +12,15 @@ import (
 
 const moderationLogPromptMaxRunes = common.ModerationPromptMaxRunes
 
+const moderationLogTruncatedMarker = "…[truncated]"
+
 func moderationLogPrompt(prompt string) string {
 	prompt = strings.TrimSpace(prompt)
 	if utf8.RuneCountInString(prompt) <= moderationLogPromptMaxRunes {
 		return prompt
 	}
-	return common.TruncateStringFromEnd(prompt, moderationLogPromptMaxRunes) + "…[truncated]"
+	markerRunes := utf8.RuneCountInString(moderationLogTruncatedMarker)
+	return common.TruncateStringFromEnd(prompt, moderationLogPromptMaxRunes-markerRunes) + moderationLogTruncatedMarker
 }
 
 // RecordModerationLog stores a flagged moderation decision for administrator

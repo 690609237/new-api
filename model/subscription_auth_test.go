@@ -626,6 +626,131 @@ func TestExhaustingAllMatchingSubscriptionQuotaRebindsExistingTokens(t *testing.
 	assert.False(t, active)
 }
 
+func TestFinalizeSubscriptionGroupQuotaRebindsTokenWithoutUsableSubscription(t *testing.T) {
+	truncateTables(t)
+	user := User{
+		Username: "expired-subscription-token-fallback",
+		Password: "unused-password-hash",
+		Role:     common.RoleCommonUser,
+		Status:   common.UserStatusEnabled,
+		Group:    "default",
+	}
+	require.NoError(t, DB.Create(&user).Error)
+	token := Token{
+		UserId:            user.Id,
+		Key:               "expired-subscription-token-fallback-key",
+		Name:              "expired-subscription-token",
+		Status:            common.TokenStatusEnabled,
+		ExpiredTime:       -1,
+		UnlimitedQuota:    true,
+		Group:             "month_a",
+		SubscriptionGroup: "month_a",
+	}
+	require.NoError(t, token.Insert())
+
+	state, err := FinalizeSubscriptionGroupQuota(user.Id, "month_a")
+	require.NoError(t, err)
+	assert.Zero(t, state.Total)
+	assert.Equal(t, 1, state.ReboundTokenCount)
+
+	var rebound Token
+	require.NoError(t, DB.First(&rebound, token.Id).Error)
+	assert.Equal(t, "default", rebound.Group)
+	assert.Empty(t, rebound.SubscriptionGroup)
+}
+
+func TestRefundSubscriptionPreConsumeCommitsQuotaAndStatusTogether(t *testing.T) {
+	truncateTables(t)
+	now := time.Now().Unix()
+	subscription := UserSubscription{
+		UserId:      1,
+		PlanId:      1,
+		AmountTotal: 100,
+		AmountUsed:  40,
+		StartTime:   now - 60,
+		EndTime:     now + 3600,
+		Status:      "active",
+	}
+	require.NoError(t, DB.Create(&subscription).Error)
+	record := SubscriptionPreConsumeRecord{
+		RequestId:          "atomic-refund-request",
+		UserId:             1,
+		UserSubscriptionId: subscription.Id,
+		PreConsumed:        10,
+		Status:             "consumed",
+	}
+	require.NoError(t, DB.Create(&record).Error)
+
+	require.NoError(t, RefundSubscriptionPreConsume(record.RequestId))
+	require.NoError(t, RefundSubscriptionPreConsume(record.RequestId))
+
+	require.NoError(t, DB.First(&subscription, subscription.Id).Error)
+	assert.EqualValues(t, 30, subscription.AmountUsed)
+	require.NoError(t, DB.First(&record, record.Id).Error)
+	assert.Equal(t, "refunded", record.Status)
+}
+
+func TestUpdateSubscriptionPlanRollsBackWhenTokenFallbackFails(t *testing.T) {
+	truncateTables(t)
+	user := User{
+		Username: "atomic-plan-update",
+		Password: "unused-password-hash",
+		Role:     common.RoleCommonUser,
+		Status:   common.UserStatusEnabled,
+		Group:    "default",
+	}
+	require.NoError(t, DB.Create(&user).Error)
+	plan := SubscriptionPlan{
+		Title:             "Original title",
+		DurationUnit:      SubscriptionDurationMonth,
+		DurationValue:     1,
+		TotalAmount:       100,
+		SubscriptionGroup: "month_a",
+		Enabled:           true,
+	}
+	require.NoError(t, DB.Create(&plan).Error)
+	now := time.Now().Unix()
+	subscription := UserSubscription{
+		UserId:            user.Id,
+		PlanId:            plan.Id,
+		AmountTotal:       100,
+		StartTime:         now - 60,
+		EndTime:           now + 3600,
+		Status:            "active",
+		SubscriptionGroup: "month_a",
+	}
+	require.NoError(t, DB.Create(&subscription).Error)
+	token := Token{
+		UserId:            user.Id,
+		Key:               "atomic-plan-update-key",
+		Status:            common.TokenStatusEnabled,
+		ExpiredTime:       -1,
+		UnlimitedQuota:    true,
+		Group:             "month_a",
+		SubscriptionGroup: "month_a",
+	}
+	require.NoError(t, token.Insert())
+
+	callbackName := "test:fail_subscription_token_fallback"
+	require.NoError(t, DB.Callback().Update().Before("gorm:update").Register(callbackName, func(tx *gorm.DB) {
+		if tx.Statement.Table == "tokens" {
+			tx.AddError(errors.New("forced token fallback failure"))
+		}
+	}))
+	t.Cleanup(func() {
+		require.NoError(t, DB.Callback().Update().Remove(callbackName))
+	})
+
+	err := UpdateSubscriptionPlan(plan.Id, map[string]any{"title": "Changed title"}, false)
+	require.ErrorContains(t, err, "forced token fallback failure")
+
+	require.NoError(t, DB.First(&plan, plan.Id).Error)
+	assert.Equal(t, "Original title", plan.Title)
+	assert.True(t, plan.Enabled)
+	require.NoError(t, DB.First(&subscription, subscription.Id).Error)
+	assert.Equal(t, "active", subscription.Status)
+}
+
 func TestPreConsumeSubscriptionEntitlementUsesAllMatchingSubscriptions(t *testing.T) {
 	truncateTables(t)
 	user := User{

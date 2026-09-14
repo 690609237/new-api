@@ -445,7 +445,31 @@ func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preCons
 	// the group is exhausted, authentication persists the fallback and the next
 	// request reaches the wallet path with the user's account-group ratio.
 	if relayInfo.SubscriptionGroup != "" {
-		return trySubscription()
+		session, apiErr := trySubscription()
+		if apiErr == nil || apiErr.GetErrorCode() != types.ErrorCodeInsufficientUserQuota {
+			return session, apiErr
+		}
+		allowOverflow, err := model.UserActiveSubscriptionGroupAllowsWalletOverflow(relayInfo.UserId, relayInfo.SubscriptionGroup)
+		if err != nil {
+			return nil, types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
+		}
+		if !allowOverflow {
+			return nil, apiErr
+		}
+		rebound, err := model.RebindSubscriptionTokenForWalletFallback(relayInfo.TokenId, relayInfo.UserId, relayInfo.SubscriptionGroup)
+		if err != nil {
+			return nil, types.NewError(err, types.ErrorCodeUpdateDataError, types.ErrOptionWithSkipRetry())
+		}
+		if !rebound {
+			return nil, apiErr
+		}
+		return nil, types.NewErrorWithStatusCode(
+			fmt.Errorf("订阅额度不足，API Key 已切换至用户分组，请重试请求"),
+			types.ErrorCodeInsufficientUserQuota,
+			http.StatusForbidden,
+			types.ErrOptionWithSkipRetry(),
+			types.ErrOptionWithNoRecordErrorLog(),
+		)
 	}
 
 	switch pref {

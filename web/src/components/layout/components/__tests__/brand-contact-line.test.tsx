@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
+import { describe, expect, test } from 'vitest'
 
 const { renderToStaticMarkup } = await import('react-dom/server')
 const { createInstance } = await import('i18next')
@@ -45,10 +44,10 @@ describe('brand contact line', () => {
       </I18nextProvider>
     )
 
-    assert.equal(markup.includes('联系作者交流'), true)
-    assert.equal(markup.includes('QQ 1549277597'), true)
-    assert.equal(markup.includes('微信 ModelPass'), true)
-    assert.equal(markup.includes('1549277597@qq.com'), true)
-    assert.equal(markup.includes('<a'), false)
+    expect(markup).toContain('联系作者交流')
+    expect(markup).toContain('QQ 1549277597')
+    expect(markup).toContain('微信 ModelPass')
+    expect(markup).toContain('1549277597@qq.com')
+    expect(markup).not.toContain('<a')
   })
 })

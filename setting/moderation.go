@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -32,6 +33,7 @@ const (
 )
 
 var (
+	moderationMu                   sync.RWMutex
 	moderationEnabled              = envBool(moderationEnabledEnv)
 	moderationBeforeChannel        = envBool(moderationBeforeChannelEnv)
 	moderationBaseURL              = os.Getenv(moderationBaseURLEnv)
@@ -73,111 +75,173 @@ func envBoundedInt(key string, fallback, min, max int) int {
 }
 
 func ShouldModeratePrompt() bool {
-	if !moderationOptionOverrides["ModerationEnabled"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationEnabled"]
+	enabled := moderationEnabled
+	moderationMu.RUnlock()
+	if !overridden {
 		return envBool(moderationEnabledEnv)
 	}
-	return moderationEnabled
+	return enabled
 }
 
 // ShouldModerateBeforeChannel enables the temporary pre-distribution check.
 // It is disabled by default because normal moderation runs after channel setup.
 func ShouldModerateBeforeChannel() bool {
-	if !moderationOptionOverrides["ModerationBeforeChannel"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationBeforeChannel"]
+	enabled := moderationBeforeChannel
+	moderationMu.RUnlock()
+	if !overridden {
 		return envBool(moderationBeforeChannelEnv)
 	}
-	return moderationBeforeChannel
+	return enabled
 }
 
 func ModerationBaseURL() string {
-	if !moderationOptionOverrides["ModerationBaseURL"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationBaseURL"]
+	value := moderationBaseURL
+	moderationMu.RUnlock()
+	if !overridden {
 		return os.Getenv(moderationBaseURLEnv)
 	}
-	return moderationBaseURL
+	return value
 }
 
 func ModerationAPIKey() string {
-	if !moderationOptionOverrides["ModerationAPIKey"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationAPIKey"]
+	value := moderationAPIKey
+	moderationMu.RUnlock()
+	if !overridden {
 		return os.Getenv(moderationAPIKeyEnv)
 	}
-	return moderationAPIKey
+	return value
 }
 
 func ModerationModel() string {
-	if !moderationOptionOverrides["ModerationModel"] {
-		moderationModel = os.Getenv(moderationModelEnv)
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationModel"]
+	model := moderationModel
+	moderationMu.RUnlock()
+	if !overridden {
+		model = os.Getenv(moderationModelEnv)
 	}
-	if model := strings.TrimSpace(moderationModel); model != "" {
+	if model = strings.TrimSpace(model); model != "" {
 		return model
 	}
 	return "omni-moderation-latest"
 }
 
 func ModerationAlertEmail() string {
-	if !moderationOptionOverrides["ModerationAlertEmail"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationAlertEmail"]
+	value := moderationAlertEmail
+	moderationMu.RUnlock()
+	if !overridden {
 		return strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
 	}
-	return moderationAlertEmail
+	return value
 }
 
 func ModerationAlertThreshold() int {
-	if !moderationOptionOverrides["ModerationAlertThreshold"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationAlertThreshold"]
+	value := moderationAlertThreshold
+	moderationMu.RUnlock()
+	if !overridden {
 		return envPositiveInt(moderationAlertThresholdEnv, 20)
 	}
-	return moderationAlertThreshold
+	return value
 }
 
 // ModerationCacheTTL controls how long a successful moderation result can be
 // reused for an identical prompt. A short default keeps the cache useful for
 // client retries without retaining results indefinitely.
 func ModerationCacheTTL() time.Duration {
-	if !moderationOptionOverrides["ModerationCacheTTLSeconds"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationCacheTTLSeconds"]
+	value := moderationCacheTTL
+	moderationMu.RUnlock()
+	if !overridden {
 		return time.Duration(envPositiveInt(moderationCacheTTLEnv, 600)) * time.Second
 	}
-	return time.Duration(moderationCacheTTL) * time.Second
+	return time.Duration(value) * time.Second
 }
 
 func ModerationExemptUserIDs() string {
-	if !moderationOptionOverrides["ModerationExemptUserIDs"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationExemptUserIDs"]
+	value := moderationExemptUserIDs
+	moderationMu.RUnlock()
+	if !overridden {
 		return strings.TrimSpace(os.Getenv(moderationExemptUserIDsEnv))
 	}
-	return moderationExemptUserIDs
+	return value
 }
 
 func ModerationExemptGroups() string {
-	if !moderationOptionOverrides["ModerationExemptGroups"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationExemptGroups"]
+	value := moderationExemptGroups
+	moderationMu.RUnlock()
+	if !overridden {
 		return strings.TrimSpace(os.Getenv(moderationExemptGroupsEnv))
 	}
-	return moderationExemptGroups
+	return value
 }
 
 func ModerationSampleRate() int {
-	if !moderationOptionOverrides["ModerationSampleRate"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationSampleRate"]
+	value := moderationSampleRate
+	moderationMu.RUnlock()
+	if !overridden {
 		return envBoundedInt(moderationSampleRateEnv, 100, 0, 100)
 	}
-	return moderationSampleRate
+	return value
 }
 
 func ModerationTimeout() time.Duration {
-	return time.Duration(moderationTimeoutValue("ModerationTimeoutSeconds", moderationTimeoutEnv, moderationTimeoutSeconds, 10, 1, 300)) * time.Second
+	return time.Duration(moderationTimeoutValue("ModerationTimeoutSeconds", moderationTimeoutEnv, 10, 1, 300)) * time.Second
 }
 func ModerationTimeoutWindow() time.Duration {
-	return time.Duration(moderationTimeoutValue("ModerationTimeoutWindowSeconds", moderationTimeoutWindowEnv, moderationTimeoutWindowSeconds, 300, 1, 86400)) * time.Second
+	return time.Duration(moderationTimeoutValue("ModerationTimeoutWindowSeconds", moderationTimeoutWindowEnv, 300, 1, 86400)) * time.Second
 }
 func ModerationTimeoutThreshold() int {
-	return moderationTimeoutValue("ModerationTimeoutThreshold", moderationTimeoutThresholdEnv, moderationTimeoutThreshold, 3, 1, 100)
+	return moderationTimeoutValue("ModerationTimeoutThreshold", moderationTimeoutThresholdEnv, 3, 1, 100)
 }
 func ModerationTimeoutPause() time.Duration {
-	return time.Duration(moderationTimeoutValue("ModerationTimeoutPauseSeconds", moderationTimeoutPauseEnv, moderationTimeoutPauseSeconds, 300, 1, 86400)) * time.Second
+	return time.Duration(moderationTimeoutValue("ModerationTimeoutPauseSeconds", moderationTimeoutPauseEnv, 300, 1, 86400)) * time.Second
 }
 func ModerationForceTokenIDs() string {
-	if !moderationOptionOverrides["ModerationForceTokenIDs"] {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationForceTokenIDs"]
+	value := moderationForceTokenIDs
+	moderationMu.RUnlock()
+	if !overridden {
 		return strings.TrimSpace(os.Getenv(moderationForceTokenIDsEnv))
 	}
-	return moderationForceTokenIDs
+	return value
 }
 
-func moderationTimeoutValue(optionKey, envKey string, value, fallback, min, max int) int {
-	if !moderationOptionOverrides[optionKey] {
+func moderationTimeoutValue(optionKey, envKey string, fallback, min, max int) int {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides[optionKey]
+	var value int
+	switch optionKey {
+	case "ModerationTimeoutSeconds":
+		value = moderationTimeoutSeconds
+	case "ModerationTimeoutWindowSeconds":
+		value = moderationTimeoutWindowSeconds
+	case "ModerationTimeoutThreshold":
+		value = moderationTimeoutThreshold
+	case "ModerationTimeoutPauseSeconds":
+		value = moderationTimeoutPauseSeconds
+	}
+	moderationMu.RUnlock()
+	if !overridden {
 		return envBoundedInt(envKey, fallback, min, max)
 	}
 	return value
@@ -233,6 +297,9 @@ func splitModerationList(value string) []string {
 // UpdateModerationOption applies a persisted system option to the in-memory
 // moderation settings. It returns false for unrelated keys.
 func UpdateModerationOption(key, value string) bool {
+	moderationMu.Lock()
+	defer moderationMu.Unlock()
+
 	switch key {
 	case "ModerationEnabled":
 		moderationEnabled = value == "true" || value == "1"

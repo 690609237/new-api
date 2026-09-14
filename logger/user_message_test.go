@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func TestUserMessageLogWritesJSONLinesAndRotates(t *testing.T) {
 	writer := &userMessageLogWriter{
 		config: userMessageLogConfig{
 			dir:           dir,
-			maxSizeBytes:  100,
+			maxSizeBytes:  180,
 			maxFiles:      10,
 			retentionDays: 15,
 		},
@@ -46,6 +47,38 @@ func TestUserMessageLogWritesJSONLinesAndRotates(t *testing.T) {
 	assert.Equal(t, "primary", entry.TokenName)
 	assert.Equal(t, int64(1786363200), entry.CreatedAt)
 	assert.Equal(t, "first message with enough text to rotate the next entry", entry.Content)
+}
+
+func TestUserMessageLogTruncatesEntryToFileSizeLimit(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Date(2026, time.August, 10, 12, 0, 0, 0, time.UTC)
+	writer := &userMessageLogWriter{
+		config: userMessageLogConfig{
+			dir:           dir,
+			maxSizeBytes:  256,
+			maxFiles:      10,
+			retentionDays: 15,
+		},
+		now: func() time.Time { return now },
+	}
+
+	repeated := strings.Repeat("超长内容", 256)
+	require.NoError(t, writer.writeWithToken("alice", "primary", repeated))
+	require.NoError(t, writer.file.Close())
+	writer.file = nil
+
+	files, err := filepath.Glob(filepath.Join(dir, userMessageLogPrefix+"*"+userMessageLogSuffix))
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	info, err := os.Stat(files[0])
+	require.NoError(t, err)
+	assert.LessOrEqual(t, info.Size(), int64(256))
+	data, err := os.ReadFile(files[0])
+	require.NoError(t, err)
+	var entry userMessageLogEntry
+	require.NoError(t, common.Unmarshal(bytes.TrimSpace(data), &entry))
+	assert.True(t, strings.HasPrefix(entry.Content, userMessageLogTruncatedMarker))
+	assert.True(t, strings.HasSuffix(repeated, strings.TrimPrefix(entry.Content, userMessageLogTruncatedMarker)))
 }
 
 func TestUserMessageLogCleanupAppliesAgeAndFileCountLimits(t *testing.T) {

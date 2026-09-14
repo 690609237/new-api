@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import assert from 'node:assert/strict'
-import { after, test } from 'node:test'
+import { afterAll, expect, test } from 'vitest'
 
 import { Window } from 'happy-dom'
 
@@ -123,18 +122,18 @@ test('inline system brand shows all contact methods in the mobile app header', a
   const mobileContact = container.querySelector(
     '[data-slot="brand-contact-line"][data-variant="compact"]'
   )
-  assert.ok(mobileContact)
-  assert.match(mobileContact.textContent || '', /QQ 1549277597/)
-  assert.match(mobileContact.textContent || '', /微信 ModelPass/)
-  assert.match(mobileContact.textContent || '', /1549277597@qq\.com/)
-  assert.equal(mobileContact.classList.contains('absolute'), true)
-  assert.equal(mobileContact.classList.contains('lg:hidden'), true)
+  expect(mobileContact).not.toBeNull()
+  expect(mobileContact?.textContent).toMatch(/QQ 1549277597/)
+  expect(mobileContact?.textContent).toMatch(/微信 ModelPass/)
+  expect(mobileContact?.textContent).toMatch(/1549277597@qq\.com/)
+  expect(mobileContact?.classList).toContain('absolute')
+  expect(mobileContact?.classList).toContain('lg:hidden')
 
   await act(async () => root.unmount())
   container.remove()
   queryClient.clear()
 })
 
-after(() => {
+afterAll(() => {
   domWindow.close()
 })

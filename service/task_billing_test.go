@@ -15,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relaytypes "github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,7 @@ func TestMain(m *testing.M) {
 		&model.TopUp{},
 		&model.SubscriptionPlan{},
 		&model.UserSubscription{},
+		&model.SubscriptionPreConsumeRecord{},
 		&model.NotificationDelivery{},
 		&model.ModerationUsageStat{},
 		&model.SystemTask{},
@@ -80,6 +82,7 @@ func truncate(t *testing.T) {
 		model.DB.Exec("DELETE FROM midjourneys")
 		model.DB.Exec("DELETE FROM top_ups")
 		model.DB.Exec("DELETE FROM user_subscriptions")
+		model.DB.Exec("DELETE FROM subscription_pre_consume_records")
 		model.DB.Exec("DELETE FROM subscription_plans")
 		model.DB.Exec("DELETE FROM notification_deliveries")
 		model.DB.Exec("DELETE FROM moderation_usage_stats")
@@ -120,6 +123,72 @@ func seedSubscription(t *testing.T, id int, userId int, amountTotal int64, amoun
 		EndTime:     time.Now().Add(30 * 24 * time.Hour).Unix(),
 	}
 	require.NoError(t, model.DB.Create(sub).Error)
+}
+
+func TestNewBillingSessionRebindsTokenWhenSubscriptionCannotCoverPreConsume(t *testing.T) {
+	truncate(t)
+	user := model.User{
+		Id:       703,
+		Username: "subscription-wallet-fallback",
+		Quota:    10_000,
+		Status:   common.UserStatusEnabled,
+		Group:    "default",
+	}
+	require.NoError(t, model.DB.Create(&user).Error)
+	plan := model.SubscriptionPlan{
+		Title:             "Tail balance plan",
+		DurationUnit:      model.SubscriptionDurationMonth,
+		DurationValue:     1,
+		TotalAmount:       100,
+		SubscriptionGroup: "month_a",
+		Enabled:           true,
+	}
+	require.NoError(t, model.DB.Create(&plan).Error)
+	subscription := model.UserSubscription{
+		UserId:              user.Id,
+		PlanId:              plan.Id,
+		AmountTotal:         100,
+		AmountUsed:          99,
+		StartTime:           time.Now().Add(-time.Hour).Unix(),
+		EndTime:             time.Now().Add(time.Hour).Unix(),
+		Status:              "active",
+		SubscriptionGroup:   "month_a",
+		AllowWalletOverflow: true,
+	}
+	require.NoError(t, model.DB.Create(&subscription).Error)
+	token := model.Token{
+		Id:                703,
+		UserId:            user.Id,
+		Key:               "subscription-wallet-fallback-key",
+		Name:              "subscription-wallet-fallback-token",
+		Status:            common.TokenStatusEnabled,
+		ExpiredTime:       -1,
+		UnlimitedQuota:    true,
+		Group:             "month_a",
+		SubscriptionGroup: "month_a",
+	}
+	require.NoError(t, model.DB.Create(&token).Error)
+	relayInfo := &relaycommon.RelayInfo{
+		RequestId:         "subscription-wallet-fallback-request",
+		UserId:            user.Id,
+		UserGroup:         user.Group,
+		UsingGroup:        "month_a",
+		TokenId:           token.Id,
+		TokenKey:          token.Key,
+		TokenUnlimited:    true,
+		SubscriptionGroup: "month_a",
+	}
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+
+	session, apiErr := NewBillingSession(c, relayInfo, 10)
+	require.Nil(t, session)
+	require.NotNil(t, apiErr)
+	assert.Equal(t, relaytypes.ErrorCodeInsufficientUserQuota, apiErr.GetErrorCode())
+	assert.Contains(t, apiErr.Error(), "已切换至用户分组")
+
+	require.NoError(t, model.DB.First(&token, token.Id).Error)
+	assert.Equal(t, "default", token.Group)
+	assert.Empty(t, token.SubscriptionGroup)
 }
 
 func seedChannel(t *testing.T, id int) {

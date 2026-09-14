@@ -87,6 +87,51 @@
 - 审核 API Key 按敏感配置处理，只写入不回显。
 - `MODERATION_FORCE_TOKEN_IDS`、`MODERATION_TIMEOUT_SECONDS`、`MODERATION_TIMEOUT_WINDOW_SECONDS`、`MODERATION_TIMEOUT_THRESHOLD` 和 `MODERATION_TIMEOUT_PAUSE_SECONDS` 用于部署环境配置。
 
+### 使用 SQLite 通过令牌值查询令牌 ID 和用户 ID
+
+审核配置中的 `ModerationForceTokenIDs`（或环境变量
+`MODERATION_FORCE_TOKEN_IDS`）填写的是令牌 ID。如果手里只有请求中使用的令牌值，
+先去掉 `Bearer ` 和 `sk-` 前缀，再查询 `tokens` 表。下面的查询只读数据库，不会修改令牌。
+
+令牌值属于敏感凭据，请勿将完整值提交到代码仓库或写入日志。
+
+#### Docker 部署
+
+应用容器通常不带 `sqlite3` 命令行工具，可以启动一个临时 SQLite 工具容器，
+通过 `--volumes-from` 读取应用的 `/data` 卷（容器名按实际部署修改）：
+
+```bash
+docker run --rm --volumes-from new-api keinos/sqlite3 /data/one-api.db \
+  "SELECT id AS token_id, user_id, name, status FROM tokens WHERE \"key\" = 'YOUR_TOKEN_VALUE' AND deleted_at IS NULL;"
+```
+
+使用 Docker Compose 时，如果 `new-api` 不是容器名，可先执行
+`docker compose ps` 查看实际容器名，再替换 `--volumes-from` 的参数。默认 SQLite
+文件是 `/data/one-api.db`；如果设置了 `SQLITE_PATH`，请将命令中的数据库路径替换为
+该配置指向的实际文件路径（去掉 `?` 后面的 SQLite 参数）。
+
+如果部署时使用了宿主机目录映射（例如 `-v ./data:/data`），也可以直接在宿主机执行
+下面的非 Docker 查询，数据库文件通常是 `./data/one-api.db`。
+
+#### 非 Docker 部署
+
+在应用数据库文件所在的宿主机上执行。默认文件名是 `one-api.db`：
+
+```bash
+sqlite3 /path/to/one-api.db \
+  "SELECT id AS token_id, user_id, name, status FROM tokens WHERE \"key\" = 'YOUR_TOKEN_VALUE' AND deleted_at IS NULL;"
+```
+
+例如请求头中的值为 `Bearer sk-abc123`，查询时使用 `abc123`：
+
+```bash
+sqlite3 /path/to/one-api.db \
+  "SELECT id AS token_id, user_id, name, status FROM tokens WHERE \"key\" = 'abc123' AND deleted_at IS NULL;"
+```
+
+返回的 `token_id` 填入 `ModerationForceTokenIDs`，返回的 `user_id` 可用于
+`ModerationExemptUserIDs` 等用户级审核配置。
+
 ## 审计日志与审核统计的边界
 
 - 通用安全审计日志记录登录、令牌、额度等管理操作。

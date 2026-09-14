@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import assert from 'node:assert/strict'
-import { after, describe, test } from 'node:test'
+import { afterAll, describe, expect, test } from 'vitest'
 
 import { Window } from 'happy-dom'
 
@@ -172,23 +171,20 @@ describe('public header navigation layout', () => {
     const pricingLink = [...rendered.container.querySelectorAll('a')].find(
       (link) => link.textContent === '模型广场'
     )
-    assert.ok(pricingLink)
-    assert.equal(pricingLink.classList.contains('whitespace-nowrap'), true)
-    assert.equal(pricingLink.classList.contains('shrink-0'), true)
+    expect(pricingLink).toBeDefined()
+    expect(pricingLink?.classList).toContain('whitespace-nowrap')
+    expect(pricingLink?.classList).toContain('shrink-0')
 
-    const desktopNavigation = pricingLink.parentElement
-    assert.ok(desktopNavigation)
-    assert.equal(desktopNavigation.classList.contains('lg:flex'), true)
-    assert.equal(desktopNavigation.classList.contains('sm:flex'), false)
+    const desktopNavigation = pricingLink?.parentElement
+    expect(desktopNavigation).not.toBeNull()
+    expect(desktopNavigation?.classList).toContain('lg:flex')
+    expect(desktopNavigation?.classList).not.toContain('sm:flex')
 
     const menuButton = rendered.container.querySelector(
       'button[aria-label="Toggle navigation menu"]'
     )
-    assert.ok(menuButton)
-    assert.equal(
-      menuButton.parentElement?.classList.contains('lg:hidden'),
-      true
-    )
+    expect(menuButton).not.toBeNull()
+    expect(menuButton?.parentElement?.classList).toContain('lg:hidden')
 
     await rendered.cleanup()
   })
@@ -199,17 +195,17 @@ describe('public header navigation layout', () => {
       '[data-slot="brand-contact-line"][data-variant="compact"]'
     )
 
-    assert.ok(mobileContact)
-    assert.match(mobileContact.textContent || '', /QQ 1549277597/)
-    assert.match(mobileContact.textContent || '', /微信 ModelPass/)
-    assert.match(mobileContact.textContent || '', /1549277597@qq\.com/)
-    assert.equal(mobileContact.classList.contains('flex-wrap'), true)
-    assert.equal(mobileContact.classList.contains('lg:hidden'), true)
+    expect(mobileContact).not.toBeNull()
+    expect(mobileContact?.textContent).toMatch(/QQ 1549277597/)
+    expect(mobileContact?.textContent).toMatch(/微信 ModelPass/)
+    expect(mobileContact?.textContent).toMatch(/1549277597@qq\.com/)
+    expect(mobileContact?.classList).toContain('flex-wrap')
+    expect(mobileContact?.classList).toContain('lg:hidden')
 
     await rendered.cleanup()
   })
 })
 
-after(() => {
+afterAll(() => {
   domWindow.close()
 })
