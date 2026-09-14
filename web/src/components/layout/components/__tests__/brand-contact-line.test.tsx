@@ -30,6 +30,7 @@ await i18n.use(initReactI18next).init({
     zh: {
       translation: {
         'Contact the author': '联系作者交流',
+        'QQ Group': 'QQ群',
         WeChat: '微信',
       },
     },
@@ -37,7 +38,7 @@ await i18n.use(initReactI18next).init({
 })
 
 describe('brand contact line', () => {
-  test('shows all contact details while keeping the email as plain text', () => {
+  test('shows QQ, WeChat, and QQ group contact details', () => {
     const markup = renderToStaticMarkup(
       <I18nextProvider i18n={i18n}>
         <BrandContactLine />
@@ -47,7 +48,8 @@ describe('brand contact line', () => {
     expect(markup).toContain('联系作者交流')
     expect(markup).toContain('QQ 1549277597')
     expect(markup).toContain('微信 ModelPass')
-    expect(markup).toContain('1549277597@qq.com')
+    expect(markup).toContain('QQ群 450997742')
+    expect(markup).not.toContain('1549277597@qq.com')
     expect(markup).not.toContain('<a')
   })
 })

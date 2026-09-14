@@ -51,7 +51,7 @@ export function BrandContactLine(props: BrandContactLineProps) {
       </span>
       <span className='whitespace-nowrap'>
         <span className={cn('text-border', !compact && 'ms-1')}>·</span>{' '}
-        1549277597@qq.com
+        {t('QQ Group')} 450997742
       </span>
     </span>
   )

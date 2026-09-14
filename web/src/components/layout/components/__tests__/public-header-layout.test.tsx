@@ -86,6 +86,7 @@ await i18n.use(initReactI18next).init({
       translation: {
         'Contact the author': '联系作者交流',
         'Model Square': '模型广场',
+        'QQ Group': 'QQ群',
         Rankings: '排行榜',
         WeChat: '微信',
       },
@@ -198,7 +199,8 @@ describe('public header navigation layout', () => {
     expect(mobileContact).not.toBeNull()
     expect(mobileContact?.textContent).toMatch(/QQ 1549277597/)
     expect(mobileContact?.textContent).toMatch(/微信 ModelPass/)
-    expect(mobileContact?.textContent).toMatch(/1549277597@qq\.com/)
+    expect(mobileContact?.textContent).toMatch(/QQ群 450997742/)
+    expect(mobileContact?.textContent).not.toMatch(/1549277597@qq\.com/)
     expect(mobileContact?.classList).toContain('flex-wrap')
     expect(mobileContact?.classList).toContain('lg:hidden')
 
