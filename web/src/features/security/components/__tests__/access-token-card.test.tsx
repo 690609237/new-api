@@ -81,11 +81,20 @@ beforeEach(() => {
       return { data: { success: true, data: { items: [], total: 0 } } }
     }
     if (url === '/api/verify/methods') {
+      const params = config?.params
+      if (
+        typeof params !== 'object' ||
+        params === null ||
+        !('scope' in params) ||
+        typeof params.scope !== 'string'
+      ) {
+        throw new Error('Verification scope is missing')
+      }
       return {
         data: {
           success: true,
           data: {
-            scope: config?.params?.scope,
+            scope: params.scope,
             methods: [{ method: 'password', available: true }],
             oauth_providers: [],
             password_encryption_enabled: false,
