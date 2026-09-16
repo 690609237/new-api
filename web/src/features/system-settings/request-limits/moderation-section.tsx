@@ -369,7 +369,9 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                     />
                   </FormControl>
                   <FormDescription>
-                    {t('Seconds to reuse a successful moderation result.')}
+                    {t(
+                      'Seconds to reuse sensitive-word and moderation results for identical user content.'
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

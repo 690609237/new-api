@@ -23,23 +23,36 @@ func moderationLogPrompt(prompt string) string {
 	return common.TruncateStringFromEnd(prompt, moderationLogPromptMaxRunes-markerRunes) + moderationLogTruncatedMarker
 }
 
-// RecordModerationLog stores a flagged moderation decision for administrator
-// review. The submitted prompt and result are nested under admin_info so
-// formatUserLogs removes them from non-admin log responses.
-func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel string, flagged bool, source ...string) {
+// RecordModerationLog stores a flagged upstream moderation decision for
+// administrator review.
+func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel, source string, rules []string) {
+	recordContentPolicyLog(c, userID, prompt, "moderation_api", "Prompt blocked by content moderation", moderationModel, source, rules)
+}
+
+// RecordSensitiveWordLog stores a local sensitive-word policy hit for
+// administrator review.
+func RecordSensitiveWordLog(c *gin.Context, userID int, prompt string, rules []string) {
+	recordContentPolicyLog(c, userID, prompt, "sensitive_word", "Prompt blocked by sensitive-word policy", "", "local", rules)
+}
+
+// recordContentPolicyLog nests the submitted prompt and matched rules under
+// admin_info so formatUserLogs removes them from non-admin log responses.
+func recordContentPolicyLog(c *gin.Context, userID int, prompt, policy, content, moderationModel, source string, rules []string) {
 	if c == nil {
 		return
 	}
 
 	moderationInfo := map[string]any{
 		"prompt":  moderationLogPrompt(prompt),
-		"flagged": flagged,
+		"flagged": true,
+		"policy":  policy,
+		"rules":   rules,
 	}
 	if moderationModel != "" {
 		moderationInfo["model"] = moderationModel
 	}
-	if len(source) > 0 && source[0] != "" {
-		moderationInfo["source"] = source[0]
+	if source != "" {
+		moderationInfo["source"] = source
 	}
 	other := map[string]any{
 		"admin_info": map[string]any{
@@ -49,9 +62,11 @@ func RecordModerationLog(c *gin.Context, userID int, prompt, moderationModel str
 	log := &Log{
 		UserId:    userID,
 		Username:  c.GetString("username"),
+		TokenId:   c.GetInt("token_id"),
+		TokenName: c.GetString("token_name"),
 		CreatedAt: common.GetTimestamp(),
 		Type:      LogTypeError,
-		Content:   "Prompt blocked by content moderation",
+		Content:   content,
 		ModelName: c.GetString("original_model"),
 		Group:     c.GetString("group"),
 		RequestId: c.GetString(common.RequestIdKey),

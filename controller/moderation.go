@@ -79,6 +79,7 @@ func GetModerationUsageStats(c *gin.Context) {
 			"api_latency_average_ms": averageLatencyMs,
 			"api_timeouts":           summary.APITimeouts,
 			"circuit_skips":          summary.CircuitSkips,
+			"sensitive_word_hits":    summary.SensitiveWordHits,
 			"buckets":                buckets,
 			"dimensions":             dimensions,
 		},

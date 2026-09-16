@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -45,7 +46,11 @@ func PrepareRequestBilling(c *gin.Context, info *relaycommon.RelayInfo) *types.N
 		// Sensitive-content policy applies only to the newly submitted user turn,
 		// not system prompts or historical assistant/tool context.
 		prompt := service.ExtractLatestUserMessageForModeration(info.Request)
-		if contains, words := service.CheckSensitiveText(prompt); contains {
+		contains, words := service.CheckSensitiveText(prompt)
+		common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
+		if contains {
+			service.RecordSensitiveWordHit(service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
+			model.RecordSensitiveWordLog(c, c.GetInt("id"), prompt, words)
 			message := fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", "))
 			logger.LogWarn(c, message)
 			return types.NewError(errors.New(message), types.ErrorCodeSensitiveWordsDetected)

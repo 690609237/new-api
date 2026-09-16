@@ -156,9 +156,9 @@ func ModerationAlertThreshold() int {
 	return value
 }
 
-// ModerationCacheTTL controls how long a successful moderation result can be
-// reused for an identical prompt. A short default keeps the cache useful for
-// client retries without retaining results indefinitely.
+// ModerationCacheTTL controls how long moderation and sensitive-word results
+// can be reused for identical user content. A short default keeps the cache
+// useful for client retries without retaining results indefinitely.
 func ModerationCacheTTL() time.Duration {
 	moderationMu.RLock()
 	overridden := moderationOptionOverrides["ModerationCacheTTLSeconds"]

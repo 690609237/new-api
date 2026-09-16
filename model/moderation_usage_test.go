@@ -14,6 +14,27 @@ import (
 	"gorm.io/gorm"
 )
 
+type legacyModerationUsageStat struct {
+	Id                int64 `gorm:"primaryKey"`
+	BucketStart       int64 `gorm:"uniqueIndex:idx_moderation_usage_dimension,priority:1"`
+	UserId            int   `gorm:"uniqueIndex:idx_moderation_usage_dimension,priority:2;index"`
+	TokenId           int   `gorm:"uniqueIndex:idx_moderation_usage_dimension,priority:3;index"`
+	APIRequests       int64
+	APIPassed         int64
+	APIViolations     int64
+	APIFailed         int64
+	CacheHits         int64
+	APILatencyTotalMs int64
+	APITimeouts       int64
+	CircuitSkips      int64
+	CreatedAt         int64 `gorm:"bigint"`
+	UpdatedAt         int64 `gorm:"bigint"`
+}
+
+func (legacyModerationUsageStat) TableName() string {
+	return "moderation_usage_stats"
+}
+
 func TestRecordModerationUsageAggregatesByBucket(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
@@ -43,6 +64,7 @@ func TestRecordModerationUsageAggregatesByBucket(t *testing.T) {
 		APILatencyTotalMs: 18,
 		APITimeouts:       1,
 		CircuitSkips:      1,
+		SensitiveWordHits: 1,
 	}))
 	require.NoError(t, RecordModerationUsage(timestamp+360, ModerationUsageStatDelta{
 		UserID:      8,
@@ -62,11 +84,37 @@ func TestRecordModerationUsageAggregatesByBucket(t *testing.T) {
 	require.Equal(t, int64(30), summary.APILatencyTotalMs)
 	require.Equal(t, int64(1), summary.APITimeouts)
 	require.Equal(t, int64(1), summary.CircuitSkips)
+	require.Equal(t, int64(1), summary.SensitiveWordHits)
 	require.Len(t, dimensions, 2)
 	filtered, _, filteredDimensions, err := GetModerationUsageStats(timestamp-300, timestamp+600, 7, 9)
 	require.NoError(t, err)
 	require.Equal(t, int64(2), filtered.APIRequests)
+	require.Equal(t, int64(1), filtered.SensitiveWordHits)
 	require.Len(t, filteredDimensions, 1)
+	require.Equal(t, int64(1), filteredDimensions[0].SensitiveWordHits)
+}
+
+func TestModerationUsageMigrationAddsSensitiveWordHits(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&legacyModerationUsageStat{}))
+	require.NoError(t, db.Create(&legacyModerationUsageStat{
+		BucketStart: 1_700_000_100,
+		UserId:      7,
+		TokenId:     9,
+		APIRequests: 3,
+		APIPassed:   2,
+	}).Error)
+
+	require.NoError(t, db.AutoMigrate(&ModerationUsageStat{}))
+	require.NoError(t, db.AutoMigrate(&ModerationUsageStat{}))
+	require.True(t, db.Migrator().HasColumn(&ModerationUsageStat{}, "sensitive_word_hits"))
+
+	var upgraded ModerationUsageStat
+	require.NoError(t, db.First(&upgraded).Error)
+	require.Equal(t, int64(3), upgraded.APIRequests)
+	require.Equal(t, int64(2), upgraded.APIPassed)
+	require.Zero(t, upgraded.SensitiveWordHits)
 }
 
 func TestRecordModerationUsageConfiguredDatabases(t *testing.T) {
@@ -96,6 +144,7 @@ func TestRecordModerationUsageConfiguredDatabases(t *testing.T) {
 			var version string
 			require.NoError(t, db.Raw("SELECT version()").Scan(&version).Error)
 			t.Logf("%s version: %s", test.name, version)
+			require.NoError(t, db.AutoMigrate(&ModerationUsageStat{}))
 			require.NoError(t, db.AutoMigrate(&ModerationUsageStat{}))
 
 			tx := db.Begin()
@@ -129,6 +178,7 @@ func TestRecordModerationUsageConfiguredDatabases(t *testing.T) {
 				APILatencyTotalMs: 18,
 				APITimeouts:       1,
 				CircuitSkips:      1,
+				SensitiveWordHits: 1,
 			}))
 
 			summary, buckets, dimensions, err := GetModerationUsageStats(timestamp-300, timestamp+300, userID, tokenID)
@@ -142,6 +192,7 @@ func TestRecordModerationUsageConfiguredDatabases(t *testing.T) {
 			require.Equal(t, int64(30), summary.APILatencyTotalMs)
 			require.Equal(t, int64(1), summary.APITimeouts)
 			require.Equal(t, int64(1), summary.CircuitSkips)
+			require.Equal(t, int64(1), summary.SensitiveWordHits)
 		})
 	}
 }

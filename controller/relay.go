@@ -149,6 +149,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		contains, words := service.CheckSensitiveText(currentUserPrompt)
 		common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
 		if contains {
+			service.RecordSensitiveWordHit(service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
+			model.RecordSensitiveWordLog(c, c.GetInt("id"), currentUserPrompt, words)
 			logger.LogWarn(c, fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", ")))
 			newAPIError = types.NewError(errors.New("sensitive content detected"), types.ErrorCodeSensitiveWordsDetected, types.ErrOptionWithStatusCode(http.StatusBadRequest), types.ErrOptionWithSkipRetry())
 			return
@@ -160,7 +162,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		if strings.TrimSpace(moderationText) == "" {
 			common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 		} else {
-			flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), moderationText, service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
+			decision, moderationSource, moderationErr := service.ModeratePromptWithDetails(c.Request.Context(), moderationText, service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
 			if moderationErr != nil {
 				logger.LogWarn(c, fmt.Sprintf("omni moderation request failed: %s", moderationErr.Error()))
 				service.RecordModerationAlert(c.Request.Context(), moderationErr)
@@ -171,8 +173,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 					logger.LogWarn(c, fmt.Sprintf("skip omni moderation after upstream failure: %s", moderationErr.Error()))
 				}
 			}
-			if flagged {
-				model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), flagged, string(moderationSource))
+			if decision.Flagged {
+				model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), string(moderationSource), decision.Rules)
 				violationCount, violationLimit, accountBanned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 				newAPIError = types.NewErrorWithStatusCode(
 					errors.New(service.ModerationViolationMessage(violationCount, violationLimit, accountBanned)),

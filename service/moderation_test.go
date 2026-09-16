@@ -81,7 +81,7 @@ func TestModeratePromptSendsOmniModerationRequest(t *testing.T) {
 			handlerErr = common.Unmarshal(body, &gotBody)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"results":[{"flagged":true}]}`))
+		_, _ = w.Write([]byte(`{"results":[{"flagged":true,"categories":{"violence":true,"harassment":false}}]}`))
 	}))
 	defer server.Close()
 
@@ -90,10 +90,11 @@ func TestModeratePromptSendsOmniModerationRequest(t *testing.T) {
 	t.Setenv("MODERATION_MODEL", "omni-moderation-latest")
 
 	identity := ModerationIdentity{UserID: 7, TokenID: 9}
-	flagged, source, err := ModeratePromptWithSource(context.Background(), "unsafe prompt", identity)
+	decision, source, err := ModeratePromptWithDetails(context.Background(), "unsafe prompt", identity)
 	require.NoError(t, err)
 	require.NoError(t, handlerErr)
-	require.True(t, flagged)
+	require.True(t, decision.Flagged)
+	require.Equal(t, []string{"violence"}, decision.Rules)
 	require.Equal(t, ModerationResultSourceAPI, source)
 	require.Equal(t, "Bearer test-key", gotAuth)
 	require.Equal(t, "omni-moderation-latest", gotBody.Model)
@@ -124,7 +125,7 @@ func TestModeratePromptReusesCachedResult(t *testing.T) {
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
-		_, _ = w.Write([]byte(`{"results":[{"flagged":false}]}`))
+		_, _ = w.Write([]byte(`{"results":[{"flagged":true,"categories":{"violence/graphic":true,"violence":true}}]}`))
 	}))
 	defer server.Close()
 
@@ -133,14 +134,16 @@ func TestModeratePromptReusesCachedResult(t *testing.T) {
 	t.Setenv("MODERATION_CACHE_TTL_SECONDS", "600")
 
 	identity := ModerationIdentity{UserID: 7, TokenID: 9}
-	first, firstSource, err := ModeratePromptWithSource(context.Background(), "retry me", identity)
+	first, firstSource, err := ModeratePromptWithDetails(context.Background(), "retry me", identity)
 	require.NoError(t, err)
-	second, secondSource, err := ModeratePromptWithSource(context.Background(), "  retry me  ", identity)
+	second, secondSource, err := ModeratePromptWithDetails(context.Background(), "  retry me  ", identity)
 	require.NoError(t, err)
 	_, err = ModeratePrompt(context.Background(), "different prompt")
 	require.NoError(t, err)
-	require.False(t, first)
-	require.False(t, second)
+	require.True(t, first.Flagged)
+	require.True(t, second.Flagged)
+	require.Equal(t, []string{"violence", "violence/graphic"}, first.Rules)
+	require.Equal(t, first.Rules, second.Rules)
 	require.Equal(t, ModerationResultSourceAPI, firstSource)
 	require.Equal(t, ModerationResultSourceCache, secondSource)
 	require.Equal(t, int32(2), calls.Load())

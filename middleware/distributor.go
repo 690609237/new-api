@@ -274,9 +274,11 @@ func runPreChannelModeration(c *gin.Context) bool {
 	}
 	if setting.ShouldCheckPromptSensitive() {
 		currentUserPrompt := service.ExtractLatestUserMessageForModeration(request)
-		contains, _ := service.CheckSensitiveText(currentUserPrompt)
+		contains, words := service.CheckSensitiveText(currentUserPrompt)
 		common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
 		if contains {
+			service.RecordSensitiveWordHit(service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
+			model.RecordSensitiveWordLog(c, c.GetInt("id"), currentUserPrompt, words)
 			abortWithOpenAiMessage(c, http.StatusBadRequest, "sensitive content detected", types.ErrorCodeSensitiveWordsDetected)
 			return false
 		}
@@ -297,7 +299,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 		common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 		return true
 	}
-	flagged, moderationSource, moderationErr := service.ModeratePromptWithSource(c.Request.Context(), prompt, service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
+	decision, moderationSource, moderationErr := service.ModeratePromptWithDetails(c.Request.Context(), prompt, service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
 	if moderationErr != nil {
 		service.RecordModerationAlert(c.Request.Context(), moderationErr)
 		if service.ShouldSkipModerationError(moderationErr) {
@@ -305,8 +307,8 @@ func runPreChannelModeration(c *gin.Context) bool {
 		}
 	}
 	common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
-	if flagged {
-		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), flagged, string(moderationSource))
+	if decision.Flagged {
+		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), string(moderationSource), decision.Rules)
 		count, limit, banned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 		abortWithOpenAiMessage(c, http.StatusBadRequest, service.ModerationViolationMessage(count, limit, banned), types.ErrorCodePromptBlocked)
 		return false

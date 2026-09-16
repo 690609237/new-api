@@ -15,3 +15,9 @@ func TestValidateOptionValueRejectsInvalidMaxTokenAutoGroups(t *testing.T) {
 	}
 	require.NoError(t, validateOptionValue("MaxTokenAutoGroups", "999999"))
 }
+
+func TestValidateOptionValueRejectsInvalidSensitiveWordRules(t *testing.T) {
+	require.NoError(t, validateOptionValue("SensitiveWords", "one|two|three|four|five"))
+	assert.ErrorContains(t, validateOptionValue("SensitiveWords", "one|two|three|four|five|six"), "at most 5 keywords")
+	assert.ErrorContains(t, validateOptionValue("SensitiveWords", "one||two"), "empty keyword")
+}

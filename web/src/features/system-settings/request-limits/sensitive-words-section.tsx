@@ -20,7 +20,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import * as z from 'zod'
 
 import {
   Form,
@@ -42,14 +41,10 @@ import {
 import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
 import { useUpdateOption } from '../hooks/use-update-option'
-
-const sensitiveSchema = z.object({
-  CheckSensitiveEnabled: z.boolean(),
-  CheckSensitiveOnPromptEnabled: z.boolean(),
-  SensitiveWords: z.string().optional(),
-})
-
-type SensitiveFormValues = z.infer<typeof sensitiveSchema>
+import {
+  createSensitiveSchema,
+  type SensitiveFormValues,
+} from './lib/sensitive-words'
 
 type SensitiveWordsSectionProps = {
   defaultValues: SensitiveFormValues
@@ -60,6 +55,7 @@ export function SensitiveWordsSection({
 }: SensitiveWordsSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const sensitiveSchema = createSensitiveSchema(t)
   const form = useForm<SensitiveFormValues>({
     resolver: zodResolver(sensitiveSchema),
     defaultValues,
@@ -146,13 +142,15 @@ export function SensitiveWordsSection({
                 <FormControl>
                   <Textarea
                     rows={12}
-                    placeholder={t('Enter one keyword per line')}
+                    placeholder={t(
+                      'Enter one keyword or combined rule per line'
+                    )}
                     {...field}
                   />
                 </FormControl>
                 <FormDescription>
                   {t(
-                    'Each line represents one keyword. Leave blank to disable the list but keep the switch states.'
+                    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.'
                   )}
                 </FormDescription>
                 <FormMessage />

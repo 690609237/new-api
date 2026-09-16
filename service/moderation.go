@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +21,7 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-const moderationCacheNamespace = "new-api:moderation:v1"
+const moderationCacheNamespace = "new-api:moderation:v2"
 
 // ModerationResultSource identifies whether a moderation decision came from
 // the configured upstream API or a previously cached result.
@@ -33,7 +34,7 @@ const (
 
 var (
 	moderationCacheOnce      sync.Once
-	moderationCache          *cachex.HybridCache[bool]
+	moderationCache          *cachex.HybridCache[ModerationDecision]
 	moderationRequests       singleflight.Group
 	moderationTimeoutCircuit = moderationTimeoutCircuitState{}
 )
@@ -48,9 +49,15 @@ type ModerationIdentity struct {
 	TokenID int
 }
 
+type ModerationDecision struct {
+	Flagged bool     `json:"flagged"`
+	Rules   []string `json:"rules,omitempty"`
+}
+
 type moderationResponse struct {
 	Results []struct {
-		Flagged bool `json:"flagged"`
+		Flagged    bool            `json:"flagged"`
+		Categories map[string]bool `json:"categories"`
 	} `json:"results"`
 }
 
@@ -86,22 +93,23 @@ func TestModerationEndpoint(ctx context.Context, baseURL, apiKey, model string) 
 	if model == "" {
 		model = "omni-moderation-latest"
 	}
-	return requestModeration(ctx, baseURL, apiKey, model, moderationTestPrompt)
+	decision, err := requestModeration(ctx, baseURL, apiKey, model, moderationTestPrompt)
+	return decision.Flagged, err
 }
 
-func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt string) (bool, error) {
+func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt string) (ModerationDecision, error) {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
-		return false, nil
+		return ModerationDecision{}, nil
 	}
 	prompt = common.TruncateStringFromEnd(prompt, common.ModerationPromptMaxRunes)
 	payload, marshalErr := common.Marshal(moderationRequest{Model: model, Input: prompt})
 	if marshalErr != nil {
-		return false, fmt.Errorf("marshal moderation request: %w", marshalErr)
+		return ModerationDecision{}, fmt.Errorf("marshal moderation request: %w", marshalErr)
 	}
 	req, requestErr := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/moderations", bytes.NewReader(payload))
 	if requestErr != nil {
-		return false, fmt.Errorf("create moderation request: %w", requestErr)
+		return ModerationDecision{}, fmt.Errorf("create moderation request: %w", requestErr)
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
@@ -111,20 +119,31 @@ func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt strin
 	}
 	resp, requestErr := client.Do(req)
 	if requestErr != nil {
-		return false, &moderationTransportError{err: requestErr}
+		return ModerationDecision{}, &moderationTransportError{err: requestErr}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return false, &moderationStatusError{statusCode: resp.StatusCode}
+		return ModerationDecision{}, &moderationStatusError{statusCode: resp.StatusCode}
 	}
 	var moderationResult moderationResponse
 	if decodeErr := common.DecodeJson(resp.Body, &moderationResult); decodeErr != nil {
-		return false, fmt.Errorf("decode moderation response: %w", decodeErr)
+		return ModerationDecision{}, fmt.Errorf("decode moderation response: %w", decodeErr)
 	}
 	if len(moderationResult.Results) == 0 {
-		return false, fmt.Errorf("moderation response contains no results")
+		return ModerationDecision{}, fmt.Errorf("moderation response contains no results")
 	}
-	return moderationResult.Results[0].Flagged, nil
+	result := moderationResult.Results[0]
+	rules := make([]string, 0, len(result.Categories))
+	for category, matched := range result.Categories {
+		if matched {
+			rules = append(rules, category)
+		}
+	}
+	sort.Strings(rules)
+	if result.Flagged && len(rules) == 0 {
+		rules = append(rules, "provider_flagged")
+	}
+	return ModerationDecision{Flagged: result.Flagged, Rules: rules}, nil
 }
 
 func (e *moderationStatusError) Error() string {
@@ -138,18 +157,18 @@ func ShouldSkipModerationError(err error) bool {
 	return err != nil
 }
 
-func getModerationCache() *cachex.HybridCache[bool] {
+func getModerationCache() *cachex.HybridCache[ModerationDecision] {
 	moderationCacheOnce.Do(func() {
 		const capacity = 10000
-		moderationCache = cachex.NewHybridCache[bool](cachex.HybridCacheConfig[bool]{
+		moderationCache = cachex.NewHybridCache(cachex.HybridCacheConfig[ModerationDecision]{
 			Namespace: cachex.Namespace(moderationCacheNamespace),
 			Redis:     common.RDB,
 			RedisEnabled: func() bool {
 				return common.RedisEnabled && common.RDB != nil
 			},
-			RedisCodec: cachex.BoolCodec{},
-			Memory: func() *hot.HotCache[string, bool] {
-				return hot.NewHotCache[string, bool](hot.LRU, capacity).
+			RedisCodec: cachex.JSONCodec[ModerationDecision]{},
+			Memory: func() *hot.HotCache[string, ModerationDecision] {
+				return hot.NewHotCache[string, ModerationDecision](hot.LRU, capacity).
 					WithTTL(setting.ModerationCacheTTL()).
 					WithJanitor().
 					Build()
@@ -170,42 +189,47 @@ func moderationCacheKey(prompt string) string {
 // ModeratePrompt checks the normalized prompt before any model request is
 // sent. The caller must decide whether a flagged prompt should be rejected.
 func ModeratePrompt(ctx context.Context, prompt string) (bool, error) {
-	flagged, _, err := ModeratePromptWithSource(ctx, prompt)
-	return flagged, err
+	decision, _, err := ModeratePromptWithDetails(ctx, prompt)
+	return decision.Flagged, err
 }
 
 func ModeratePromptWithSource(ctx context.Context, prompt string, identities ...ModerationIdentity) (bool, ModerationResultSource, error) {
+	decision, source, err := ModeratePromptWithDetails(ctx, prompt, identities...)
+	return decision.Flagged, source, err
+}
+
+func ModeratePromptWithDetails(ctx context.Context, prompt string, identities ...ModerationIdentity) (ModerationDecision, ModerationResultSource, error) {
 	userID, tokenID := 0, 0
 	if len(identities) > 0 {
 		userID, tokenID = identities[0].UserID, identities[0].TokenID
 	}
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
-		return false, ModerationResultSourceAPI, nil
+		return ModerationDecision{}, ModerationResultSourceAPI, nil
 	}
 	prompt = common.TruncateStringFromEnd(prompt, common.ModerationPromptMaxRunes)
 	baseURL := strings.TrimRight(strings.TrimSpace(setting.ModerationBaseURL()), "/")
 	apiKey := strings.TrimSpace(setting.ModerationAPIKey())
 	model := strings.TrimSpace(setting.ModerationModel())
 	if baseURL == "" || apiKey == "" {
-		return false, ModerationResultSourceAPI, fmt.Errorf("moderation is enabled but base URL or API key is not configured")
+		return ModerationDecision{}, ModerationResultSourceAPI, fmt.Errorf("moderation is enabled but base URL or API key is not configured")
 	}
 
 	cache := getModerationCache()
 	cacheKey := moderationCacheKey(prompt)
-	if flagged, found, err := cache.Get(cacheKey); err != nil {
+	if decision, found, err := cache.Get(cacheKey); err != nil {
 		common.SysError(fmt.Sprintf("moderation cache get failed: %v", err))
 	} else if found {
 		recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{UserID: userID, TokenID: tokenID, CacheHits: 1})
-		return flagged, ModerationResultSourceCache, nil
+		return decision, ModerationResultSourceCache, nil
 	}
 
 	result, err, _ := moderationRequests.Do(cacheKey, func() (any, error) {
 		// A second lookup closes the race between callers that missed the cache
 		// before the first caller completed the upstream request.
-		if flagged, found, cacheErr := cache.Get(cacheKey); cacheErr == nil && found {
+		if decision, found, cacheErr := cache.Get(cacheKey); cacheErr == nil && found {
 			recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{UserID: userID, TokenID: tokenID, CacheHits: 1})
-			return flagged, nil
+			return decision, nil
 		}
 		if !moderationTimeoutCircuit.allow(time.Now()) {
 			recordModerationUsage(time.Now().Unix(), moderationmodel.ModerationUsageStatDelta{UserID: userID, TokenID: tokenID, CircuitSkips: 1})
@@ -214,7 +238,7 @@ func ModeratePromptWithSource(ctx context.Context, prompt string, identities ...
 
 		startedAt := time.Now()
 		requestCtx, cancel := context.WithTimeout(ctx, setting.ModerationTimeout())
-		flagged, requestErr := requestModeration(requestCtx, baseURL, apiKey, model, prompt)
+		decision, requestErr := requestModeration(requestCtx, baseURL, apiKey, model, prompt)
 		cancel()
 		delta := moderationmodel.ModerationUsageStatDelta{
 			UserID:            userID,
@@ -228,7 +252,7 @@ func ModeratePromptWithSource(ctx context.Context, prompt string, identities ...
 		}
 		if requestErr != nil {
 			delta.APIFailed = 1
-		} else if flagged {
+		} else if decision.Flagged {
 			delta.APIViolations = 1
 		} else {
 			delta.APIPassed = 1
@@ -236,24 +260,24 @@ func ModeratePromptWithSource(ctx context.Context, prompt string, identities ...
 		moderationTimeoutCircuit.observe(time.Now(), timedOut)
 		recordModerationUsage(startedAt.Unix(), delta)
 		if requestErr != nil {
-			return false, requestErr
+			return ModerationDecision{}, requestErr
 		}
-		if cacheErr := cache.SetWithTTL(cacheKey, flagged, setting.ModerationCacheTTL()); cacheErr != nil {
+		if cacheErr := cache.SetWithTTL(cacheKey, decision, setting.ModerationCacheTTL()); cacheErr != nil {
 			common.SysError(fmt.Sprintf("moderation cache set failed: %v", cacheErr))
 		}
-		return flagged, nil
+		return decision, nil
 	})
 	if err != nil {
-		return false, ModerationResultSourceAPI, err
+		return ModerationDecision{}, ModerationResultSourceAPI, err
 	}
 	if _, ok := result.(moderationCircuitResult); ok {
-		return false, ModerationResultSourceCircuitBreaker, nil
+		return ModerationDecision{}, ModerationResultSourceCircuitBreaker, nil
 	}
-	flagged, ok := result.(bool)
+	decision, ok := result.(ModerationDecision)
 	if !ok {
-		return false, ModerationResultSourceAPI, fmt.Errorf("moderation cache returned invalid result type %T", result)
+		return ModerationDecision{}, ModerationResultSourceAPI, fmt.Errorf("moderation cache returned invalid result type %T", result)
 	}
-	return flagged, ModerationResultSourceAPI, nil
+	return decision, ModerationResultSourceAPI, nil
 }
 
 type moderationCircuitResult struct{}

@@ -12,6 +12,7 @@ export type ModerationUsageBucket = {
   api_latency_total_ms: number
   api_timeouts: number
   circuit_skips: number
+  sensitive_word_hits: number
 }
 
 export type ModerationUsageDimension = Omit<
@@ -35,6 +36,7 @@ export type ModerationUsageResponse = {
     api_latency_average_ms: number
     api_timeouts: number
     circuit_skips: number
+    sensitive_word_hits: number
     buckets: ModerationUsageBucket[]
     dimensions: ModerationUsageDimension[]
   }

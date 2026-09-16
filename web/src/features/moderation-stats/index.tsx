@@ -75,6 +75,11 @@ export function ModerationStats() {
         cell: (row: ModerationUsageDimension) => row.api_requests,
       },
       {
+        id: 'sensitive-word-hits',
+        header: t('Sensitive word hits'),
+        cell: (row: ModerationUsageDimension) => row.sensitive_word_hits,
+      },
+      {
         id: 'passed',
         header: t('Passed'),
         cell: (row: ModerationUsageDimension) => row.api_passed,
@@ -193,15 +198,15 @@ export function ModerationStats() {
             </CardContent>
           </Card>
           {query.isPending ? (
-            <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-6'>
-              {Array.from({ length: 5 }, (_, index) => (
+            <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
+              {Array.from({ length: 7 }, (_, index) => (
                 <Skeleton key={index} className='h-24 rounded-xl' />
               ))}
             </div>
           ) : (
             data && (
               <>
-                <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-6'>
+                <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
                   <StatCard
                     label={t('API requests')}
                     value={numberFormatter.format(data.api_requests)}
@@ -225,6 +230,10 @@ export function ModerationStats() {
                   <StatCard
                     label={t('Average latency')}
                     value={`${data.api_latency_average_ms.toFixed(0)} ms`}
+                  />
+                  <StatCard
+                    label={t('Sensitive word hits')}
+                    value={numberFormatter.format(data.sensitive_word_hits)}
                   />
                 </div>
                 <div className='flex flex-wrap gap-2'>

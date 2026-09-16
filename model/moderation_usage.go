@@ -10,9 +10,10 @@ import (
 
 const ModerationUsageBucketDuration = 5 * time.Minute
 
-// ModerationUsageStat stores aggregate moderation upstream usage by time bucket,
-// user, and token. User prompts are intentionally not stored here; flagged
-// prompts remain available through the existing administrator-only log.
+// ModerationUsageStat stores aggregate upstream moderation usage and local
+// sensitive-word hits by time bucket, user, and token. User prompts are
+// intentionally not stored here; flagged prompts remain available through the
+// existing administrator-only log.
 type ModerationUsageStat struct {
 	Id                int64 `json:"id" gorm:"primaryKey"`
 	BucketStart       int64 `json:"bucket_start" gorm:"uniqueIndex:idx_moderation_usage_dimension,priority:1"`
@@ -26,6 +27,7 @@ type ModerationUsageStat struct {
 	APILatencyTotalMs int64 `json:"api_latency_total_ms"`
 	APITimeouts       int64 `json:"api_timeouts"`
 	CircuitSkips      int64 `json:"circuit_skips"`
+	SensitiveWordHits int64 `json:"sensitive_word_hits" gorm:"not null;default:0"`
 	CreatedAt         int64 `json:"created_at" gorm:"bigint"`
 	UpdatedAt         int64 `json:"updated_at" gorm:"bigint"`
 }
@@ -41,6 +43,7 @@ type ModerationUsageStatDelta struct {
 	APILatencyTotalMs int64
 	APITimeouts       int64
 	CircuitSkips      int64
+	SensitiveWordHits int64
 }
 
 type ModerationUsageStatSummary struct {
@@ -52,6 +55,7 @@ type ModerationUsageStatSummary struct {
 	APILatencyTotalMs int64 `json:"api_latency_total_ms" gorm:"column:api_latency_total_ms"`
 	APITimeouts       int64 `json:"api_timeouts" gorm:"column:api_timeouts"`
 	CircuitSkips      int64 `json:"circuit_skips" gorm:"column:circuit_skips"`
+	SensitiveWordHits int64 `json:"sensitive_word_hits" gorm:"column:sensitive_word_hits"`
 }
 
 type ModerationUsageDimensionSummary struct {
@@ -65,6 +69,7 @@ type ModerationUsageDimensionSummary struct {
 	APILatencyTotalMs int64 `json:"api_latency_total_ms" gorm:"column:api_latency_total_ms"`
 	APITimeouts       int64 `json:"api_timeouts" gorm:"column:api_timeouts"`
 	CircuitSkips      int64 `json:"circuit_skips" gorm:"column:circuit_skips"`
+	SensitiveWordHits int64 `json:"sensitive_word_hits" gorm:"column:sensitive_word_hits"`
 }
 
 func moderationUsageBucketStart(timestamp int64) int64 {
@@ -79,7 +84,7 @@ func RecordModerationUsage(timestamp int64, delta ModerationUsageStatDelta) erro
 	if DB == nil || timestamp <= 0 {
 		return errors.New("moderation usage database or timestamp is invalid")
 	}
-	if delta.APIRequests < 0 || delta.APIPassed < 0 || delta.APIViolations < 0 || delta.APIFailed < 0 || delta.CacheHits < 0 || delta.APILatencyTotalMs < 0 || delta.APITimeouts < 0 || delta.CircuitSkips < 0 {
+	if delta.APIRequests < 0 || delta.APIPassed < 0 || delta.APIViolations < 0 || delta.APIFailed < 0 || delta.CacheHits < 0 || delta.APILatencyTotalMs < 0 || delta.APITimeouts < 0 || delta.CircuitSkips < 0 || delta.SensitiveWordHits < 0 {
 		return errors.New("moderation usage delta cannot be negative")
 	}
 
@@ -96,6 +101,7 @@ func RecordModerationUsage(timestamp int64, delta ModerationUsageStatDelta) erro
 		APILatencyTotalMs: delta.APILatencyTotalMs,
 		APITimeouts:       delta.APITimeouts,
 		CircuitSkips:      delta.CircuitSkips,
+		SensitiveWordHits: delta.SensitiveWordHits,
 		CreatedAt:         now,
 		UpdatedAt:         now,
 	}
@@ -110,6 +116,7 @@ func RecordModerationUsage(timestamp int64, delta ModerationUsageStatDelta) erro
 			"api_latency_total_ms": gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_latency_total_ms"}, delta.APILatencyTotalMs),
 			"api_timeouts":         gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "api_timeouts"}, delta.APITimeouts),
 			"circuit_skips":        gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "circuit_skips"}, delta.CircuitSkips),
+			"sensitive_word_hits":  gorm.Expr("? + ?", clause.Column{Table: clause.CurrentTable, Name: "sensitive_word_hits"}, delta.SensitiveWordHits),
 			"updated_at":           now,
 		}),
 	}).Create(stat).Error
@@ -129,7 +136,7 @@ func GetModerationUsageStats(startTimestamp, endTimestamp, userID, tokenID int64
 	if tokenID > 0 {
 		query = query.Where("token_id = ?", tokenID)
 	}
-	if err := query.Select("COALESCE(SUM(api_requests), 0) AS api_requests, COALESCE(SUM(api_passed), 0) AS api_passed, COALESCE(SUM(api_violations), 0) AS api_violations, COALESCE(SUM(api_failed), 0) AS api_failed, COALESCE(SUM(cache_hits), 0) AS cache_hits, COALESCE(SUM(api_latency_total_ms), 0) AS api_latency_total_ms, COALESCE(SUM(api_timeouts), 0) AS api_timeouts, COALESCE(SUM(circuit_skips), 0) AS circuit_skips").Scan(&summary).Error; err != nil {
+	if err := query.Select("COALESCE(SUM(api_requests), 0) AS api_requests, COALESCE(SUM(api_passed), 0) AS api_passed, COALESCE(SUM(api_violations), 0) AS api_violations, COALESCE(SUM(api_failed), 0) AS api_failed, COALESCE(SUM(cache_hits), 0) AS cache_hits, COALESCE(SUM(api_latency_total_ms), 0) AS api_latency_total_ms, COALESCE(SUM(api_timeouts), 0) AS api_timeouts, COALESCE(SUM(circuit_skips), 0) AS circuit_skips, COALESCE(SUM(sensitive_word_hits), 0) AS sensitive_word_hits").Scan(&summary).Error; err != nil {
 		return ModerationUsageStatSummary{}, nil, nil, err
 	}
 
@@ -146,7 +153,7 @@ func GetModerationUsageStats(startTimestamp, endTimestamp, userID, tokenID int64
 		return ModerationUsageStatSummary{}, nil, nil, err
 	}
 	dimensionQuery := DB.Model(&ModerationUsageStat{}).
-		Select("user_id, token_id, COALESCE(SUM(api_requests), 0) AS api_requests, COALESCE(SUM(api_passed), 0) AS api_passed, COALESCE(SUM(api_violations), 0) AS api_violations, COALESCE(SUM(api_failed), 0) AS api_failed, COALESCE(SUM(cache_hits), 0) AS cache_hits, COALESCE(SUM(api_latency_total_ms), 0) AS api_latency_total_ms, COALESCE(SUM(api_timeouts), 0) AS api_timeouts, COALESCE(SUM(circuit_skips), 0) AS circuit_skips").
+		Select("user_id, token_id, COALESCE(SUM(api_requests), 0) AS api_requests, COALESCE(SUM(api_passed), 0) AS api_passed, COALESCE(SUM(api_violations), 0) AS api_violations, COALESCE(SUM(api_failed), 0) AS api_failed, COALESCE(SUM(cache_hits), 0) AS cache_hits, COALESCE(SUM(api_latency_total_ms), 0) AS api_latency_total_ms, COALESCE(SUM(api_timeouts), 0) AS api_timeouts, COALESCE(SUM(circuit_skips), 0) AS circuit_skips, COALESCE(SUM(sensitive_word_hits), 0) AS sensitive_word_hits").
 		Where("bucket_start >= ? AND bucket_start < ?", startTimestamp, endTimestamp).
 		Group("user_id, token_id").Order("user_id asc, token_id asc")
 	if userID > 0 {

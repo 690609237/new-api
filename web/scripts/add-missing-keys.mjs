@@ -54,8 +54,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       'Failures within 30 minutes before an alert is sent.',
     'Moderation cache TTL': 'Moderation cache TTL',
-    'Seconds to reuse a successful moderation result.':
-      'Seconds to reuse a successful moderation result.',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      'Seconds to reuse sensitive-word and moderation results for identical user content.',
     'Moderation sample rate': 'Moderation sample rate',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       'Percentage of non-exempt users selected for moderation. 100% checks everyone.',
@@ -90,9 +90,19 @@ const newKeys = {
       'Connection succeeded; the test text was flagged.',
     'Connection succeeded; the test text was allowed.':
       'Connection succeeded; the test text was allowed.',
+    'Combined rules cannot contain empty keywords':
+      'Combined rules cannot contain empty keywords',
+    'Each combined rule can contain at most 5 keywords':
+      'Each combined rule can contain at most 5 keywords',
+    'Enter one keyword or combined rule per line':
+      'Enter one keyword or combined rule per line',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.',
+    'Sensitive word hits': 'Sensitive word hits',
   },
   zh: {
-    'Use responsibly; breaking limits is strictly prohibited!': '文明使用，严禁破限！',
+    'Use responsibly; breaking limits is strictly prohibited!':
+      '文明使用，严禁破限！',
     'Content Moderation': '内容审核',
     'Save moderation settings': '保存审核设置',
     'Enable content moderation': '启用内容审核',
@@ -118,8 +128,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       '30 分钟内达到此失败次数后发送告警。',
     'Moderation cache TTL': '审核缓存时长',
-    'Seconds to reuse a successful moderation result.':
-      '成功审核结果的复用时长（秒）。',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      '相同用户内容复用敏感词和审核结果的秒数。',
     'Moderation sample rate': '审核采样比例',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       '未豁免用户中参与审核的比例，100% 表示全部审核。',
@@ -146,13 +156,25 @@ const newKeys = {
     'Violation limit updated successfully': '违规限制更新成功',
     'Test moderation connection': '测试审核接口连接',
     'View OpenAI usage statistics': '查看 OpenAI 使用统计',
-    'Enter a moderation base URL and API key first.': '请先填写审核接口地址和 API 密钥。',
+    'Enter a moderation base URL and API key first.':
+      '请先填写审核接口地址和 API 密钥。',
     'Moderation connection test failed.': '审核接口连接测试失败。',
-    'Connection succeeded; the test text was flagged.': '连接成功，测试文本被判定为违规。',
-    'Connection succeeded; the test text was allowed.': '连接成功，测试文本通过审核。',
+    'Connection succeeded; the test text was flagged.':
+      '连接成功，测试文本被判定为违规。',
+    'Connection succeeded; the test text was allowed.':
+      '连接成功，测试文本通过审核。',
+    'Combined rules cannot contain empty keywords': '组合规则不能包含空关键词',
+    'Each combined rule can contain at most 5 keywords':
+      '每条组合规则最多可包含 5 个关键词',
+    'Enter one keyword or combined rule per line':
+      '每行输入一个关键词或组合规则',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      '每行输入一条规则。使用 | 分隔组合规则中必须同时出现的关键词（最多 5 个）。留空可禁用敏感词列表。',
+    'Sensitive word hits': '敏感词命中次数',
   },
   'zh-TW': {
-    'Use responsibly; breaking limits is strictly prohibited!': '請文明使用，嚴禁突破限制！',
+    'Use responsibly; breaking limits is strictly prohibited!':
+      '請文明使用，嚴禁突破限制！',
     'Content Moderation': '內容審核',
     'Save moderation settings': '儲存審核設定',
     'Enable content moderation': '啟用內容審核',
@@ -178,8 +200,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       '30 分鐘內達到此失敗次數後發送告警。',
     'Moderation cache TTL': '審核快取時間',
-    'Seconds to reuse a successful moderation result.':
-      '成功審核結果的重用時間（秒）。',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      '相同使用者內容重用敏感詞與審核結果的秒數。',
     'Moderation sample rate': '審核採樣比例',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       '未豁免使用者中參與審核的比例，100% 表示全部審核。',
@@ -206,10 +228,21 @@ const newKeys = {
     'Violation limit updated successfully': '違規限制更新成功',
     'Test moderation connection': '審核連線測試',
     'View OpenAI usage statistics': '查看 OpenAI 使用統計',
-    'Enter a moderation base URL and API key first.': '請先填寫審核端點位址和 API 金鑰。',
+    'Enter a moderation base URL and API key first.':
+      '請先填寫審核端點位址和 API 金鑰。',
     'Moderation connection test failed.': '審核連線測試失敗。',
-    'Connection succeeded; the test text was flagged.': '連線成功，測試文字被判定為違規。',
-    'Connection succeeded; the test text was allowed.': '連線成功，測試文字通過審核。',
+    'Connection succeeded; the test text was flagged.':
+      '連線成功，測試文字被判定為違規。',
+    'Connection succeeded; the test text was allowed.':
+      '連線成功，測試文字通過審核。',
+    'Combined rules cannot contain empty keywords': '組合規則不能包含空關鍵詞',
+    'Each combined rule can contain at most 5 keywords':
+      '每條組合規則最多可包含 5 個關鍵詞',
+    'Enter one keyword or combined rule per line':
+      '每行輸入一個關鍵詞或組合規則',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      '每行輸入一條規則。使用 | 分隔組合規則中必須同時出現的關鍵詞（最多 5 個）。留空可停用敏感詞清單。',
+    'Sensitive word hits': '敏感詞命中次數',
   },
   fr: {
     'Use responsibly; breaking limits is strictly prohibited!':
@@ -239,8 +272,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       'Nombre d’échecs en 30 minutes avant l’envoi d’une alerte.',
     'Moderation cache TTL': 'TTL du cache de modération',
-    'Seconds to reuse a successful moderation result.':
-      'Nombre de secondes pendant lesquelles un résultat réussi est réutilisé.',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      'Durée de réutilisation des résultats des mots sensibles et de modération pour un contenu identique.',
     'Moderation sample rate': 'Taux d’échantillonnage de la modération',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       'Pourcentage des utilisateurs non exemptés soumis à la modération. 100 % vérifie tout le monde.',
@@ -266,11 +299,25 @@ const newKeys = {
       "Si vous ne recevez pas le code de vérification, vérifiez vos spams. Si vous ne le trouvez toujours pas, contactez l'auteur.",
     'Violation limit updated successfully': 'Limite de violations mise à jour',
     'Test moderation connection': 'Tester la connexion de modération',
-    'View OpenAI usage statistics': 'Voir les statistiques d’utilisation OpenAI',
-    'Enter a moderation base URL and API key first.': 'Saisissez d’abord une URL de base et une clé API de modération.',
-    'Moderation connection test failed.': 'Échec du test de connexion de modération.',
-    'Connection succeeded; the test text was flagged.': 'Connexion réussie ; le texte de test a été signalé.',
-    'Connection succeeded; the test text was allowed.': 'Connexion réussie ; le texte de test a été autorisé.',
+    'View OpenAI usage statistics':
+      'Voir les statistiques d’utilisation OpenAI',
+    'Enter a moderation base URL and API key first.':
+      'Saisissez d’abord une URL de base et une clé API de modération.',
+    'Moderation connection test failed.':
+      'Échec du test de connexion de modération.',
+    'Connection succeeded; the test text was flagged.':
+      'Connexion réussie ; le texte de test a été signalé.',
+    'Connection succeeded; the test text was allowed.':
+      'Connexion réussie ; le texte de test a été autorisé.',
+    'Combined rules cannot contain empty keywords':
+      'Les règles combinées ne peuvent pas contenir de mots-clés vides',
+    'Each combined rule can contain at most 5 keywords':
+      'Chaque règle combinée peut contenir au maximum 5 mots-clés',
+    'Enter one keyword or combined rule per line':
+      'Saisissez un mot-clé ou une règle combinée par ligne',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      'Saisissez une règle par ligne. Utilisez | pour exiger tous les mots-clés d’une règle combinée (5 maximum). Laissez vide pour désactiver la liste.',
+    'Sensitive word hits': 'Détections de mots sensibles',
   },
   ja: {
     'Use responsibly; breaking limits is strictly prohibited!':
@@ -300,8 +347,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       'アラートを送信するまでの 30 分間の失敗回数です。',
     'Moderation cache TTL': 'モデレーションキャッシュ TTL',
-    'Seconds to reuse a successful moderation result.':
-      '成功したモデレーション結果を再利用する秒数です。',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      '同一のユーザー内容に対するセンシティブワードとモデレーションの結果を再利用する秒数です。',
     'Moderation sample rate': 'モデレーションサンプル率',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       '除外されていないユーザーのうちモデレーション対象にする割合です。100% は全員を検査します。',
@@ -328,10 +375,23 @@ const newKeys = {
     'Violation limit updated successfully': '違反上限を更新しました',
     'Test moderation connection': 'モデレーション接続をテスト',
     'View OpenAI usage statistics': 'OpenAI の利用統計を表示',
-    'Enter a moderation base URL and API key first.': '先にモデレーションのベース URL と API キーを入力してください。',
-    'Moderation connection test failed.': 'モデレーション接続テストに失敗しました。',
-    'Connection succeeded; the test text was flagged.': '接続に成功しました。テスト文は違反として判定されました。',
-    'Connection succeeded; the test text was allowed.': '接続に成功しました。テスト文は許可されました。',
+    'Enter a moderation base URL and API key first.':
+      '先にモデレーションのベース URL と API キーを入力してください。',
+    'Moderation connection test failed.':
+      'モデレーション接続テストに失敗しました。',
+    'Connection succeeded; the test text was flagged.':
+      '接続に成功しました。テスト文は違反として判定されました。',
+    'Connection succeeded; the test text was allowed.':
+      '接続に成功しました。テスト文は許可されました。',
+    'Combined rules cannot contain empty keywords':
+      '組み合わせルールに空のキーワードを含めることはできません',
+    'Each combined rule can contain at most 5 keywords':
+      '各組み合わせルールに設定できるキーワードは最大5個です',
+    'Enter one keyword or combined rule per line':
+      '1行に1つのキーワードまたは組み合わせルールを入力',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      '1行に1つのルールを入力します。組み合わせルールですべてのキーワードを必須にするには、| で区切ります（最大5個）。空欄にするとリストが無効になります。',
+    'Sensitive word hits': '機密語の検出回数',
   },
   ru: {
     'Use responsibly; breaking limits is strictly prohibited!':
@@ -361,8 +421,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       'Число сбоев за 30 минут до отправки оповещения.',
     'Moderation cache TTL': 'TTL кэша модерации',
-    'Seconds to reuse a successful moderation result.':
-      'Количество секунд для повторного использования успешного результата.',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      'Срок повторного использования результатов проверки чувствительных слов и модерации для одинакового содержимого.',
     'Moderation sample rate': 'Доля выборочной модерации',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       'Процент пользователей без исключений, выбранных для модерации. 100% проверяет всех.',
@@ -388,11 +448,25 @@ const newKeys = {
       'Если вы не получили код подтверждения, проверьте папку «Спам». Если найти его не удалось, обратитесь к автору.',
     'Violation limit updated successfully': 'Лимит нарушений обновлён',
     'Test moderation connection': 'Проверить подключение модерации',
-    'View OpenAI usage statistics': 'Просмотреть статистику использования OpenAI',
-    'Enter a moderation base URL and API key first.': 'Сначала укажите базовый URL и API-ключ модерации.',
-    'Moderation connection test failed.': 'Не удалось проверить подключение модерации.',
-    'Connection succeeded; the test text was flagged.': 'Подключение успешно; тестовый текст отмечен как нарушающий правила.',
-    'Connection succeeded; the test text was allowed.': 'Подключение успешно; тестовый текст разрешён.',
+    'View OpenAI usage statistics':
+      'Просмотреть статистику использования OpenAI',
+    'Enter a moderation base URL and API key first.':
+      'Сначала укажите базовый URL и API-ключ модерации.',
+    'Moderation connection test failed.':
+      'Не удалось проверить подключение модерации.',
+    'Connection succeeded; the test text was flagged.':
+      'Подключение успешно; тестовый текст отмечен как нарушающий правила.',
+    'Connection succeeded; the test text was allowed.':
+      'Подключение успешно; тестовый текст разрешён.',
+    'Combined rules cannot contain empty keywords':
+      'Комбинированные правила не могут содержать пустые ключевые слова',
+    'Each combined rule can contain at most 5 keywords':
+      'Каждое комбинированное правило может содержать не более 5 ключевых слов',
+    'Enter one keyword or combined rule per line':
+      'Вводите по одному ключевому слову или комбинированному правилу в строке',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      'Вводите по одному правилу в строке. Используйте |, чтобы потребовать все ключевые слова в комбинированном правиле (до 5). Оставьте поле пустым, чтобы отключить список.',
+    'Sensitive word hits': 'Срабатывания по чувствительным словам',
   },
   vi: {
     'Use responsibly; breaking limits is strictly prohibited!':
@@ -422,8 +496,8 @@ const newKeys = {
     'Failures within 30 minutes before an alert is sent.':
       'Số lần thất bại trong 30 phút trước khi gửi cảnh báo.',
     'Moderation cache TTL': 'TTL bộ nhớ đệm kiểm duyệt',
-    'Seconds to reuse a successful moderation result.':
-      'Số giây tái sử dụng kết quả kiểm duyệt thành công.',
+    'Seconds to reuse sensitive-word and moderation results for identical user content.':
+      'Số giây tái sử dụng kết quả từ nhạy cảm và kiểm duyệt cho cùng nội dung người dùng.',
     'Moderation sample rate': 'Tỷ lệ lấy mẫu kiểm duyệt',
     'Percentage of non-exempt users selected for moderation. 100% checks everyone.':
       'Tỷ lệ người dùng không được miễn kiểm duyệt sẽ được chọn. 100% là kiểm tra tất cả.',
@@ -450,18 +524,43 @@ const newKeys = {
     'Violation limit updated successfully': 'Đã cập nhật giới hạn vi phạm',
     'Test moderation connection': 'Kiểm tra kết nối kiểm duyệt',
     'View OpenAI usage statistics': 'Xem thống kê sử dụng OpenAI',
-    'Enter a moderation base URL and API key first.': 'Vui lòng nhập URL cơ sở và API key kiểm duyệt trước.',
-    'Moderation connection test failed.': 'Kiểm tra kết nối kiểm duyệt thất bại.',
-    'Connection succeeded; the test text was flagged.': 'Kết nối thành công; văn bản kiểm tra bị đánh dấu vi phạm.',
-    'Connection succeeded; the test text was allowed.': 'Kết nối thành công; văn bản kiểm tra được cho phép.',
+    'Enter a moderation base URL and API key first.':
+      'Vui lòng nhập URL cơ sở và API key kiểm duyệt trước.',
+    'Moderation connection test failed.':
+      'Kiểm tra kết nối kiểm duyệt thất bại.',
+    'Connection succeeded; the test text was flagged.':
+      'Kết nối thành công; văn bản kiểm tra bị đánh dấu vi phạm.',
+    'Connection succeeded; the test text was allowed.':
+      'Kết nối thành công; văn bản kiểm tra được cho phép.',
+    'Combined rules cannot contain empty keywords':
+      'Quy tắc kết hợp không được chứa từ khóa trống',
+    'Each combined rule can contain at most 5 keywords':
+      'Mỗi quy tắc kết hợp chỉ được chứa tối đa 5 từ khóa',
+    'Enter one keyword or combined rule per line':
+      'Nhập một từ khóa hoặc quy tắc kết hợp trên mỗi dòng',
+    'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
+      'Nhập một quy tắc trên mỗi dòng. Dùng | để yêu cầu tất cả từ khóa trong quy tắc kết hợp (tối đa 5). Để trống để tắt danh sách.',
+    'Sensitive word hits': 'Số lần phát hiện từ ngữ nhạy cảm',
   },
 }
+
+const removedKeys = [
+  'Seconds to reuse a successful moderation result.',
+  'Sensitive word checks',
+  'Sensitive word hit rate',
+]
 
 async function main() {
   for (const [locale, translations] of Object.entries(newKeys)) {
     const filePath = path.join(LOCALES_DIR, `${locale}.json`)
     const json = JSON.parse(await fs.readFile(filePath, 'utf8'))
     Object.assign(json.translation, translations)
+    for (const key of removedKeys) {
+      delete json.translation[key]
+    }
+    json.translation = Object.fromEntries(
+      Object.entries(json.translation).sort(([a], [b]) => a.localeCompare(b))
+    )
     await fs.writeFile(filePath, stableStringify(json), 'utf8')
   }
 }
