@@ -426,6 +426,7 @@ export type SecuritySettings = {
   ModerationExemptUserIDs: string
   ModerationExemptGroups: string
   ModerationSampleRate: number
+  ModerationForceUserIDs: string
   ModerationForceTokenIDs: string
   ModerationTimeoutSeconds: number
   ModerationTimeoutWindowSeconds: number

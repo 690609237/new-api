@@ -21,3 +21,19 @@ func TestValidateOptionValueRejectsInvalidSensitiveWordRules(t *testing.T) {
 	assert.ErrorContains(t, validateOptionValue("SensitiveWords", "one|two|three|four|five|six"), "at most 5 keywords")
 	assert.ErrorContains(t, validateOptionValue("SensitiveWords", "one||two"), "empty keyword")
 }
+
+func TestValidateOptionValueRejectsInvalidModerationForceIDs(t *testing.T) {
+	for _, test := range []struct {
+		key          string
+		errorMessage string
+	}{
+		{key: "ModerationForceUserIDs", errorMessage: "must contain positive user IDs"},
+		{key: "ModerationForceTokenIDs", errorMessage: "must contain positive token IDs"},
+	} {
+		t.Run(test.key, func(t *testing.T) {
+			require.NoError(t, validateOptionValue(test.key, "1, 2\n3"))
+			assert.ErrorContains(t, validateOptionValue(test.key, "1, invalid"), test.errorMessage)
+			assert.ErrorContains(t, validateOptionValue(test.key, "0"), test.errorMessage)
+		})
+	}
+}

@@ -34,6 +34,7 @@ const defaultValues = {
   ModerationExemptUserIDs: '',
   ModerationExemptGroups: '',
   ModerationSampleRate: 100,
+  ModerationForceUserIDs: '',
   ModerationForceTokenIDs: '',
   ModerationTimeoutSeconds: 5,
   ModerationTimeoutWindowSeconds: 300,
@@ -76,7 +77,7 @@ describe('content moderation layout', () => {
     ).toBeTruthy()
   })
 
-  it('groups forced tokens after both exemption fields at the bottom', () => {
+  it('groups forced user and token IDs after both exemption fields', () => {
     const view = renderModerationSection()
     const audienceRegion = view.container.querySelector(
       '[data-moderation-layout="audience-rules"]'
@@ -86,10 +87,23 @@ describe('content moderation layout', () => {
     const region = within(audienceRegion as HTMLElement)
     const exemptUsers = region.getByLabelText('Exempt user IDs')
     const exemptGroups = region.getByLabelText('Exempt user groups')
+    const forcedUsers = region.getByLabelText('Required moderation user IDs')
     const forcedTokens = region.getByLabelText('Required moderation token IDs')
 
     expect(
+      exemptUsers.compareDocumentPosition(forcedUsers) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      exemptGroups.compareDocumentPosition(forcedUsers) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
       exemptUsers.compareDocumentPosition(forcedTokens) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      forcedUsers.compareDocumentPosition(forcedTokens) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()
     expect(

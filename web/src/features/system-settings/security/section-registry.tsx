@@ -72,6 +72,7 @@ const SECURITY_SECTIONS = [
           ModerationExemptUserIDs: settings.ModerationExemptUserIDs,
           ModerationExemptGroups: settings.ModerationExemptGroups,
           ModerationSampleRate: settings.ModerationSampleRate,
+          ModerationForceUserIDs: settings.ModerationForceUserIDs,
           ModerationForceTokenIDs: settings.ModerationForceTokenIDs,
           ModerationTimeoutSeconds: settings.ModerationTimeoutSeconds,
           ModerationTimeoutWindowSeconds:

@@ -29,6 +29,7 @@ const (
 	moderationTimeoutWindowEnv    = "MODERATION_TIMEOUT_WINDOW_SECONDS"
 	moderationTimeoutThresholdEnv = "MODERATION_TIMEOUT_THRESHOLD"
 	moderationTimeoutPauseEnv     = "MODERATION_TIMEOUT_PAUSE_SECONDS"
+	moderationForceUserIDsEnv     = "MODERATION_FORCE_USER_IDS"
 	moderationForceTokenIDsEnv    = "MODERATION_FORCE_TOKEN_IDS"
 )
 
@@ -49,6 +50,7 @@ var (
 	moderationTimeoutWindowSeconds = envBoundedInt(moderationTimeoutWindowEnv, 300, 1, 86400)
 	moderationTimeoutThreshold     = envBoundedInt(moderationTimeoutThresholdEnv, 3, 1, 100)
 	moderationTimeoutPauseSeconds  = envBoundedInt(moderationTimeoutPauseEnv, 300, 1, 86400)
+	moderationForceUserIDs         = strings.TrimSpace(os.Getenv(moderationForceUserIDsEnv))
 	moderationForceTokenIDs        = strings.TrimSpace(os.Getenv(moderationForceTokenIDsEnv))
 	moderationOptionOverrides      = map[string]bool{}
 )
@@ -215,6 +217,16 @@ func ModerationTimeoutThreshold() int {
 func ModerationTimeoutPause() time.Duration {
 	return time.Duration(moderationTimeoutValue("ModerationTimeoutPauseSeconds", moderationTimeoutPauseEnv, 300, 1, 86400)) * time.Second
 }
+func ModerationForceUserIDs() string {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationForceUserIDs"]
+	value := moderationForceUserIDs
+	moderationMu.RUnlock()
+	if !overridden {
+		return strings.TrimSpace(os.Getenv(moderationForceUserIDsEnv))
+	}
+	return value
+}
 func ModerationForceTokenIDs() string {
 	moderationMu.RLock()
 	overridden := moderationOptionOverrides["ModerationForceTokenIDs"]
@@ -247,9 +259,16 @@ func moderationTimeoutValue(optionKey, envKey string, fallback, min, max int) in
 	return value
 }
 
-// ShouldModeratePromptForUser applies the configured user/group exemptions and
-// stable user sampling before an OpenAI moderation request is sent.
+// ShouldModeratePromptForUser applies forced user/token rules before the
+// configured exemptions and stable user sampling.
 func ShouldModeratePromptForUser(userID int, group string, tokenID ...int) bool {
+	if userID > 0 {
+		for _, value := range splitModerationList(ModerationForceUserIDs()) {
+			if parsed, err := strconv.Atoi(value); err == nil && parsed == userID {
+				return true
+			}
+		}
+	}
 	for _, id := range tokenID {
 		if id > 0 {
 			for _, value := range splitModerationList(ModerationForceTokenIDs()) {
@@ -343,6 +362,8 @@ func UpdateModerationOption(key, value string) bool {
 		moderationTimeoutThreshold = parseModerationBoundedInt(value, 3, 1, 100)
 	case "ModerationTimeoutPauseSeconds":
 		moderationTimeoutPauseSeconds = parseModerationBoundedInt(value, 300, 1, 86400)
+	case "ModerationForceUserIDs":
+		moderationForceUserIDs = strings.TrimSpace(value)
 	case "ModerationForceTokenIDs":
 		moderationForceTokenIDs = strings.TrimSpace(value)
 	default:

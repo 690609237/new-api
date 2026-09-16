@@ -67,6 +67,9 @@ const newKeys = {
     'One group per line': 'One group per line',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       'Users in these groups bypass moderation. Matching is case-insensitive.',
+    'Required moderation user IDs': 'Required moderation user IDs',
+    'These users are always moderated, even when they or their group are exempt.':
+      'These users are always moderated, even when they or their group are exempt.',
     'Moderation Audit': 'Moderation Audit',
     Decision: 'Decision',
     'Result source': 'Result source',
@@ -141,6 +144,9 @@ const newKeys = {
     'One group per line': '每行一个用户组',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       '这些用户组中的用户会跳过审核，匹配不区分大小写。',
+    'Required moderation user IDs': '必须审核的用户 ID',
+    'These users are always moderated, even when they or their group are exempt.':
+      '这些用户始终需要审核，即使其自身或所属用户组已被豁免。',
     'Moderation Audit': '审核追溯',
     Decision: '审核结果',
     'Result source': '结果来源',
@@ -213,6 +219,9 @@ const newKeys = {
     'One group per line': '每行一個使用者群組',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       '這些使用者群組中的使用者會跳過審核，匹配不分大小寫。',
+    'Required moderation user IDs': '必須審核的使用者 ID',
+    'These users are always moderated, even when they or their group are exempt.':
+      '這些使用者一律接受審核，即使其本身或所屬使用者群組已獲豁免。',
     'Moderation Audit': '審核追溯',
     Decision: '審核結果',
     'Result source': '結果來源',
@@ -285,6 +294,9 @@ const newKeys = {
     'One group per line': 'Un groupe par ligne',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       'Les utilisateurs de ces groupes contournent la modération. La correspondance ignore la casse.',
+    'Required moderation user IDs': 'ID utilisateur à modération obligatoire',
+    'These users are always moderated, even when they or their group are exempt.':
+      'Ces utilisateurs sont toujours modérés, même s’ils sont exemptés ou si leur groupe l’est.',
     'Moderation Audit': 'Audit de modération',
     Decision: 'Décision',
     'Result source': 'Source du résultat',
@@ -360,6 +372,9 @@ const newKeys = {
     'One group per line': '1 行に 1 つのグループ',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       'これらのグループのユーザーはモデレーションを回避します。大文字と小文字は区別しません。',
+    'Required moderation user IDs': '常に審査するユーザー ID',
+    'These users are always moderated, even when they or their group are exempt.':
+      'これらのユーザーは、本人または所属グループが除外対象でも常に審査されます。',
     'Moderation Audit': 'モデレーション監査',
     Decision: '判定',
     'Result source': '結果ソース',
@@ -434,6 +449,10 @@ const newKeys = {
     'One group per line': 'Одна группа в строке',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       'Пользователи этих групп пропускают модерацию. Регистр не учитывается.',
+    'Required moderation user IDs':
+      'ID пользователей для обязательной модерации',
+    'These users are always moderated, even when they or their group are exempt.':
+      'Эти пользователи всегда проходят модерацию, даже если они или их группа освобождены от неё.',
     'Moderation Audit': 'Аудит модерации',
     Decision: 'Решение',
     'Result source': 'Источник результата',
@@ -509,6 +528,9 @@ const newKeys = {
     'One group per line': 'Mỗi dòng một nhóm',
     'Users in these groups bypass moderation. Matching is case-insensitive.':
       'Người dùng trong các nhóm này sẽ bỏ qua kiểm duyệt. Không phân biệt hoa thường.',
+    'Required moderation user IDs': 'ID người dùng luôn phải kiểm duyệt',
+    'These users are always moderated, even when they or their group are exempt.':
+      'Những người dùng này luôn được kiểm duyệt, ngay cả khi họ hoặc nhóm của họ được miễn.',
     'Moderation Audit': 'Kiểm tra kiểm duyệt',
     Decision: 'Kết quả',
     'Result source': 'Nguồn kết quả',

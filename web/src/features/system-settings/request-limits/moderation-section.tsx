@@ -65,6 +65,7 @@ const createModerationSchema = (t: (key: string) => string) =>
     ModerationExemptUserIDs: z.string(),
     ModerationExemptGroups: z.string(),
     ModerationSampleRate: z.number().int().min(0).max(100),
+    ModerationForceUserIDs: z.string(),
     ModerationForceTokenIDs: z.string(),
     ModerationTimeoutSeconds: z.number().int().min(1).max(300),
     ModerationTimeoutWindowSeconds: z.number().int().min(1).max(86400),
@@ -525,9 +526,31 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
             />
             <FormField
               control={form.control}
+              name='ModerationForceUserIDs'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Required moderation user IDs')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={5}
+                      placeholder={t('One user ID per line')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'These users are always moderated, even when they or their group are exempt.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name='ModerationForceTokenIDs'
               render={({ field }) => (
-                <FormItem className='md:col-span-2'>
+                <FormItem>
                   <FormLabel>{t('Required moderation token IDs')}</FormLabel>
                   <FormControl>
                     <Textarea

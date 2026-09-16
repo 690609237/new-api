@@ -13,6 +13,7 @@ func TestShouldModeratePromptForUserHonorsExemptionsAndSampling(t *testing.T) {
 	oldUserIDs := moderationExemptUserIDs
 	oldGroups := moderationExemptGroups
 	oldSampleRate := moderationSampleRate
+	oldForceUsers := moderationForceUserIDs
 	oldForceTokens := moderationForceTokenIDs
 	oldOverrides := moderationOptionOverrides
 	moderationOptionOverrides = map[string]bool{}
@@ -23,6 +24,7 @@ func TestShouldModeratePromptForUserHonorsExemptionsAndSampling(t *testing.T) {
 		moderationExemptUserIDs = oldUserIDs
 		moderationExemptGroups = oldGroups
 		moderationSampleRate = oldSampleRate
+		moderationForceUserIDs = oldForceUsers
 		moderationForceTokenIDs = oldForceTokens
 		moderationOptionOverrides = oldOverrides
 	})
@@ -30,15 +32,18 @@ func TestShouldModeratePromptForUserHonorsExemptionsAndSampling(t *testing.T) {
 	UpdateModerationOption("ModerationExemptUserIDs", "42, 100")
 	UpdateModerationOption("ModerationExemptGroups", "trusted\ninternal")
 	UpdateModerationOption("ModerationSampleRate", "100")
+	UpdateModerationOption("ModerationForceUserIDs", "42, 43")
 	UpdateModerationOption("ModerationForceTokenIDs", "99, 100")
 
-	require.False(t, ShouldModeratePromptForUser(42, "default"))
-	require.True(t, ShouldModeratePromptForUser(42, "default", 99))
+	require.True(t, ShouldModeratePromptForUser(42, "default"))
+	require.True(t, ShouldModeratePromptForUser(7, "TRUSTED", 99))
+	require.False(t, ShouldModeratePromptForUser(100, "default"))
 	require.False(t, ShouldModeratePromptForUser(7, "TRUSTED"))
 	require.True(t, ShouldModeratePromptForUser(7, "default"))
 
 	UpdateModerationOption("ModerationSampleRate", "0")
 	require.False(t, ShouldModeratePromptForUser(7, "default"))
+	require.True(t, ShouldModeratePromptForUser(43, "default"))
 }
 
 func TestModerationOptionsSupportConcurrentReadsAndUpdates(t *testing.T) {

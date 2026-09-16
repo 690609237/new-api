@@ -186,6 +186,7 @@ func InitOptionMap() {
 	common.OptionMap["ModerationExemptUserIDs"] = setting.ModerationExemptUserIDs()
 	common.OptionMap["ModerationExemptGroups"] = setting.ModerationExemptGroups()
 	common.OptionMap["ModerationSampleRate"] = strconv.Itoa(setting.ModerationSampleRate())
+	common.OptionMap["ModerationForceUserIDs"] = setting.ModerationForceUserIDs()
 	common.OptionMap["ModerationForceTokenIDs"] = setting.ModerationForceTokenIDs()
 	common.OptionMap["ModerationTimeoutSeconds"] = strconv.Itoa(int(setting.ModerationTimeout().Seconds()))
 	common.OptionMap["ModerationTimeoutWindowSeconds"] = strconv.Itoa(int(setting.ModerationTimeoutWindow().Seconds()))
@@ -272,11 +273,15 @@ func validateOptionValue(key string, value string) error {
 			return fmt.Errorf("%s must be between 0 and 100", key)
 		}
 	}
-	if key == "ModerationForceTokenIDs" {
+	if key == "ModerationForceUserIDs" || key == "ModerationForceTokenIDs" {
 		for _, item := range strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == '\n' || r == '\r' }) {
 			parsed, err := strconv.Atoi(strings.TrimSpace(item))
 			if err != nil || parsed <= 0 {
-				return fmt.Errorf("%s must contain positive token IDs", key)
+				idType := "user IDs"
+				if key == "ModerationForceTokenIDs" {
+					idType = "token IDs"
+				}
+				return fmt.Errorf("%s must contain positive %s", key, idType)
 			}
 		}
 	}

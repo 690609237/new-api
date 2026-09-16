@@ -77,21 +77,23 @@
 ## 管理端审核设置页
 
 - “测试审核接口连接”紧邻“审核 API 密钥”输入，填写凭据后可以立即测试，结果在同一区域反馈。
-- “必须审核的令牌 ID”与“豁免用户 ID”“豁免用户组”集中在同一策略区域。
-- 两项豁免并列展示，强制审核令牌放在区域末尾并独占一行，用阅读顺序表达其覆盖优先级。
+- “必须审核的用户 ID”“必须审核的令牌 ID”与“豁免用户 ID”“豁免用户组”集中在同一策略区域。
+- 两项豁免并列展示，两项强制审核配置放在区域末尾，用阅读顺序表达其覆盖优先级。
 
 ## 配置边界
 
 - 审核支持环境变量和系统选项两种来源；系统选项保存后覆盖环境变量。
-- 主要配置包括审核开关、基础 URL、API Key、模型、前置审核开关、用户/分组豁免、采样率、强制令牌、缓存 TTL、告警邮箱与阈值，以及超时窗口、超时阈值和暂停时长。
+- 主要配置包括审核开关、基础 URL、API Key、模型、前置审核开关、用户/分组豁免、采样率、强制用户/令牌、缓存 TTL、告警邮箱与阈值，以及超时窗口、超时阈值和暂停时长。
 - 审核 API Key 按敏感配置处理，只写入不回显。
-- `MODERATION_FORCE_TOKEN_IDS`、`MODERATION_TIMEOUT_SECONDS`、`MODERATION_TIMEOUT_WINDOW_SECONDS`、`MODERATION_TIMEOUT_THRESHOLD` 和 `MODERATION_TIMEOUT_PAUSE_SECONDS` 用于部署环境配置。
+- `MODERATION_FORCE_USER_IDS`、`MODERATION_FORCE_TOKEN_IDS`、`MODERATION_TIMEOUT_SECONDS`、`MODERATION_TIMEOUT_WINDOW_SECONDS`、`MODERATION_TIMEOUT_THRESHOLD` 和 `MODERATION_TIMEOUT_PAUSE_SECONDS` 用于部署环境配置。
 
 ### 使用 SQLite 通过令牌值查询令牌 ID 和用户 ID
 
 审核配置中的 `ModerationForceTokenIDs`（或环境变量
 `MODERATION_FORCE_TOKEN_IDS`）填写的是令牌 ID。如果手里只有请求中使用的令牌值，
 先去掉 `Bearer ` 和 `sk-` 前缀，再查询 `tokens` 表。下面的查询只读数据库，不会修改令牌。
+`ModerationForceUserIDs`（或环境变量 `MODERATION_FORCE_USER_IDS`）则填写查询结果中的
+`user_id`。
 
 令牌值属于敏感凭据，请勿将完整值提交到代码仓库或写入日志。
 

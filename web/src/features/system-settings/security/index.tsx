@@ -44,6 +44,7 @@ const defaultSecuritySettings: SecuritySettings = {
   ModerationExemptUserIDs: '',
   ModerationExemptGroups: '',
   ModerationSampleRate: 100,
+  ModerationForceUserIDs: '',
   ModerationForceTokenIDs: '',
   ModerationTimeoutSeconds: 10,
   ModerationTimeoutWindowSeconds: 300,
