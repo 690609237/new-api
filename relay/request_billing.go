@@ -53,7 +53,15 @@ func PrepareRequestBilling(c *gin.Context, info *relaycommon.RelayInfo) *types.N
 			model.RecordSensitiveWordLog(c, c.GetInt("id"), prompt, words)
 			message := fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", "))
 			logger.LogWarn(c, message)
-			return types.NewError(errors.New(message), types.ErrorCodeSensitiveWordsDetected)
+			// A local policy rejection is a client-side bad request. Mark it as
+			// non-retryable so transports (including Responses WebSocket) do not
+			// treat the default 500 from NewError as a transient upstream failure.
+			return types.NewErrorWithStatusCode(
+				errors.New(message),
+				types.ErrorCodeSensitiveWordsDetected,
+				http.StatusBadRequest,
+				types.ErrOptionWithSkipRetry(),
+			)
 		}
 	}
 

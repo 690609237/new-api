@@ -19,11 +19,14 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestNormalizeResponsesWSMaxOutputTokens(t *testing.T) {
@@ -301,6 +304,37 @@ func TestBuildResponsesWSErrorPayloadIncludesStatus(t *testing.T) {
 	if data.Error == nil || data.Error.Code != string(types.ErrorCodeInvalidRequest) {
 		t.Fatalf("unexpected error body: %#v", data.Error)
 	}
+}
+
+func TestPrepareRequestBillingSensitiveWordErrorIsNonRetryable(t *testing.T) {
+	logDB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, logDB.AutoMigrate(&model.Log{}))
+	previousLogDB := model.LOG_DB
+	model.LOG_DB = logDB
+	t.Cleanup(func() { model.LOG_DB = previousLogDB })
+
+	previousEnabled, previousPrompt, previousWords := setting.CheckSensitiveEnabled, setting.CheckSensitiveOnPromptEnabled, setting.SensitiveWords
+	setting.CheckSensitiveEnabled = true
+	setting.CheckSensitiveOnPromptEnabled = true
+	setting.SensitiveWords = []string{"blocked"}
+	t.Cleanup(func() {
+		setting.CheckSensitiveEnabled = previousEnabled
+		setting.CheckSensitiveOnPromptEnabled = previousPrompt
+		setting.SensitiveWords = previousWords
+	})
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+	request := &dto.OpenAIResponsesRequest{Model: "gpt-5.1", Input: common.RawMessage(`"blocked"`)}
+	info := relaycommon.GenRelayInfoResponses(c, request)
+
+	apiErr := PrepareRequestBilling(c, info)
+	require.NotNil(t, apiErr)
+	assert.Equal(t, types.ErrorCodeSensitiveWordsDetected, apiErr.GetErrorCode())
+	assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
+	assert.True(t, types.IsSkipRetryError(apiErr))
+	assert.False(t, service.ShouldRetryRelayError(c, apiErr, common.RetryTimes))
 }
 
 func TestResponsesWSInvalidRequestErrorUsesBadRequestStatus(t *testing.T) {
