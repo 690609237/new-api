@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import { useState, useMemo } from 'react'
 
-import { useStatus } from '@/hooks/use-status'
+import { useStatusContent } from '@/hooks/use-status-content'
 import { getNotice } from '@/lib/api'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { useNotificationStore } from '@/stores/notification-store'
@@ -80,16 +80,15 @@ export function useNotifications() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
-  // Fetch Announcements from status
-  const { status, loading: statusLoading } = useStatus()
-  const announcementsEnabled = status?.announcements_enabled ?? false
-  const announcements = useMemo<Record<string, unknown>[]>(() => {
-    if (!announcementsEnabled) return []
-    return ((status?.announcements || []) as Record<string, unknown>[]).slice(
-      0,
-      20
+  // Fetch Announcements from their dedicated public endpoint
+  const { items: announcementItems, loading: announcementsLoading } =
+    useStatusContent<Record<string, unknown>>(
+      'announcements_enabled',
+      'announcements'
     )
-  }, [announcementsEnabled, status?.announcements])
+  const announcements = useMemo<Record<string, unknown>[]>(() => {
+    return announcementItems.slice(0, 20)
+  }, [announcementItems])
 
   // Notification store
   const {
@@ -170,7 +169,7 @@ export function useNotifications() {
     // Data
     notice: noticeContent,
     announcements,
-    loading: noticeLoading || statusLoading,
+    loading: noticeLoading || announcementsLoading,
 
     // Unread counts
     unreadCount: unreadCounts.total,

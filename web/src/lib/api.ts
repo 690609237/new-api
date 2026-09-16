@@ -75,6 +75,19 @@ export async function getStatus() {
   return requireServerSuccess(res.data)?.data as Record<string, unknown>
 }
 
+export type StatusContent = 'api-info' | 'announcements' | 'faq'
+
+export async function getStatusContent<T>(content: StatusContent): Promise<{
+  success: boolean
+  message?: string
+  data?: T[]
+}> {
+  const res = await api.get(`/api/status/${content}`, {
+    headers: { 'Cache-Control': null },
+  })
+  return res.data
+}
+
 export async function getNotice(): Promise<{
   success: boolean
   message?: string

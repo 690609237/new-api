@@ -17,35 +17,22 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useStatus } from '@/hooks/use-status'
+import { useStatusContent } from '@/hooks/use-status-content'
 
 import type { AnnouncementItem, ApiInfoItem, FAQItem } from '../types'
-
-/**
- * Get specific list from status data
- */
-export function useStatusData<T = unknown>(
-  enabledKey: string,
-  dataKey: string
-): { items: T[]; loading: boolean } {
-  const { status, loading } = useStatus()
-  const enabled = status ? status[enabledKey] !== false : false
-  const items = (enabled ? status?.[dataKey] || [] : []) as T[]
-
-  return { items, loading }
-}
 
 /**
  * Get API info list
  */
 export function useApiInfo() {
-  return useStatusData<ApiInfoItem>('api_info_enabled', 'api_info')
+  return useStatusContent<ApiInfoItem>('api_info_enabled', 'api-info')
 }
 
 /**
  * Get announcements list
  */
 export function useAnnouncements() {
-  return useStatusData<AnnouncementItem>(
+  return useStatusContent<AnnouncementItem>(
     'announcements_enabled',
     'announcements'
   )
@@ -55,7 +42,7 @@ export function useAnnouncements() {
  * Get FAQ list
  */
 export function useFAQ() {
-  return useStatusData<FAQItem>('faq_enabled', 'faq')
+  return useStatusContent<FAQItem>('faq_enabled', 'faq')
 }
 
 /**

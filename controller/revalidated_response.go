@@ -11,10 +11,18 @@ import (
 // the JSON envelope served by serveRevalidatedJSON changes shape.
 const etagVersionPublicContent = "public-content:v1"
 
+const etagVersionPublicContentData = "public-content-data:v1"
+
 type publicContentResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Data    string `json:"data"`
+}
+
+type publicContentDataResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
 }
 
 // serveRevalidatedJSON writes public content as JSON with a weak
@@ -41,6 +49,45 @@ func serveRevalidatedJSON(c *gin.Context, content string) {
 
 	etag := common.ETagFor(etagVersionPublicContent, content)
 
+	c.Header("ETag", etag)
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Vary", "Accept-Encoding")
+
+	if common.ETagMatches(c.GetHeader("If-None-Match"), etag) {
+		c.Status(http.StatusNotModified)
+		return
+	}
+
+	c.Data(http.StatusOK, "application/json; charset=utf-8", body)
+}
+
+// serveRevalidatedJSONData serves structured public content with the same
+// revalidation behavior as serveRevalidatedJSON. The encoded data is used as
+// the validator input so every endpoint gets a stable ETag across replicas.
+func serveRevalidatedJSONData(c *gin.Context, data any) {
+	encodedData, err := common.Marshal(data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	body, err := common.Marshal(publicContentDataResponse{
+		Success: true,
+		Message: "",
+		Data:    data,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	etag := common.ETagFor(etagVersionPublicContentData, string(encodedData))
 	c.Header("ETag", etag)
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Vary", "Accept-Encoding")

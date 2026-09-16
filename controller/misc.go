@@ -128,17 +128,6 @@ func GetStatus(c *gin.Context) {
 		"checkin_enabled":             operation_setting.GetCheckinSetting().Enabled,
 	}
 
-	// 根据启用状态注入可选内容
-	if cs.ApiInfoEnabled {
-		data["api_info"] = console_setting.GetApiInfo()
-	}
-	if cs.AnnouncementsEnabled {
-		data["announcements"] = console_setting.GetAnnouncements()
-	}
-	if cs.FAQEnabled {
-		data["faq"] = console_setting.GetFAQ()
-	}
-
 	// Add enabled custom OAuth providers
 	customProviders := oauth.GetEnabledCustomProviders()
 	if len(customProviders) > 0 {
@@ -173,6 +162,39 @@ func GetStatus(c *gin.Context) {
 		"data":    data,
 	})
 	return
+}
+
+func GetStatusApiInfo(c *gin.Context) {
+	common.OptionMapRWMutex.RLock()
+	defer common.OptionMapRWMutex.RUnlock()
+
+	data := make([]map[string]any, 0)
+	if console_setting.GetConsoleSetting().ApiInfoEnabled {
+		data = console_setting.GetApiInfo()
+	}
+	serveRevalidatedJSONData(c, data)
+}
+
+func GetStatusAnnouncements(c *gin.Context) {
+	common.OptionMapRWMutex.RLock()
+	defer common.OptionMapRWMutex.RUnlock()
+
+	data := make([]map[string]any, 0)
+	if console_setting.GetConsoleSetting().AnnouncementsEnabled {
+		data = console_setting.GetAnnouncements()
+	}
+	serveRevalidatedJSONData(c, data)
+}
+
+func GetStatusFAQ(c *gin.Context) {
+	common.OptionMapRWMutex.RLock()
+	defer common.OptionMapRWMutex.RUnlock()
+
+	data := make([]map[string]any, 0)
+	if console_setting.GetConsoleSetting().FAQEnabled {
+		data = console_setting.GetFAQ()
+	}
+	serveRevalidatedJSONData(c, data)
 }
 
 func GetNotice(c *gin.Context) {
