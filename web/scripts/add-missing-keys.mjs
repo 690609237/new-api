@@ -27,6 +27,26 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Audit log cleanup': 'Audit log cleanup',
+    'Audit log cleanup task started.': 'Audit log cleanup task started.',
+    'Clean audit logs': 'Clean audit logs',
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.',
+    'Days to retain': 'Days to retain',
+    '{{count}} audit log entries removed.':
+      '{{count}} audit log entries removed.',
+    'No audit log entries matched the retention period.':
+      'No audit log entries matched the retention period.',
+    'Failed to clean audit logs': 'Failed to clean audit logs',
+    'Enter a retention period between 1 and {{max}} days.':
+      'Enter a retention period between 1 and {{max}} days.',
+    'Audit log cleanup progress': 'Audit log cleanup progress',
+    '{{processed}} of {{total}} audit log entries processed.':
+      '{{processed}} of {{total}} audit log entries processed.',
+    'Confirm audit log cleanup': 'Confirm audit log cleanup',
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.',
+    'Delete audit logs': 'Delete audit logs',
     'Use responsibly; breaking limits is strictly prohibited!':
       'Use responsibly; breaking limits is strictly prohibited!',
     'Content Moderation': 'Content Moderation',
@@ -104,6 +124,25 @@ const newKeys = {
     'Sensitive word hits': 'Sensitive word hits',
   },
   zh: {
+    'Audit log cleanup': '审计日志清理',
+    'Audit log cleanup task started.': '审计日志清理任务已启动。',
+    'Clean audit logs': '清理审计日志',
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      '永久删除早于保留期限的审计记录。用量日志和服务器日志文件不受影响。',
+    'Days to retain': '保留天数',
+    '{{count}} audit log entries removed.': '已删除 {{count}} 条审计日志。',
+    'No audit log entries matched the retention period.':
+      '没有符合保留期限的审计日志。',
+    'Failed to clean audit logs': '清理审计日志失败',
+    'Enter a retention period between 1 and {{max}} days.':
+      '请输入 1 到 {{max}} 天之间的保留期限。',
+    'Audit log cleanup progress': '审计日志清理进度',
+    '{{processed}} of {{total}} audit log entries processed.':
+      '已处理 {{processed}} / {{total}} 条审计日志。',
+    'Confirm audit log cleanup': '确认清理审计日志',
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      '将永久删除 {{date}} 之前的审计记录。仅影响 audit_logs 表，用量日志和服务器日志文件将保持不变。',
+    'Delete audit logs': '删除审计日志',
     'Use responsibly; breaking limits is strictly prohibited!':
       '文明使用，严禁破限！',
     'Content Moderation': '内容审核',
@@ -179,6 +218,25 @@ const newKeys = {
     'Sensitive word hits': '敏感词命中次数',
   },
   'zh-TW': {
+    'Audit log cleanup': '稽核日誌清理',
+    'Audit log cleanup task started.': '稽核日誌清理工作已啟動。',
+    'Clean audit logs': '清理稽核日誌',
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      '永久刪除早於保留期限的稽核記錄。用量日誌與伺服器日誌檔案不受影響。',
+    'Days to retain': '保留天數',
+    '{{count}} audit log entries removed.': '已刪除 {{count}} 筆稽核日誌。',
+    'No audit log entries matched the retention period.':
+      '沒有符合保留期限的稽核日誌。',
+    'Failed to clean audit logs': '清理稽核日誌失敗',
+    'Enter a retention period between 1 and {{max}} days.':
+      '請輸入 1 到 {{max}} 天之間的保留期限。',
+    'Audit log cleanup progress': '稽核日誌清理進度',
+    '{{processed}} of {{total}} audit log entries processed.':
+      '已處理 {{processed}} / {{total}} 筆稽核日誌。',
+    'Confirm audit log cleanup': '確認清理稽核日誌',
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      '將永久刪除 {{date}} 之前的稽核記錄。僅影響 audit_logs 資料表，用量日誌與伺服器日誌檔案將保持不變。',
+    'Delete audit logs': '刪除稽核日誌',
     'Use responsibly; breaking limits is strictly prohibited!':
       '請文明使用，嚴禁突破限制！',
     'Content Moderation': '內容審核',
@@ -254,6 +312,27 @@ const newKeys = {
     'Sensitive word hits': '敏感詞命中次數',
   },
   fr: {
+    'Audit log cleanup': "Nettoyage du journal d'audit",
+    'Audit log cleanup task started.':
+      "Tâche de nettoyage du journal d'audit démarrée.",
+    'Clean audit logs': "Nettoyer le journal d'audit",
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      "Supprime définitivement les enregistrements d'audit antérieurs à la durée de conservation. Les journaux d'utilisation et fichiers journaux du serveur ne sont pas affectés.",
+    'Days to retain': 'Jours à conserver',
+    '{{count}} audit log entries removed.':
+      "{{count}} entrées du journal d'audit supprimées.",
+    'No audit log entries matched the retention period.':
+      "Aucune entrée du journal d'audit ne correspond à la durée de conservation.",
+    'Failed to clean audit logs': "Échec du nettoyage du journal d'audit",
+    'Enter a retention period between 1 and {{max}} days.':
+      'Saisissez une durée de conservation comprise entre 1 et {{max}} jours.',
+    'Audit log cleanup progress': "Progression du nettoyage du journal d'audit",
+    '{{processed}} of {{total}} audit log entries processed.':
+      "{{processed}} entrées du journal d'audit traitées sur {{total}}.",
+    'Confirm audit log cleanup': "Confirmer le nettoyage du journal d'audit",
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      "Les enregistrements d'audit antérieurs au {{date}} seront définitivement supprimés. Seule la table audit_logs est concernée ; les journaux d'utilisation et fichiers journaux du serveur resteront inchangés.",
+    'Delete audit logs': "Supprimer le journal d'audit",
     'Use responsibly; breaking limits is strictly prohibited!':
       'Utilisez le service de manière responsable ; tout contournement des limites est strictement interdit !',
     'Content Moderation': 'Modération du contenu',
@@ -332,6 +411,27 @@ const newKeys = {
     'Sensitive word hits': 'Détections de mots sensibles',
   },
   ja: {
+    'Audit log cleanup': '監査ログのクリーンアップ',
+    'Audit log cleanup task started.':
+      '監査ログのクリーンアップを開始しました。',
+    'Clean audit logs': '監査ログをクリーンアップ',
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      '保持期間より古い監査記録を完全に削除します。使用量ログとサーバーログファイルには影響しません。',
+    'Days to retain': '保持日数',
+    '{{count}} audit log entries removed.':
+      '{{count}} 件の監査ログを削除しました。',
+    'No audit log entries matched the retention period.':
+      '保持期間より古い監査ログはありませんでした。',
+    'Failed to clean audit logs': '監査ログのクリーンアップに失敗しました',
+    'Enter a retention period between 1 and {{max}} days.':
+      '保持期間を 1～{{max}} 日で入力してください。',
+    'Audit log cleanup progress': '監査ログのクリーンアップ進捗',
+    '{{processed}} of {{total}} audit log entries processed.':
+      '{{total}} 件中 {{processed}} 件の監査ログを処理しました。',
+    'Confirm audit log cleanup': '監査ログのクリーンアップを確認',
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      '{{date}} より古い監査記録は完全に削除されます。影響するのは audit_logs テーブルのみで、使用量ログとサーバーログファイルは変更されません。',
+    'Delete audit logs': '監査ログを削除',
     'Use responsibly; breaking limits is strictly prohibited!':
       '責任を持って利用し、制限の突破は固く禁止します！',
     'Content Moderation': 'コンテンツモデレーション',
@@ -409,6 +509,27 @@ const newKeys = {
     'Sensitive word hits': '機密語の検出回数',
   },
   ru: {
+    'Audit log cleanup': 'Очистка журнала аудита',
+    'Audit log cleanup task started.':
+      'Задача очистки журнала аудита запущена.',
+    'Clean audit logs': 'Очистить журнал аудита',
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      'Безвозвратно удаляет записи аудита старше срока хранения. Журналы использования и файлы журналов сервера не затрагиваются.',
+    'Days to retain': 'Дней хранения',
+    '{{count}} audit log entries removed.':
+      'Удалено записей журнала аудита: {{count}}.',
+    'No audit log entries matched the retention period.':
+      'Записей журнала аудита старше срока хранения не найдено.',
+    'Failed to clean audit logs': 'Не удалось очистить журнал аудита',
+    'Enter a retention period between 1 and {{max}} days.':
+      'Укажите срок хранения от 1 до {{max}} дней.',
+    'Audit log cleanup progress': 'Ход очистки журнала аудита',
+    '{{processed}} of {{total}} audit log entries processed.':
+      'Обработано записей журнала аудита: {{processed}} из {{total}}.',
+    'Confirm audit log cleanup': 'Подтвердите очистку журнала аудита',
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      'Записи аудита старше {{date}} будут безвозвратно удалены. Изменяется только таблица audit_logs; журналы использования и файлы журналов сервера останутся без изменений.',
+    'Delete audit logs': 'Удалить журнал аудита',
     'Use responsibly; breaking limits is strictly prohibited!':
       'Используйте сервис ответственно; обход ограничений строго запрещён!',
     'Content Moderation': 'Модерация контента',
@@ -488,6 +609,27 @@ const newKeys = {
     'Sensitive word hits': 'Срабатывания по чувствительным словам',
   },
   vi: {
+    'Audit log cleanup': 'Dọn dẹp nhật ký kiểm tra',
+    'Audit log cleanup task started.':
+      'Đã bắt đầu tác vụ dọn dẹp nhật ký kiểm tra.',
+    'Clean audit logs': 'Dọn dẹp nhật ký kiểm tra',
+    'Permanently delete audit records older than the retention period. Usage logs and server log files are not affected.':
+      'Xóa vĩnh viễn các bản ghi kiểm tra cũ hơn thời hạn lưu giữ. Nhật ký sử dụng và tệp nhật ký máy chủ không bị ảnh hưởng.',
+    'Days to retain': 'Số ngày lưu giữ',
+    '{{count}} audit log entries removed.':
+      'Đã xóa {{count}} mục nhật ký kiểm tra.',
+    'No audit log entries matched the retention period.':
+      'Không có mục nhật ký kiểm tra nào cũ hơn thời hạn lưu giữ.',
+    'Failed to clean audit logs': 'Không thể dọn dẹp nhật ký kiểm tra',
+    'Enter a retention period between 1 and {{max}} days.':
+      'Nhập thời hạn lưu giữ từ 1 đến {{max}} ngày.',
+    'Audit log cleanup progress': 'Tiến độ dọn dẹp nhật ký kiểm tra',
+    '{{processed}} of {{total}} audit log entries processed.':
+      'Đã xử lý {{processed}} trên {{total}} mục nhật ký kiểm tra.',
+    'Confirm audit log cleanup': 'Xác nhận dọn dẹp nhật ký kiểm tra',
+    'Audit records older than {{date}} will be permanently deleted. Only the audit_logs table is affected; usage logs and server log files will remain unchanged.':
+      'Các bản ghi kiểm tra cũ hơn {{date}} sẽ bị xóa vĩnh viễn. Chỉ bảng audit_logs bị ảnh hưởng; nhật ký sử dụng và tệp nhật ký máy chủ vẫn được giữ nguyên.',
+    'Delete audit logs': 'Xóa nhật ký kiểm tra',
     'Use responsibly; breaking limits is strictly prohibited!':
       'Vui lòng sử dụng có trách nhiệm; nghiêm cấm vượt qua giới hạn!',
     'Content Moderation': 'Kiểm duyệt nội dung',

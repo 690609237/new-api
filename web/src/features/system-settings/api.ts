@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 import type {
+  AuditLogCleanupTask,
   ConfirmPaymentComplianceResponse,
   FetchUpstreamRatiosRequest,
   LogCleanupTask,
@@ -94,6 +95,27 @@ export async function getCurrentLogCleanupTask() {
     '/api/system-task/current',
     {
       params: { type: 'log_cleanup' },
+    }
+  )
+  return res.data
+}
+
+export async function startAuditLogCleanupTask(targetTimestamp: number) {
+  const res = await api.post<SystemTaskResponse<AuditLogCleanupTask>>(
+    '/api/system-task/audit-log-cleanup',
+    null,
+    {
+      params: { target_timestamp: targetTimestamp },
+    }
+  )
+  return res.data
+}
+
+export async function getCurrentAuditLogCleanupTask() {
+  const res = await api.get<SystemTaskResponse<AuditLogCleanupTask | null>>(
+    '/api/system-task/current',
+    {
+      params: { type: 'audit_log_cleanup' },
     }
   )
   return res.data

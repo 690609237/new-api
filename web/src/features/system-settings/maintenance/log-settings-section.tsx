@@ -82,6 +82,7 @@ import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
 import { useUpdateOption } from '../hooks/use-update-option'
 import type { LogCleanupTask } from '../types'
+import { AuditLogCleanupControl } from './audit-log-cleanup-control'
 
 const logSettingsSchema = z.object({
   LogConsumeEnabled: z.boolean(),
@@ -430,6 +431,8 @@ export function LogSettingsSection({
               </div>
             )}
           </SettingsControlGroup>
+
+          <AuditLogCleanupControl />
         </SettingsForm>
       </Form>
 

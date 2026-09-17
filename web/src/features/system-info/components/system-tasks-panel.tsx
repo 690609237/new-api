@@ -81,6 +81,7 @@ const PROGRESS_BAR_CLASS_NAME: Record<SystemTaskStatus, string> = {
 // types fall back to their raw identifier so the panel never shows blank.
 const TYPE_LABEL: Record<string, string> = {
   log_cleanup: 'Log cleanup',
+  audit_log_cleanup: 'Audit log cleanup',
   channel_test: 'Batch channel test',
   model_update: 'Batch upstream model update',
   midjourney_poll: 'Drawing task polling',

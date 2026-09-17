@@ -126,6 +126,8 @@ export type LogCleanupTask = SystemTask<
   LogCleanupTaskResult
 >
 
+export type AuditLogCleanupTask = LogCleanupTask
+
 export type SystemTaskResponse<TTask = SystemTask | null> = {
   success: boolean
   message: string

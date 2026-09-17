@@ -80,11 +80,20 @@ type logCleanupHandler struct{}
 func (logCleanupHandler) Type() string { return model.SystemTaskTypeLogCleanup }
 
 func (logCleanupHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
-	runLogCleanupTask(ctx, task, runnerID)
+	runTimestampCleanupTask(ctx, task, runnerID, model.CountOldLog, model.DeleteOldLogBatch)
+}
+
+type auditLogCleanupHandler struct{}
+
+func (auditLogCleanupHandler) Type() string { return model.SystemTaskTypeAuditLogCleanup }
+
+func (auditLogCleanupHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
+	runTimestampCleanupTask(ctx, task, runnerID, model.CountOldAuditLog, model.DeleteOldAuditLogBatch)
 }
 
 func init() {
 	RegisterSystemTaskHandler(logCleanupHandler{})
+	RegisterSystemTaskHandler(auditLogCleanupHandler{})
 }
 
 type LogCleanupPayload struct {
@@ -166,11 +175,19 @@ func StartSystemTaskRunner() {
 }
 
 func StartLogCleanupTask(targetTimestamp int64) (*model.SystemTask, error) {
+	return startTimestampCleanupTask(model.SystemTaskTypeLogCleanup, targetTimestamp)
+}
+
+func StartAuditLogCleanupTask(targetTimestamp int64) (*model.SystemTask, error) {
+	return startTimestampCleanupTask(model.SystemTaskTypeAuditLogCleanup, targetTimestamp)
+}
+
+func startTimestampCleanupTask(taskType string, targetTimestamp int64) (*model.SystemTask, error) {
 	if targetTimestamp <= 0 {
 		return nil, errors.New("target timestamp is required")
 	}
 
-	activeTask, err := model.GetActiveSystemTask(model.SystemTaskTypeLogCleanup)
+	activeTask, err := model.GetActiveSystemTask(taskType)
 	if err != nil {
 		return nil, err
 	}
@@ -183,9 +200,9 @@ func StartLogCleanupTask(targetTimestamp int64) (*model.SystemTask, error) {
 		BatchSize:       logCleanupBatchSize,
 	}
 	state := LogCleanupState{}
-	task, err := model.CreateSystemTask(model.SystemTaskTypeLogCleanup, payload, state)
+	task, err := model.CreateSystemTask(taskType, payload, state)
 	if err != nil {
-		activeTask, activeErr := model.GetActiveSystemTask(model.SystemTaskTypeLogCleanup)
+		activeTask, activeErr := model.GetActiveSystemTask(taskType)
 		if activeErr == nil && activeTask != nil {
 			return activeTask, nil
 		}
@@ -335,7 +352,13 @@ func runWithLeaseHeartbeat(task *model.SystemTask, runnerID string, fn func(ctx 
 	close(done)
 }
 
-func runLogCleanupTask(ctx context.Context, task *model.SystemTask, runnerID string) {
+func runTimestampCleanupTask(
+	ctx context.Context,
+	task *model.SystemTask,
+	runnerID string,
+	countOldRows func(context.Context, int64) (int64, error),
+	deleteOldRows func(context.Context, int64, int) (int64, error),
+) {
 	payload := LogCleanupPayload{}
 	if err := task.DecodePayload(&payload); err != nil {
 		failSystemTask(task, runnerID, err)
@@ -356,7 +379,7 @@ func runLogCleanupTask(ctx context.Context, task *model.SystemTask, runnerID str
 	}
 
 	for {
-		remaining, err := model.CountOldLog(ctx, payload.TargetTimestamp)
+		remaining, err := countOldRows(ctx, payload.TargetTimestamp)
 		if err != nil {
 			failSystemTask(task, runnerID, err)
 			return
@@ -376,7 +399,7 @@ func runLogCleanupTask(ctx context.Context, task *model.SystemTask, runnerID str
 		// rows cannot be removed and we fail instead of busy-looping.
 		progressed := false
 		for state.Remaining > 0 {
-			rowsAffected, err := model.DeleteOldLogBatch(ctx, payload.TargetTimestamp, payload.BatchSize)
+			rowsAffected, err := deleteOldRows(ctx, payload.TargetTimestamp, payload.BatchSize)
 			if err != nil {
 				failSystemTask(task, runnerID, err)
 				return

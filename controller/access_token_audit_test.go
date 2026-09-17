@@ -366,6 +366,39 @@ func TestSecurityAndOperationEventsUseAuditTable(t *testing.T) {
 	assert.EqualValues(t, 10, count)
 }
 
+func TestAuditCleanupPhysicallyDeletesOnlyOldAuditRows(t *testing.T) {
+	_, _ = setupAccessTokenAudit(t)
+	for _, timestamp := range []int64{100, 200, 300} {
+		model.RecordAuditLog(nil, model.AuditLog{
+			ActorRole: common.RoleAdminUser,
+			UserId:    1,
+			Username:  "cleanup-owner",
+			CreatedAt: timestamp,
+			Category:  model.AuditCategoryOperation,
+			Action:    "cleanup-test",
+		})
+	}
+	relatedUsageLog := &model.Log{UserId: 1, CreatedAt: 100, Type: model.LogTypeConsume, Content: "must remain"}
+	require.NoError(t, model.LOG_DB.Create(relatedUsageLog).Error)
+
+	total, err := model.CountOldAuditLog(context.Background(), 250)
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, total)
+
+	deleted, err := model.DeleteOldAuditLogBatch(context.Background(), 250, 100)
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, deleted)
+
+	var audits []model.AuditLog
+	require.NoError(t, model.LOG_DB.Order("created_at").Find(&audits).Error)
+	require.Len(t, audits, 1)
+	assert.EqualValues(t, 300, audits[0].CreatedAt)
+
+	var usageLog model.Log
+	require.NoError(t, model.LOG_DB.First(&usageLog, relatedUsageLog.Id).Error)
+	assert.Equal(t, "must remain", usageLog.Content)
+}
+
 // Released schemas copied from v1.0.0-rc.33; only the Go type names differ.
 
 type releasedAuditUser struct {
@@ -734,6 +767,17 @@ func TestAuditDatabaseMatrix(t *testing.T) {
 					_, total, err = model.GetAuditLogs(model.AuditLogFilter{UserId: 1}, 0, 10, 1)
 					require.NoError(t, err)
 					assert.EqualValues(t, 3, total)
+					usageLog := &model.Log{UserId: 1, CreatedAt: 50, Type: model.LogTypeConsume, Content: "matrix usage remains"}
+					require.NoError(t, model.LOG_DB.Create(usageLog).Error)
+					deleted, err := model.DeleteOldAuditLogBatch(context.Background(), 103, 100)
+					require.NoError(t, err)
+					assert.EqualValues(t, 2, deleted)
+					_, total, err = model.GetAuditLogs(model.AuditLogFilter{UserId: 1}, 0, 10, 1)
+					require.NoError(t, err)
+					assert.EqualValues(t, 1, total)
+					var retainedUsage model.Log
+					require.NoError(t, model.LOG_DB.First(&retainedUsage, usageLog.Id).Error)
+					assert.Equal(t, "matrix usage remains", retainedUsage.Content)
 					verifyAuditRoleStorage(t)
 					verifyAuditJSONStorage(t)
 					require.NoError(t, authz.Init(model.DB))
@@ -808,6 +852,16 @@ func TestIndependentAuditLogStores(t *testing.T) {
 				var mainCount int64
 				require.NoError(t, model.DB.Model(&model.AuditLog{}).Count(&mainCount).Error)
 				assert.Zero(t, mainCount)
+				model.RecordLog(1, model.LogTypeTopup, "audit cleanup must retain this usage log")
+				deleted, err := model.DeleteOldAuditLogBatch(context.Background(), time.Now().Unix()+1, 100)
+				require.NoError(t, err)
+				assert.EqualValues(t, 1, deleted)
+				_, total, err = model.GetAuditLogs(model.AuditLogFilter{UserId: 1}, 0, 20, common.RoleAdminUser)
+				require.NoError(t, err)
+				assert.Zero(t, total)
+				var usageCount int64
+				require.NoError(t, model.LOG_DB.Model(&model.Log{}).Where("content = ?", "audit cleanup must retain this usage log").Count(&usageCount).Error)
+				assert.EqualValues(t, 1, usageCount)
 				verifyAuditRoleStorage(t)
 				verifyAuditJSONStorage(t)
 				if tc.kind == "clickhouse" {
