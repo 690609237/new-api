@@ -207,6 +207,8 @@ func SetApiRouter(router *gin.Engine) {
 		optionRoute.Use(middleware.RootAuth())
 		{
 			optionRoute.GET("/", controller.GetOptions)
+			optionRoute.GET("/request_policy", controller.GetRequestPolicy)
+			optionRoute.PATCH("/request_policy", controller.UpdateRequestPolicy)
 			optionRoute.PUT("/", controller.UpdateOption)
 			optionRoute.POST("/moderation_test", controller.TestModeration)
 			optionRoute.PUT("/passkey/domains", controller.UpdatePasskeyDomains)
@@ -316,6 +318,7 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/moderation/stats", middleware.RootAuth(), middleware.DisableCache(), controller.GetModerationUsageStats)
 		logRoute := apiRouter.Group("/log")
 		logRoute.GET("/", middleware.AdminAuth(), controller.GetAllLogs)
+		logRoute.GET("/detail", middleware.AdminAuth(), controller.GetLogDetail)
 		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
 		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
 		logRoute.GET("/channel_affinity_usage_cache", middleware.AdminAuth(), controller.GetChannelAffinityUsageCacheStats)
@@ -329,6 +332,7 @@ func SetApiRouter(router *gin.Engine) {
 			systemTaskRoute.POST("/log-cleanup", controller.CreateLogCleanupSystemTask)
 			systemTaskRoute.POST("/audit-log-cleanup", controller.CreateAuditLogCleanupSystemTask)
 			systemTaskRoute.GET("/list", controller.ListSystemTasks)
+			systemTaskRoute.DELETE("/history", controller.DeleteSystemTaskHistory)
 			systemTaskRoute.GET("/current", controller.GetCurrentSystemTask)
 			systemTaskRoute.GET("/:task_id", controller.GetSystemTask)
 		}

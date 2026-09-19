@@ -242,3 +242,72 @@ func TestLogFormattingPreservesLargeIntegerLexemes(t *testing.T) {
 		assert.Equal(t, unprivileged, adminLogs[0].Other)
 	})
 }
+
+func TestFormatAdminLogsWithSensitiveWordsRequiresExplicitPermission(t *testing.T) {
+	other := common.MapToJsonStr(map[string]any{
+		"admin_info": map[string]any{
+			"moderation": map[string]any{
+				"policy": "sensitive_word",
+				"prompt": "safe preview",
+				"rules":  []string{"secret-key", "internal-only"},
+			},
+		},
+	})
+
+	t.Run("without permission", func(t *testing.T) {
+		logs := []*Log{{Other: other}}
+		FormatAdminLogsWithSensitiveWords(logs, false)
+
+		parsed, err := common.StrToMap(logs[0].Other)
+		require.NoError(t, err)
+		adminInfo := parsed["admin_info"].(map[string]any)
+		moderation := adminInfo["moderation"].(map[string]any)
+		assert.Equal(t, "safe preview", moderation["prompt"])
+		assert.NotContains(t, moderation, "rules")
+	})
+
+	t.Run("with permission", func(t *testing.T) {
+		logs := []*Log{{Other: other}}
+		FormatAdminLogsWithSensitiveWords(logs, true)
+
+		parsed, err := common.StrToMap(logs[0].Other)
+		require.NoError(t, err)
+		moderation := parsed["admin_info"].(map[string]any)["moderation"].(map[string]any)
+		assert.Equal(t, []any{"secret-key", "internal-only"}, moderation["rules"])
+	})
+
+	t.Run("other moderation policies remain unchanged", func(t *testing.T) {
+		logs := []*Log{{Other: common.MapToJsonStr(map[string]any{
+			"admin_info": map[string]any{
+				"moderation": map[string]any{
+					"policy": "moderation_api",
+					"rules":  []string{"violence"},
+				},
+			},
+		})}}
+		FormatAdminLogsWithSensitiveWords(logs, false)
+		assert.Contains(t, logs[0].Other, `"rules":["violence"]`)
+	})
+}
+
+func TestFormatAdminLogsForListDefersModerationContent(t *testing.T) {
+	logs := []*Log{{Other: common.MapToJsonStr(map[string]any{
+		"admin_info": map[string]any{
+			"moderation": map[string]any{
+				"policy":  "sensitive_word",
+				"flagged": true,
+				"prompt":  "private prompt",
+				"rules":   []string{"secret"},
+			},
+		},
+	})}}
+
+	FormatAdminLogsForList(logs, true)
+
+	parsed, err := common.StrToMap(logs[0].Other)
+	require.NoError(t, err)
+	moderation := parsed["admin_info"].(map[string]any)["moderation"].(map[string]any)
+	assert.Equal(t, true, moderation["flagged"])
+	assert.NotContains(t, moderation, "prompt")
+	assert.NotContains(t, moderation, "rules")
+}

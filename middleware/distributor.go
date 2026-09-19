@@ -38,6 +38,11 @@ func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var channel *model.Channel
 		channelId, hasSpecificChannel := common.GetContextKey(c, constant.ContextKeyTokenSpecificChannelId)
+		defer func() {
+			if c.Writer.Status() >= 400 {
+				service.RecordRequestPolicyTermination(c, types.NewErrorWithStatusCode(errors.New("request rejected"), types.ErrorCodeInvalidRequest, c.Writer.Status(), types.ErrOptionWithSkipRetry()))
+			}
+		}()
 		constraints := service.GetChannelConstraints(c)
 		constraints.AddFilter(taskdto.ChannelFilter{
 			Kind:        taskdto.FilterRequestPath,
@@ -116,7 +121,7 @@ func Distribute() func(c *gin.Context) {
 				if !ok {
 					tokenModelLimit = map[string]bool{}
 				}
-				if !tokenModelLimitAllows(tokenModelLimit, modelRequest.Model) {
+				if !TokenModelLimitAllows(tokenModelLimit, modelRequest.Model) {
 					abortWithOpenAiMessage(c, http.StatusForbidden, i18n.T(c, i18n.MsgDistributorTokenModelForbidden, map[string]any{"Model": modelRequest.Model}))
 					return
 				}
@@ -703,10 +708,10 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 	return &modelRequest, shouldSelectChannel, nil
 }
 
-// tokenModelLimitAllows reports whether a token model-limit map authorizes
+// TokenModelLimitAllows reports whether a token model-limit map authorizes
 // model. Exact name, wildcard-normalized name, and routing-normalized name
 // (modifiers and legacy aliases stripped) are all accepted.
-func tokenModelLimitAllows(limit map[string]bool, model string) bool {
+func TokenModelLimitAllows(limit map[string]bool, model string) bool {
 	if limit[model] {
 		return true
 	}

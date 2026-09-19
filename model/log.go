@@ -121,11 +121,40 @@ func formatUserLogs(logs []*Log, startIdx int) {
 	assignDisplayLogIds(logs, startIdx)
 }
 
+// FormatUserLogs applies the non-administrator metadata projection to a log
+// collection returned by read-only token APIs.
+func FormatUserLogs(logs []*Log) {
+	formatUserLogs(logs, 0)
+}
+
 // FormatAdminLogs removes root-only diagnostics while retaining operational
 // admin_info. Root callers must not pass their results through this formatter.
 func FormatAdminLogs(logs []*Log) {
 	for i := range logs {
 		logs[i].Other = formatLogOtherJSON(logs[i].Other, logOtherVisibilityAdmin)
+	}
+}
+
+// FormatAdminLogsWithSensitiveWords applies the administrator projection and
+// removes the matched sensitive-word list unless the caller has the explicit
+// sensitive-read permission. The submitted content remains visible to admins
+// as it was before this permission was introduced.
+func FormatAdminLogsWithSensitiveWords(logs []*Log, canViewSensitiveWords bool) {
+	FormatAdminLogs(logs)
+	if canViewSensitiveWords {
+		return
+	}
+	for i := range logs {
+		logs[i].Other = stripSensitiveWordRules(logs[i].Other)
+	}
+}
+
+// FormatAdminLogsForList removes moderation prompt and matched rules from the
+// paginated list response. The full moderation detail is fetched on demand.
+func FormatAdminLogsForList(logs []*Log, canViewSensitiveWords bool) {
+	FormatAdminLogsWithSensitiveWords(logs, canViewSensitiveWords)
+	for i := range logs {
+		logs[i].Other = stripModerationContent(logs[i].Other)
 	}
 }
 
@@ -137,6 +166,13 @@ func FormatRootLogs(logs []*Log) {
 	}
 }
 
+func FormatRootLogsForList(logs []*Log) {
+	FormatRootLogs(logs)
+	for i := range logs {
+		logs[i].Other = stripModerationContent(logs[i].Other)
+	}
+}
+
 func GetLogByTokenId(tokenId int) (logs []*Log, err error) {
 	order := "id desc"
 	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
@@ -145,6 +181,18 @@ func GetLogByTokenId(tokenId int) (logs []*Log, err error) {
 	err = LOG_DB.Model(&Log{}).Where("token_id = ?", tokenId).Order(order).Limit(common.MaxRecentItems).Find(&logs).Error
 	formatUserLogs(logs, 0)
 	return logs, err
+}
+
+func GetLogByRequestIDAndType(requestID string, logType int) (*Log, error) {
+	var log Log
+	query := LOG_DB.Where("request_id = ?", requestID)
+	if logType != LogTypeUnknown {
+		query = query.Where("type = ?", logType)
+	}
+	if err := query.Order("created_at desc, id desc").First(&log).Error; err != nil {
+		return nil, err
+	}
+	return &log, nil
 }
 
 func RecordLog(userId int, logType int, content string) {

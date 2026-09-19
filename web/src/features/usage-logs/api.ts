@@ -30,6 +30,7 @@ import type {
   TaskArtifactsResponse,
   UserInfo,
 } from './types'
+import type { UsageLog } from './data/schema'
 
 // ============================================================================
 // Generic API Helpers
@@ -78,6 +79,16 @@ export const getAllLogs = (params: GetLogsParams = {}) =>
 export const getUserLogs = (
   params: Omit<GetLogsParams, 'username' | 'channel'> = {}
 ) => fetchLogs('/api/log', params, false)
+
+export async function getLogDetail(
+  requestId: string,
+  type: number
+): Promise<UsageLog> {
+  const res = await api.get<{ success: boolean; data: UsageLog }>(
+    `/api/log/detail?request_id=${encodeURIComponent(requestId)}&type=${type}`
+  )
+  return res.data.data
+}
 
 export const getLogStats = (params: GetLogStatsParams = {}) =>
   fetchLogStats('/api/log', params, true)

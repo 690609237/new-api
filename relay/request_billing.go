@@ -49,6 +49,7 @@ func PrepareRequestBilling(c *gin.Context, info *relaycommon.RelayInfo) *types.N
 		contains, words := service.CheckSensitiveText(prompt)
 		common.SetContextKey(c, constant.ContextKeySensitiveChecked, true)
 		if contains {
+			service.RequestPolicy(c).AddEvent(service.PolicyEvent{ErrorCode: string(types.ErrorCodeSensitiveWordsDetected), ErrorSource: "local", Decision: service.PolicyDecision{Action: "stop", Reason: "local_rejection", Source: "global"}, Health: "unchanged"})
 			service.RecordSensitiveWordHit(service.ModerationIdentity{UserID: c.GetInt("id"), TokenID: c.GetInt("token_id")})
 			model.RecordSensitiveWordLog(c, c.GetInt("id"), prompt, words)
 			message := fmt.Sprintf("user sensitive words detected: %s", strings.Join(words, ", "))

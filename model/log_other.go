@@ -261,3 +261,106 @@ func formatLogOtherJSON(value string, visibility logOtherVisibility) string {
 	}
 	return string(formatted)
 }
+
+func stripSensitiveWordRules(value string) string {
+	if value == "" {
+		return value
+	}
+	var values map[string]json.RawMessage
+	if err := common.UnmarshalJsonStr(value, &values); err != nil {
+		return "{}"
+	}
+	rawAdmin, ok := values[logOtherAdminInfoKey]
+	if !ok {
+		return value
+	}
+	var adminInfo map[string]json.RawMessage
+	if err := common.Unmarshal(rawAdmin, &adminInfo); err != nil {
+		return value
+	}
+	rawModeration, ok := adminInfo["moderation"]
+	if !ok {
+		return value
+	}
+	var moderation map[string]json.RawMessage
+	if err := common.Unmarshal(rawModeration, &moderation); err != nil {
+		return value
+	}
+	var policy string
+	if rawPolicy, ok := moderation["policy"]; ok {
+		_ = common.Unmarshal(rawPolicy, &policy)
+	}
+	if policy != "sensitive_word" {
+		return value
+	}
+	if _, ok := moderation["rules"]; !ok {
+		return value
+	}
+	delete(moderation, "rules")
+	encodedModeration, err := common.Marshal(moderation)
+	if err != nil {
+		return value
+	}
+	adminInfo["moderation"] = encodedModeration
+	encodedAdmin, err := common.Marshal(adminInfo)
+	if err != nil {
+		return value
+	}
+	values[logOtherAdminInfoKey] = encodedAdmin
+	encoded, err := common.Marshal(values)
+	if err != nil {
+		return value
+	}
+	return string(encoded)
+}
+
+func stripModerationContent(value string) string {
+	if value == "" {
+		return value
+	}
+	var values map[string]json.RawMessage
+	if err := common.UnmarshalJsonStr(value, &values); err != nil {
+		return "{}"
+	}
+	rawAdmin, ok := values[logOtherAdminInfoKey]
+	if !ok {
+		return value
+	}
+	var adminInfo map[string]json.RawMessage
+	if err := common.Unmarshal(rawAdmin, &adminInfo); err != nil {
+		return value
+	}
+	rawModeration, ok := adminInfo["moderation"]
+	if !ok {
+		return value
+	}
+	var moderation map[string]json.RawMessage
+	if err := common.Unmarshal(rawModeration, &moderation); err != nil {
+		return value
+	}
+	changed := false
+	for _, key := range []string{"prompt", "rules"} {
+		if _, exists := moderation[key]; exists {
+			delete(moderation, key)
+			changed = true
+		}
+	}
+	if !changed {
+		return value
+	}
+	encodedModeration, err := common.Marshal(moderation)
+	if err != nil {
+		return value
+	}
+	adminInfo["moderation"] = encodedModeration
+	encodedAdmin, err := common.Marshal(adminInfo)
+	if err != nil {
+		return value
+	}
+	values[logOtherAdminInfoKey] = encodedAdmin
+	encoded, err := common.Marshal(values)
+	if err != nil {
+		return value
+	}
+	return string(encoded)
+}

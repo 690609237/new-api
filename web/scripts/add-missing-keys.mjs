@@ -122,6 +122,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.',
     'Sensitive word hits': 'Sensitive word hits',
+    'View matched sensitive words': 'View matched sensitive words',
+    'Matched sensitive words': 'Matched sensitive words',
+    'View the configured sensitive words matched by a request.':
+      'View the configured sensitive words matched by a request.',
   },
   zh: {
     'Audit log cleanup': '审计日志清理',
@@ -216,6 +220,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       '每行输入一条规则。使用 | 分隔组合规则中必须同时出现的关键词（最多 5 个）。留空可禁用敏感词列表。',
     'Sensitive word hits': '敏感词命中次数',
+    'View matched sensitive words': '查看命中的敏感词',
+    'Matched sensitive words': '命中的敏感词',
+    'View the configured sensitive words matched by a request.':
+      '查看请求命中的已配置敏感词。',
   },
   'zh-TW': {
     'Audit log cleanup': '稽核日誌清理',
@@ -310,6 +318,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       '每行輸入一條規則。使用 | 分隔組合規則中必須同時出現的關鍵詞（最多 5 個）。留空可停用敏感詞清單。',
     'Sensitive word hits': '敏感詞命中次數',
+    'View matched sensitive words': '查看命中的敏感詞',
+    'Matched sensitive words': '命中的敏感詞',
+    'View the configured sensitive words matched by a request.':
+      '查看請求命中的已設定敏感詞。',
   },
   fr: {
     'Audit log cleanup': "Nettoyage du journal d'audit",
@@ -409,6 +421,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       'Saisissez une règle par ligne. Utilisez | pour exiger tous les mots-clés d’une règle combinée (5 maximum). Laissez vide pour désactiver la liste.',
     'Sensitive word hits': 'Détections de mots sensibles',
+    'View matched sensitive words': 'Voir les mots sensibles détectés',
+    'Matched sensitive words': 'Mots sensibles détectés',
+    'View the configured sensitive words matched by a request.':
+      'Voir les mots sensibles configurés détectés dans une requête.',
   },
   ja: {
     'Audit log cleanup': '監査ログのクリーンアップ',
@@ -507,6 +523,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       '1行に1つのルールを入力します。組み合わせルールですべてのキーワードを必須にするには、| で区切ります（最大5個）。空欄にするとリストが無効になります。',
     'Sensitive word hits': '機密語の検出回数',
+    'View matched sensitive words': '検出された機密語を表示',
+    'Matched sensitive words': '検出された機密語',
+    'View the configured sensitive words matched by a request.':
+      'リクエストで検出された設定済みの機密語を表示します。',
   },
   ru: {
     'Audit log cleanup': 'Очистка журнала аудита',
@@ -607,6 +627,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       'Вводите по одному правилу в строке. Используйте |, чтобы потребовать все ключевые слова в комбинированном правиле (до 5). Оставьте поле пустым, чтобы отключить список.',
     'Sensitive word hits': 'Срабатывания по чувствительным словам',
+    'View matched sensitive words': 'Просмотр совпавших чувствительных слов',
+    'Matched sensitive words': 'Совпавшие чувствительные слова',
+    'View the configured sensitive words matched by a request.':
+      'Просматривать настроенные чувствительные слова, совпавшие в запросе.',
   },
   vi: {
     'Audit log cleanup': 'Dọn dẹp nhật ký kiểm tra',
@@ -705,6 +729,10 @@ const newKeys = {
     'Enter one rule per line. Use | to require all keywords in a combined rule (up to 5). Leave blank to disable the list.':
       'Nhập một quy tắc trên mỗi dòng. Dùng | để yêu cầu tất cả từ khóa trong quy tắc kết hợp (tối đa 5). Để trống để tắt danh sách.',
     'Sensitive word hits': 'Số lần phát hiện từ ngữ nhạy cảm',
+    'View matched sensitive words': 'Xem các từ nhạy cảm đã khớp',
+    'Matched sensitive words': 'Các từ nhạy cảm đã khớp',
+    'View the configured sensitive words matched by a request.':
+      'Xem các từ nhạy cảm đã cấu hình khớp với yêu cầu.',
   },
 }
 

@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import type { TFunction } from 'i18next'
+import { useQuery } from '@tanstack/react-query'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -60,12 +61,20 @@ import { DynamicPricingBreakdown } from '@/features/pricing/components/dynamic-p
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 import { BILLING_PRICING_VARS } from '@/features/pricing/lib/billing-expr'
 import { pluginUsageSchema } from '@/features/pricing/lib/plugin-pricing'
+import { PolicyDecisionRecord } from '@/features/system-settings/request-policies/decision-record'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatLogQuota, formatTokens, formatUseTime } from '@/lib/format'
+import {
+  ADMIN_PERMISSION_ACTIONS,
+  ADMIN_PERMISSION_RESOURCES,
+  hasPermission,
+} from '@/lib/admin-permissions'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { AuditDetailFields } from '../../audit/components/audit-detail-fields'
+import { getLogDetail } from '../../api'
 import type { UsageLog } from '../../data/schema'
 import {
   parseLogOther,
@@ -87,6 +96,7 @@ import {
   isTimingLogType,
 } from '../../lib/utils'
 import { USAGE_BILLING_PATH, type LogOtherData } from '../../types'
+import { ResponseModelDetails } from '../model-badge'
 import { PluginAuthorLink } from '../plugin-author-link'
 import { DetailRow, DetailSection } from './log-detail-layout'
 
@@ -474,8 +484,20 @@ interface DetailsDialogProps {
 
 export function DetailsDialog(props: DetailsDialogProps) {
   const { t } = useTranslation()
+  const currentUser = useAuthStore((state) => state.auth.user)
   const { copiedText, copyToClipboard } = useCopyToClipboard({ notify: false })
-  const other = parseLogOther(props.log.other)
+  const listOther = parseLogOther(props.log.other)
+  const moderationDetailQuery = useQuery({
+    queryKey: ['usage-log-moderation-detail', props.log.request_id, props.log.type],
+    queryFn: () => getLogDetail(props.log.request_id, props.log.type),
+    enabled:
+      props.open &&
+      props.isAdmin &&
+      !!props.log.request_id &&
+      !!listOther?.admin_info?.moderation,
+    retry: false,
+  })
+  const other = parseLogOther(moderationDetailQuery.data?.other ?? props.log.other)
   const typeConfig = getLogTypeConfig(props.log.type)
 
   const isViolation = isViolationFeeLog(other)
@@ -502,6 +524,11 @@ export function DetailsDialog(props: DetailsDialogProps) {
     !!props.log.ip && (showTiming || (props.isAdmin && isTopup))
   const adminInfo = other?.admin_info
   const moderationAudit = props.isAdmin ? adminInfo?.moderation : undefined
+  const canViewSensitiveWords = hasPermission(
+    currentUser,
+    ADMIN_PERMISSION_RESOURCES.AUDIT,
+    ADMIN_PERMISSION_ACTIONS.SENSITIVE_READ
+  )
   const topupAuditFields =
     isTopup && props.isAdmin && adminInfo
       ? ([
@@ -789,6 +816,14 @@ export function DetailsDialog(props: DetailsDialogProps) {
         )}
 
         {/* Quota saturation marker (admin only) */}
+        {props.isAdmin && adminInfo?.request_policy?.length ? (
+          <DetailSection
+            label={t('Request policy decisions')}
+            icon={<Route className='size-4' />}
+          >
+            <PolicyDecisionRecord events={adminInfo.request_policy} />
+          </DetailSection>
+        ) : null}
         {props.isAdmin && other?.admin_info?.quota_saturation && (
           <DetailSection
             icon={<AlertTriangle className='size-3.5' aria-hidden='true' />}
@@ -1064,6 +1099,15 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 mono
               />
             )}
+            {canViewSensitiveWords &&
+              moderationAudit.policy === 'sensitive_word' &&
+              moderationAudit.rules?.length ? (
+              <DetailRow
+                label={t('Matched sensitive words')}
+                value={moderationAudit.rules.join(', ')}
+                mono
+              />
+            ) : null}
             {moderationAudit.prompt && (
               <div className='space-y-1.5'>
                 <Label className='text-xs font-semibold'>
@@ -1166,21 +1210,28 @@ export function DetailsDialog(props: DetailsDialogProps) {
           />
         )}
 
-        {/* Model mapping */}
-        {other?.is_model_mapped && other?.upstream_model_name && (
-          <DetailSection label={t('Model Mapping')}>
-            <DetailRow
-              label={t('Request Model')}
-              value={props.log.model_name}
-              mono
-            />
-            <DetailRow
-              label={t('Actual Model')}
-              value={other.upstream_model_name}
-              mono
-            />
+        {other?.response_model && (
+          <DetailSection label={t('Response Model')}>
+            <ResponseModelDetails observation={other.response_model} />
           </DetailSection>
         )}
+        {/* Model mapping for logs without response observations */}
+        {!other?.response_model &&
+          other?.is_model_mapped &&
+          other?.upstream_model_name && (
+            <DetailSection label={t('Model Mapping')}>
+              <DetailRow
+                label={t('Request Model')}
+                value={props.log.model_name}
+                mono
+              />
+              <DetailRow
+                label={t('Actual Model')}
+                value={other.upstream_model_name}
+                mono
+              />
+            </DetailSection>
+          )}
 
         {/* Token breakdown (for consume/error types with token data) */}
         {isDisplayableType(props.log.type) && other && (

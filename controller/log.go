@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service/authz"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,14 +29,34 @@ func GetAllLogs(c *gin.Context) {
 		return
 	}
 	if c.GetInt("role") < common.RoleRootUser {
-		model.FormatAdminLogs(logs)
+		model.FormatAdminLogsForList(logs, authz.Can(c.GetInt("id"), c.GetInt("role"), authz.AuditSensitiveRead))
 	} else {
-		model.FormatRootLogs(logs)
+		model.FormatRootLogsForList(logs)
 	}
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(logs)
 	common.ApiSuccess(c, pageInfo)
 	return
+}
+
+func GetLogDetail(c *gin.Context) {
+	requestID := c.Query("request_id")
+	if requestID == "" {
+		common.ApiErrorMsg(c, "request_id is required")
+		return
+	}
+	logType, _ := strconv.Atoi(c.Query("type"))
+	log, err := model.GetLogByRequestIDAndType(requestID, logType)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if c.GetInt("role") < common.RoleRootUser {
+		model.FormatAdminLogsWithSensitiveWords([]*model.Log{log}, authz.Can(c.GetInt("id"), c.GetInt("role"), authz.AuditSensitiveRead))
+	} else {
+		model.FormatRootLogs([]*model.Log{log})
+	}
+	common.ApiSuccess(c, log)
 }
 
 func GetUserLogs(c *gin.Context) {
@@ -93,6 +114,7 @@ func GetLogByKey(c *gin.Context) {
 		})
 		return
 	}
+	model.FormatUserLogs(logs)
 	c.JSON(200, gin.H{
 		"success": true,
 		"message": "",
