@@ -16,7 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { formatCurrencyFromUSD, formatQuotaWithCurrency } from '@/lib/currency'
+import {
+  formatBillingCurrencyFromUSD,
+  formatQuotaWithCurrency,
+} from '@/lib/currency'
 import { formatTimestampToDate } from '@/lib/format'
 
 import {
@@ -332,7 +335,7 @@ export function formatBalance(balance: number | null | undefined): string {
   if (balance == null || Number.isNaN(balance)) {
     return '-'
   }
-  return formatCurrencyFromUSD(balance, {
+  return formatBillingCurrencyFromUSD(balance, {
     digitsLarge: 2,
     digitsSmall: 4,
     abbreviate: false,

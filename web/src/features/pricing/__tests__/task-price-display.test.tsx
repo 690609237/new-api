@@ -156,7 +156,7 @@ it.each([false, true])(
     expect(screen.queryByText('image_count')).not.toBeInTheDocument()
     if (configured) {
       expect(screen.getByText('$0.2')).toBeVisible()
-      expect(screen.getByText('$0.4')).toBeVisible()
+      expect(screen.getByText('0.4')).toBeVisible()
     }
   }
 )
@@ -270,13 +270,78 @@ it('shows one standard task price and a localized group price without duplicate 
   expect(screen.queryByText('Dynamic Pricing')).not.toBeInTheDocument()
   expect(screen.queryByText('music')).not.toBeInTheDocument()
   expect(screen.getByText('$0.22')).toBeVisible()
-  expect(screen.getByText('$0.44')).toBeVisible()
+  expect(screen.getByText('0.44')).toBeVisible()
   await act(() => i18next.changeLanguage('zhCN'))
   expect(screen.getAllByText('生成歌曲单价', { exact: false })).toHaveLength(2)
   await act(() => i18next.changeLanguage('fr'))
   expect(
     screen.getAllByText('Song generation unit price', { exact: false })
   ).toHaveLength(2)
+})
+
+it('combines complex dynamic pricing under one official pricing section', () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  clients.push(client)
+  render(
+    <QueryClientProvider client={client}>
+      <ModelDetailsContent
+        model={{
+          ...model,
+          billing_usage_schema: undefined,
+          billing_expr:
+            'u("mode") == "short" ? tier("short", p * 1 + c * 2) : tier("long", p * 2 + c * 4)',
+        }}
+        groupRatio={{ default: 1 }}
+        usableGroup={{ default: { desc: '', ratio: 1 } }}
+        endpointMap={{}}
+        autoGroups={[]}
+        priceRate={1}
+        usdExchangeRate={1}
+        tokenUnit='M'
+      />
+    </QueryClientProvider>
+  )
+
+  expect(screen.getAllByText('Official pricing')).toHaveLength(1)
+  expect(screen.getAllByText('Dynamic Pricing').length).toBeGreaterThan(0)
+  expect(screen.queryByText('Pricing', { exact: true })).not.toBeInTheDocument()
+})
+
+it('keeps static token prices in one responsive official-price grid', () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  clients.push(client)
+  render(
+    <QueryClientProvider client={client}>
+      <ModelDetailsContent
+        model={{
+          ...model,
+          billing_mode: undefined,
+          billing_expr: undefined,
+          billing_usage_schema: undefined,
+          cache_ratio: 0.5,
+        }}
+        groupRatio={{ default: 1 }}
+        usableGroup={{ default: { desc: '', ratio: 1 } }}
+        endpointMap={{}}
+        autoGroups={[]}
+        priceRate={1}
+        usdExchangeRate={1}
+        tokenUnit='M'
+      />
+    </QueryClientProvider>
+  )
+
+  const cachedLabel = screen.getByText('Cached input')
+  const priceGrid = cachedLabel.closest('.grid')
+  if (!(priceGrid instanceof HTMLElement)) {
+    throw new Error('Expected official price grid')
+  }
+  expect(within(priceGrid).getByText('Input')).toBeVisible()
+  expect(within(priceGrid).getByText('Output')).toBeVisible()
 })
 
 it('labels even a single task price on model cards', async () => {
@@ -527,7 +592,7 @@ it('switches provider group prices, localized conditions and examples, and shows
   expect(alpha).toHaveAttribute('aria-selected', 'true')
   let panel = screen.getByRole('tabpanel', { name: 'Alpha' })
   expect(within(panel).getByText('Alpha sample')).toBeVisible()
-  expect(within(panel).getByText('$0.8')).toBeVisible()
+  expect(within(panel).getByText('0.8')).toBeVisible()
   await user.click(alpha)
   await user.keyboard('{ArrowRight}')
   expect(screen.getByRole('tab', { name: 'Beta' })).toHaveFocus()
@@ -540,8 +605,8 @@ it('switches provider group prices, localized conditions and examples, and shows
   expect(within(panel).getByText('Beta sample')).toBeVisible()
   expect(within(panel).queryByText('Alpha sample')).not.toBeInTheDocument()
   expect(within(panel).getByText('Professional mode')).toBeVisible()
-  expect(within(panel).getByText('$3')).toBeVisible()
-  expect(within(panel).getByText('$6')).toBeVisible()
+  expect(within(panel).getByText('3')).toBeVisible()
+  expect(within(panel).getByText('6')).toBeVisible()
   await act(() => i18next.changeLanguage('zhCN'))
   expect(within(panel).getByText('专业模式')).toBeVisible()
   await act(() => i18next.changeLanguage('en'))
@@ -555,7 +620,7 @@ it('switches provider group prices, localized conditions and examples, and shows
   expect(within(panel).queryByRole('table')).not.toBeInTheDocument()
   await user.click(screen.getByRole('tab', { name: 'Delta' }))
   panel = screen.getByRole('tabpanel', { name: 'Delta' })
-  expect(within(panel).getByText('$0.5')).toBeVisible()
+  expect(within(panel).getByText('0.5')).toBeVisible()
 })
 
 it('shows provider count, price range and missing-price status in both list and card views', () => {
@@ -599,5 +664,5 @@ it('shows provider count, price range and missing-price status in both list and 
     2
   )
   expect(screen.getByText('0.4 – 0.8/s')).toBeVisible()
-  expect(screen.getByText('$0.4 – $0.8')).toBeVisible()
+  expect(screen.getByText('0.4 – 0.8')).toBeVisible()
 })

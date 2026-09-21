@@ -105,6 +105,9 @@ export interface CurrencyFormatOptions {
   locale?: Intl.LocalesArgument | undefined
 }
 
+/** Symbol used for the platform's internal credit/quota unit. */
+export const PLATFORM_CREDIT_SYMBOL = '✦'
+
 type ResolvedCurrencyFormatOptions = Omit<
   Required<CurrencyFormatOptions>,
   'locale'
@@ -207,17 +210,20 @@ function getDisplayMeta(config: CurrencyConfig): DisplayMeta {
     case 'USD':
     default:
       return {
-        kind: 'currency',
-        symbol: '$',
-        currencyCode: 'USD',
+        kind: 'custom',
+        symbol: PLATFORM_CREDIT_SYMBOL,
         exchangeRate: 1,
       }
   }
 }
 
 function getBillingDisplayMeta(config: CurrencyConfig): DisplayMeta {
-  const meta = getDisplayMeta(config)
-  if (meta.kind === 'tokens') {
+  // Billing/model prices are expressed in real currencies. Keep USD here even
+  // though platform quota displays use the internal credit symbol above.
+  if (
+    config.quotaDisplayType === 'USD' ||
+    config.quotaDisplayType === 'TOKENS'
+  ) {
     return {
       kind: 'currency',
       symbol: '$',
@@ -225,6 +231,8 @@ function getBillingDisplayMeta(config: CurrencyConfig): DisplayMeta {
       exchangeRate: 1,
     }
   }
+
+  const meta = getDisplayMeta(config)
   return meta
 }
 
@@ -530,10 +538,10 @@ export function formatQuotaWithCurrency(
  * Returns a simple string label representing the current display currency.
  * Useful for labels, tooltips, and UI text.
  *
- * @returns Currency label string (e.g., "USD", "CNY", "Tokens")
+ * @returns Currency label string (e.g., "✦", "CNY", "Tokens")
  *
  * @example
- * getCurrencyLabel() → "USD"
+ * getCurrencyLabel() → "✦"
  * getCurrencyLabel() → "CNY"
  * getCurrencyLabel() → "Tokens"
  *
@@ -557,7 +565,7 @@ export function getCurrencyLabel(): string {
       return meta.kind === 'custom' ? meta.symbol : 'Custom'
     case 'USD':
     default:
-      return 'USD'
+      return PLATFORM_CREDIT_SYMBOL
   }
 }
 
@@ -634,4 +642,40 @@ export function formatLocalCurrencyAmount(
   const merged = mergeOptions(options)
 
   return formatCurrencyValue(amount, merged, meta)
+}
+
+/** Format a platform plan/payment amount in the internal credit unit. */
+export function formatPlatformAmount(
+  amount: number | null | undefined,
+  options?: Pick<CurrencyFormatOptions, 'digitsLarge' | 'digitsSmall'>
+): string {
+  if (amount == null || Number.isNaN(amount)) return '-'
+
+  const merged = mergeOptions({
+    abbreviate: false,
+    showSymbol: false,
+    digitsLarge: options?.digitsLarge ?? 2,
+    digitsSmall: options?.digitsSmall ?? 4,
+  })
+  const digits = getFractionDigits(
+    amount,
+    merged.digitsLarge,
+    merged.digitsSmall
+  )
+  const value = new Intl.NumberFormat(merged.locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  }).format(adjustForMinimum(amount, digits, merged.minimumNonZero))
+  return `${PLATFORM_CREDIT_SYMBOL}${value}`
+}
+
+/** Format a model price stored in the system's USD-equivalent unit as credits. */
+export function formatPlatformCreditsFromUSD(
+  amountUSD: number | null | undefined,
+  options?: CurrencyFormatOptions
+): string {
+  const formatted = formatPlatformAmount(amountUSD, options)
+  return options?.showSymbol === false
+    ? formatted.replace(PLATFORM_CREDIT_SYMBOL, '')
+    : formatted
 }

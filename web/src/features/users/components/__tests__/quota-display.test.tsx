@@ -141,7 +141,7 @@ it('shows balance above secondary usage text and opens quota details on click', 
     </I18nextProvider>
   )
   expect(
-    screen.getByRole('columnheader', { name: 'Available Balance ($)' })
+    screen.getByRole('columnheader', { name: 'Available Balance (✦)' })
   ).toHaveAttribute('data-sortable', 'true')
   expect(screen.getAllByRole('columnheader')).toHaveLength(1)
   const cells = screen.getAllByRole('cell')
@@ -162,7 +162,7 @@ it('shows balance above secondary usage text and opens quota details on click', 
     name: 'Available Balance 0.0038; Used amount 0.0022',
   })
   await userEvent.click(trigger)
-  const detail = await screen.findByRole('dialog', { name: 'Quota ($)' })
+  const detail = await screen.findByRole('dialog', { name: 'Quota (✦)' })
   expect(within(detail).getByText('Available Balance')).toBeInTheDocument()
   expect(within(detail).getByText('Total Used')).toBeInTheDocument()
   expect(within(detail).getByText('0.0038')).toBeInTheDocument()
@@ -187,7 +187,7 @@ it.each([0, 500000])(
       expect(screen.getAllByRole('cell')[0]).toHaveTextContent(/^No Quota$/)
       expect(screen.queryByText('Used amount')).not.toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'No Quota' }))
-      const detail = await screen.findByRole('dialog', { name: 'Quota ($)' })
+      const detail = await screen.findByRole('dialog', { name: 'Quota (✦)' })
       expect(within(detail).getAllByText('0')).toHaveLength(2)
       return
     }
@@ -315,7 +315,7 @@ it('sends balance sorting to the server and keeps invitation details on two line
     screen.getByRole('columnheader', { name: 'User Group' })
   ).toBeInTheDocument()
   await userEvent.click(
-    screen.getByRole('button', { name: 'Available Balance ($)' })
+    screen.getByRole('button', { name: 'Available Balance (✦)' })
   )
   await userEvent.click(screen.getByRole('menuitem', { name: 'Desc' }))
   await waitFor(() =>
@@ -340,7 +340,7 @@ it('shows balance above usage on mobile cards in Chinese', async () => {
   await i18n.changeLanguage('zh')
   try {
     await renderUsersList()
-    expect(screen.getByText('可用余额 ($)')).toBeInTheDocument()
+    expect(screen.getByText('可用余额 (✦)')).toBeInTheDocument()
     expect(screen.getByText('已用')).toBeInTheDocument()
     expect(screen.getByText('0.0038')).toBeInTheDocument()
     expect(screen.getByText('0.0022')).toBeInTheDocument()
@@ -348,7 +348,7 @@ it('shows balance above usage on mobile cards in Chinese', async () => {
     await userEvent.click(
       screen.getByRole('button', { name: /可用余额 0.0038/ })
     )
-    const detail = await screen.findByRole('dialog', { name: '额度 ($)' })
+    const detail = await screen.findByRole('dialog', { name: '额度 (✦)' })
     expect(within(detail).getByText('累计已用')).toBeInTheDocument()
     expect(within(detail).getByText('0.0022')).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')

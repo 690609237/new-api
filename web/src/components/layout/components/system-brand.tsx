@@ -29,6 +29,7 @@ import { useSystemConfig } from '@/hooks/use-system-config'
 import { cn } from '@/lib/utils'
 
 import { BrandContactLine } from './brand-contact-line'
+import { ModelPassWordmark } from './modelpass-wordmark'
 
 type SystemBrandProps = {
   defaultName?: string
@@ -67,15 +68,17 @@ export function SystemBrand(props: SystemBrandProps) {
           'hover:bg-accent focus-visible:ring-ring/40 focus-visible:ring-2'
         )}
       >
-        <div className='flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md'>
+        <div className='flex size-6 shrink-0 items-center justify-center'>
           <img
             src={logo}
             alt={t('Logo')}
-            className='size-full rounded-md object-cover'
+            className='size-full object-contain'
           />
         </div>
         <span className='flex min-w-0 flex-col justify-center'>
-          <span className='max-w-[12rem] truncate leading-none'>{name}</span>
+          <span className='max-w-[12rem] truncate leading-none'>
+            <ModelPassWordmark name={name} />
+          </span>
           <BrandContactLine className='mt-1 hidden xl:block' />
           <BrandContactLine
             variant='compact'
@@ -94,15 +97,17 @@ export function SystemBrand(props: SystemBrandProps) {
           className='hover:text-sidebar-foreground active:text-sidebar-foreground cursor-default hover:bg-transparent active:bg-transparent'
           render={<div />}
         >
-          <div className='flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg'>
+          <div className='flex aspect-square size-8 items-center justify-center'>
             <img
               src={logo}
               alt={t('Logo')}
-              className='size-full rounded-lg object-cover'
+              className='size-full object-contain'
             />
           </div>
           <div className='grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden'>
-            <span className='truncate font-semibold'>{name}</span>
+            <span className='truncate font-semibold'>
+              <ModelPassWordmark name={name} />
+            </span>
             <span className='truncate text-xs'>{version}</span>
           </div>
         </SidebarMenuButton>

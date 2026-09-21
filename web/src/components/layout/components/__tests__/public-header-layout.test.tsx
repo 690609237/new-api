@@ -206,6 +206,18 @@ describe('public header navigation layout', () => {
 
     await rendered.cleanup()
   })
+
+  test('preserves the logo asset shape without circular clipping', async () => {
+    const rendered = await renderHeader('/')
+    const logo = rendered.container.querySelector('img[alt="logo"]')
+
+    expect(logo).not.toBeNull()
+    expect(logo?.classList).toContain('object-contain')
+    expect(logo?.classList).not.toContain('rounded-full')
+    expect(logo?.classList).not.toContain('rounded-lg')
+
+    await rendered.cleanup()
+  })
 })
 
 afterAll(() => {

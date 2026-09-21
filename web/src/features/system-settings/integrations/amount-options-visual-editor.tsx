@@ -21,6 +21,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
+import { PlatformCreditAmount } from '@/components/platform-credit-amount'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -112,7 +113,7 @@ export function AmountOptionsVisualEditor({
                 className='text-base'
                 copyable={false}
               >
-                <span className='font-mono'>${amount}</span>
+                <PlatformCreditAmount value={amount} className='font-mono' />
                 <Button
                   type='button'
                   variant='ghost'
@@ -123,7 +124,9 @@ export function AmountOptionsVisualEditor({
                     handleRemove(amount)
                   }}
                   className='hover:bg-muted-foreground/20 size-auto p-0.5'
-                  aria-label={t('Remove ${{amount}}', { amount })}
+                  aria-label={t('Remove amount {{amount}}', {
+                    amount: amount.toString(),
+                  })}
                 >
                   <X className='h-3.5 w-3.5' />
                 </Button>

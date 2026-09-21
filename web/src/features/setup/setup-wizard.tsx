@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ModelPassWordmark } from '@/components/layout/components/modelpass-wordmark'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { handleServerError } from '@/lib/handle-server-error'
 import { accountPasswordSchema } from '@/lib/password-policy'
@@ -291,12 +292,12 @@ export function SetupWizard() {
         <div className='flex flex-col items-center gap-3'>
           <div className='relative h-12 w-12'>
             {systemConfigLoading ? (
-              <Skeleton className='absolute inset-0 rounded-full' />
+              <Skeleton className='absolute inset-0 rounded-lg' />
             ) : (
               <img
                 src={logo}
                 alt={t('System logo')}
-                className='h-12 w-12 rounded-full object-cover shadow-sm'
+                className='h-12 w-12 object-contain shadow-sm'
               />
             )}
           </div>
@@ -304,7 +305,8 @@ export function SetupWizard() {
             <Skeleton className='h-7 w-40' />
           ) : (
             <h1 className='text-2xl font-semibold tracking-tight'>
-              {t('Initialize')} {systemName}
+              {t('Initialize')}{' '}
+              <ModelPassWordmark name={systemName} />
             </h1>
           )}
           <p className='text-muted-foreground text-center text-sm sm:text-base'>

@@ -49,6 +49,10 @@ func GetStatus(c *gin.Context) {
 	defer common.OptionMapRWMutex.RUnlock()
 
 	legalSetting := system_setting.GetLegalSettings()
+	logo := common.Logo
+	if logo == "" {
+		logo = "/logo.svg?v=2"
+	}
 
 	data := gin.H{
 		"version":                     common.Version,
@@ -66,7 +70,7 @@ func GetStatus(c *gin.Context) {
 		"telegram_bot_name":           common.TelegramBotName,
 		"theme":                       "default",
 		"system_name":                 common.SystemName,
-		"logo":                        common.Logo,
+		"logo":                        logo,
 		"footer_html":                 common.Footer,
 		"wechat_qrcode":               common.WeChatAccountQRCodeImageURL,
 		"wechat_login":                common.WeChatAuthEnabled,
@@ -156,12 +160,7 @@ func GetStatus(c *gin.Context) {
 		data["custom_oauth_providers"] = providersInfo
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    data,
-	})
-	return
+	serveRevalidatedJSONData(c, data)
 }
 
 func GetStatusApiInfo(c *gin.Context) {

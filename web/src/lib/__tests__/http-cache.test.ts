@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { AxiosError, type AxiosAdapter } from 'axios'
 import { afterEach, expect, it, vi } from 'vitest'
 
-import { api, getNotice } from '../api'
+import { api, getNotice, getStatus } from '../api'
 
 const originalAdapter = api.defaults.adapter
 
@@ -74,5 +74,20 @@ it('public notices keep their existing ETag revalidation policy', async () => {
   }))
   api.defaults.adapter = adapter
   await getNotice()
+  expect(adapter.mock.calls[0][0].headers.get('Cache-Control')).toBeNull()
+})
+
+it('public status allows ETag revalidation', async () => {
+  const adapter = vi.fn<AxiosAdapter>(async (config) => ({
+    data: { success: true, data: {} },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config,
+  }))
+  api.defaults.adapter = adapter
+
+  await getStatus()
+
   expect(adapter.mock.calls[0][0].headers.get('Cache-Control')).toBeNull()
 })

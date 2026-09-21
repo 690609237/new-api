@@ -32,6 +32,7 @@ import type { AuthUser } from '@/stores/auth-store'
 
 import { MOBILE_DRAWER_ANIMATION, MOBILE_DRAWER_CONFIG } from '../constants'
 import type { TopNavLink } from '../types'
+import { ModelPassWordmark } from './modelpass-wordmark'
 
 /**
  * Brand logo component with skeleton loading
@@ -61,11 +62,15 @@ function BrandLogo({
     >
       <div className='relative h-6 w-6'>
         {loading || !logoLoaded ? (
-          <Skeleton className='absolute inset-0 rounded-full' />
+          <Skeleton className='absolute inset-0 rounded-md' />
         ) : null}
         {displayLogo}
       </div>
-      {loading ? <Skeleton className='h-5 w-20' /> : displaySiteName}
+      {loading ? (
+        <Skeleton className='h-5 w-20' />
+      ) : (
+        <ModelPassWordmark name={displaySiteName} />
+      )}
     </Link>
   )
 }

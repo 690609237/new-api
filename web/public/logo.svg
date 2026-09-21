@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">ModelPass</title>
+  <desc id="desc">ModelPass monogram in white on a split teal and orange rounded square.</desc>
+  <defs>
+    <linearGradient id="modelpass-gradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#008b8c"/>
+      <stop offset="0.5" stop-color="#008b8c"/>
+      <stop offset="0.5" stop-color="#e95d21"/>
+      <stop offset="1" stop-color="#e95d21"/>
+    </linearGradient>
+    <filter id="modelpass-shadow" x="-25%" y="-25%" width="150%" height="165%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#008b8c" flood-opacity=".16"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#e95d21" flood-opacity=".14"/>
+    </filter>
+  </defs>
+  <rect x="1" y="1" width="126" height="126" rx="29" fill="url(#modelpass-gradient)" stroke="#ffffff" stroke-opacity=".76" stroke-width="2" filter="url(#modelpass-shadow)"/>
+  <text x="18" y="83" fill="#ffffff" font-family="Inter, PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="50" font-weight="900" letter-spacing="-3">M</text>
+  <text x="66" y="83" fill="#ffffff" font-family="Inter, PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="50" font-weight="900" letter-spacing="-3">P</text>
+</svg>

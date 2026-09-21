@@ -16,7 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+import {
+  formatBillingCurrencyFromUSD,
+  formatPlatformCreditsFromUSD,
+} from '@/lib/currency'
 
 import { QUOTA_TYPE_VALUES, TOKEN_UNIT_DIVISORS } from '../constants'
 import type { PricingModel, TokenUnit, PriceType } from '../types'
@@ -149,13 +152,16 @@ export function formatPrice(
   priceRate = 1,
   usdExchangeRate = 1,
   selectedGroup?: string,
-  showCurrencySymbol = true
+  showCurrencySymbol = true,
+  usePlatformCredits = false,
+  groupRatioOverride?: number
 ): string {
   if (model.quota_type === QUOTA_TYPE_VALUES.REQUEST) {
     return '-'
   }
 
-  const displayGroupRatio = getDisplayGroupRatio(model, selectedGroup)
+  const displayGroupRatio =
+    groupRatioOverride ?? getDisplayGroupRatio(model, selectedGroup)
 
   let priceInUSD = calculateTokenPrice(model, type, displayGroupRatio)
   priceInUSD = applyRechargeRate(
@@ -166,7 +172,10 @@ export function formatPrice(
   )
 
   const price = priceInUSD / TOKEN_UNIT_DIVISORS[tokenUnit]
-  return formatBillingCurrencyFromUSD(price, {
+  const format = usePlatformCredits
+    ? formatPlatformCreditsFromUSD
+    : formatBillingCurrencyFromUSD
+  return format(price, {
     showSymbol: showCurrencySymbol,
     digitsLarge: 4,
     digitsSmall: 6,
@@ -185,7 +194,9 @@ export function formatGroupPrice(
   showWithRecharge = false,
   priceRate = 1,
   usdExchangeRate = 1,
-  groupRatio: Record<string, number>
+  groupRatio: Record<string, number>,
+  usePlatformCredits = false,
+  showCurrencySymbol = true
 ): string {
   if (model.quota_type === QUOTA_TYPE_VALUES.REQUEST) {
     return '-'
@@ -202,7 +213,11 @@ export function formatGroupPrice(
   )
 
   const price = priceInUSD / TOKEN_UNIT_DIVISORS[tokenUnit]
-  return formatBillingCurrencyFromUSD(price, {
+  const format = usePlatformCredits
+    ? formatPlatformCreditsFromUSD
+    : formatBillingCurrencyFromUSD
+  return format(price, {
+    showSymbol: showCurrencySymbol,
     digitsLarge: 4,
     digitsSmall: 6,
     abbreviate: false,
@@ -218,7 +233,9 @@ export function formatFixedPrice(
   showWithRecharge = false,
   priceRate = 1,
   usdExchangeRate = 1,
-  groupRatio: Record<string, number>
+  groupRatio: Record<string, number>,
+  usePlatformCredits = false,
+  showCurrencySymbol = true
 ): string {
   if (model.quota_type !== QUOTA_TYPE_VALUES.REQUEST) {
     return '-'
@@ -234,7 +251,11 @@ export function formatFixedPrice(
     usdExchangeRate
   )
 
-  return formatBillingCurrencyFromUSD(priceInUSD, {
+  const format = usePlatformCredits
+    ? formatPlatformCreditsFromUSD
+    : formatBillingCurrencyFromUSD
+  return format(priceInUSD, {
+    showSymbol: showCurrencySymbol,
     digitsLarge: 4,
     digitsSmall: 4,
     abbreviate: false,
@@ -250,13 +271,16 @@ export function formatRequestPrice(
   priceRate = 1,
   usdExchangeRate = 1,
   selectedGroup?: string,
-  showCurrencySymbol = true
+  showCurrencySymbol = true,
+  usePlatformCredits = false,
+  groupRatioOverride?: number
 ): string {
   if (model.quota_type !== QUOTA_TYPE_VALUES.REQUEST) {
     return '-'
   }
 
-  const displayGroupRatio = getDisplayGroupRatio(model, selectedGroup)
+  const displayGroupRatio =
+    groupRatioOverride ?? getDisplayGroupRatio(model, selectedGroup)
 
   let priceInUSD = (model.model_price || 0) * displayGroupRatio
 
@@ -267,7 +291,10 @@ export function formatRequestPrice(
     usdExchangeRate
   )
 
-  return formatBillingCurrencyFromUSD(priceInUSD, {
+  const format = usePlatformCredits
+    ? formatPlatformCreditsFromUSD
+    : formatBillingCurrencyFromUSD
+  return format(priceInUSD, {
     showSymbol: showCurrencySymbol,
     digitsLarge: 4,
     digitsSmall: 4,

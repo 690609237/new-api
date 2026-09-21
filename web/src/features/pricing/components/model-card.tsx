@@ -21,6 +21,7 @@ import { memo, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { CopyButton } from '@/components/copy-button'
+import { PlatformCredit } from '@/components/platform-credit-amount'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { getLobeIcon } from '@/lib/lobe-icon'
@@ -55,6 +56,30 @@ export interface ModelCardProps {
   perf?: ModelPerfBadgeData
 }
 
+function OfficialPriceComparison(props: {
+  value: ReactNode
+  unitLabel: ReactNode
+}) {
+  const { t } = useTranslation()
+  const officialLabel = t('Official pricing')
+
+  return (
+    <span className='text-muted-foreground/70 flex min-w-0 items-center gap-1.5 font-mono text-[10px] tabular-nums'>
+      <span
+        aria-hidden
+        title={officialLabel}
+        className='inline-flex size-4 shrink-0 -rotate-2 items-center justify-center rounded-[3px] border border-current font-serif text-[9px] leading-none font-bold'
+      >
+        官
+      </span>
+      <span className='sr-only'>{officialLabel}: </span>
+      <span>
+        {props.value} / {props.unitLabel}
+      </span>
+    </span>
+  )
+}
+
 export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const { t, i18n } = useTranslation()
   const tokenUnit = props.tokenUnit ?? DEFAULT_TOKEN_UNIT
@@ -79,6 +104,8 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
       showRechargePrice,
       priceRate,
       usdExchangeRate,
+      showCurrencySymbol: false,
+      usePlatformCredits: true,
       groupRatioMultiplier: getDynamicDisplayGroupRatio(
         props.model,
         props.selectedGroup
@@ -99,6 +126,19 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
     // Currency is read indirectly by the price formatter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [props.model, dynamicPriceOptions, currency]
+  )
+  const officialDynamicSummary = useMemo(
+    () =>
+      getDynamicPricingSummary(props.model, {
+        now: billingTime === undefined ? undefined : new Date(billingTime),
+        tokenUnit,
+        showRechargePrice: false,
+        priceRate: 1,
+        usdExchangeRate: 1,
+        showCurrencySymbol: true,
+        groupRatioMultiplier: 1,
+      }),
+    [props.model, billingTime, tokenUnit]
   )
   const cardExamplePrice = useMemo(
     () => getCardExamplePrice(props.model, dynamicPriceOptions),
@@ -122,6 +162,9 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
     } else if (dynamicSummary.primaryEntries.length > 0) {
       priceSummary = (
         <>
+          <span className='text-muted-foreground col-span-full text-[10px] font-medium tracking-wide uppercase'>
+            {t('Platform group pricing')}
+          </span>
           {dynamicSummary.primaryEntries
             .slice(0, dynamicSummary.providerCount ? 2 : undefined)
             .map((entry) => {
@@ -130,6 +173,9 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
                 entry,
                 i18n.language,
                 unitLabelKey ? t(unitLabelKey) : tokenUnitLabel
+              )
+              const officialEntry = officialDynamicSummary?.primaryEntries.find(
+                (candidate) => candidate.key === entry.key
               )
               let label: ReactNode = null
               if (entry.labelKind !== 'schema') {
@@ -155,12 +201,22 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
                     </span>
                   )}
                   <span className='flex flex-wrap items-baseline gap-x-1 font-mono text-sm font-semibold tabular-nums'>
-                    <span>{entry.formattedRange ?? entry.formatted}</span>
+                    <PlatformCredit>
+                      {entry.formattedRange ?? entry.formatted}
+                    </PlatformCredit>
                     <span className='text-muted-foreground text-xs font-normal whitespace-nowrap'>
                       {' '}
                       / {unitLabel}
                     </span>
                   </span>
+                  {officialEntry && (
+                    <OfficialPriceComparison
+                      value={
+                        officialEntry.formattedRange ?? officialEntry.formatted
+                      }
+                      unitLabel={unitLabel}
+                    />
+                  )}
                 </div>
               )
             })}
@@ -176,7 +232,8 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
           )}
           {cardExamplePrice && (
             <span className='text-muted-foreground col-span-full text-xs break-words'>
-              {cardExamplePrice.label} ≈ {cardExamplePrice.formatted}
+              {cardExamplePrice.label} ≈{' '}
+              <PlatformCredit>{cardExamplePrice.formatted}</PlatformCredit>
             </span>
           )}
           {dynamicSummary.isTaskUsage &&
@@ -213,42 +270,96 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
         ? [{ type: 'cache' as const, label: t('Cached') }]
         : []),
     ]
-    priceSummary = prices.map((price) => (
-      <div key={price.type} className='flex min-w-0 flex-col gap-1'>
-        <span className='text-muted-foreground text-xs'>{price.label}</span>
-        <span className='font-mono text-sm font-semibold tabular-nums'>
-          {formatPrice(
-            props.model,
-            price.type,
-            tokenUnit,
-            showRechargePrice,
-            priceRate,
-            usdExchangeRate,
-            props.selectedGroup
-          )}
-          <span className='text-muted-foreground text-xs font-normal'>
-            {' '}
-            / {tokenUnitLabel}
-          </span>
+    const officialPrices = prices.map((price) => ({
+      ...price,
+      value: formatPrice(
+        props.model,
+        price.type,
+        tokenUnit,
+        false,
+        1,
+        1,
+        undefined,
+        true,
+        false,
+        1
+      ),
+    }))
+    priceSummary = (
+      <>
+        <span className='text-muted-foreground col-span-full text-[10px] font-medium tracking-wide uppercase'>
+          {t('Platform group pricing')}
         </span>
-      </div>
-    ))
+        {prices.map((price) => (
+          <div key={price.type} className='flex min-w-0 flex-col gap-1'>
+            <span className='text-muted-foreground text-[10px] font-medium tracking-wide uppercase'>
+              {price.label}
+            </span>
+            <span className='font-mono text-sm font-semibold tabular-nums'>
+              <PlatformCredit>
+                {formatPrice(
+                  props.model,
+                  price.type,
+                  tokenUnit,
+                  showRechargePrice,
+                  priceRate,
+                  usdExchangeRate,
+                  props.selectedGroup,
+                  false,
+                  true
+                )}
+              </PlatformCredit>
+              <span className='text-muted-foreground text-xs font-normal'>
+                {' '}
+                / {tokenUnitLabel}
+              </span>
+            </span>
+            <OfficialPriceComparison
+              value={
+                officialPrices.find((item) => item.type === price.type)?.value
+              }
+              unitLabel={tokenUnitLabel}
+            />
+          </div>
+        ))}
+      </>
+    )
   } else {
     priceSummary = (
       <div className='col-span-full flex min-w-0 flex-col gap-1'>
+        <span className='text-muted-foreground text-[10px] font-medium tracking-wide uppercase'>
+          {t('Platform group pricing')}
+        </span>
         <span className='font-mono text-sm font-semibold tabular-nums'>
-          {formatRequestPrice(
-            props.model,
-            showRechargePrice,
-            priceRate,
-            usdExchangeRate,
-            props.selectedGroup
-          )}
+          <PlatformCredit>
+            {formatRequestPrice(
+              props.model,
+              showRechargePrice,
+              priceRate,
+              usdExchangeRate,
+              props.selectedGroup,
+              false,
+              true
+            )}
+          </PlatformCredit>
           <span className='text-muted-foreground text-xs font-normal'>
             {' '}
             / {t('request')}
           </span>
         </span>
+        <OfficialPriceComparison
+          value={formatRequestPrice(
+            props.model,
+            false,
+            1,
+            1,
+            undefined,
+            true,
+            false,
+            1
+          )}
+          unitLabel={t('request')}
+        />
       </div>
     )
   }

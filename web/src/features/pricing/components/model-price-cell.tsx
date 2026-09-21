@@ -51,7 +51,9 @@ export function ModelPriceCell(props: {
   const { t, i18n } = useTranslation()
   const currency = useSystemConfigStore((state) => state.config.currency)
   const currencyLabel =
-    currency.quotaDisplayType === 'TOKENS' ? 'USD' : getCurrencyLabel()
+    currency.quotaDisplayType === 'TOKENS' || currency.quotaDisplayType === 'USD'
+      ? 'USD'
+      : getCurrencyLabel()
   const options = props.options ?? {}
   const tokenUnit = options.tokenUnit ?? DEFAULT_TOKEN_UNIT
   const tokenUnitLabel = tokenUnit === 'K' ? '1K' : '1M'

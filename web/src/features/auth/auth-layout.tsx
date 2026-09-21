@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { BrandContactLine } from '@/components/layout/components/brand-contact-line'
+import { ModelPassWordmark } from '@/components/layout/components/modelpass-wordmark'
 import { useSystemConfig } from '@/hooks/use-system-config'
 
 type AuthLayoutProps = {
@@ -39,12 +40,12 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       >
         <div className='relative h-8 w-8'>
           {loading ? (
-            <Skeleton className='absolute inset-0 rounded-full' />
+            <Skeleton className='absolute inset-0 rounded-lg' />
           ) : (
             <img
               src={logo}
               alt={t('Logo')}
-              className='h-8 w-8 rounded-full object-cover'
+              className='h-8 w-8 object-contain'
             />
           )}
         </div>
@@ -53,7 +54,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             <Skeleton className='h-6 w-24' />
           ) : (
             <>
-              <h1 className='text-xl leading-none font-medium'>{systemName}</h1>
+              <h1 className='text-xl leading-none font-medium'>
+                <ModelPassWordmark name={systemName} />
+              </h1>
               <BrandContactLine className='mt-1 max-w-[calc(100vw-4.5rem)] overflow-hidden text-ellipsis sm:max-w-none' />
             </>
           )}

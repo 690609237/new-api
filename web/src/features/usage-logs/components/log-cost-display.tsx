@@ -25,6 +25,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
+import { PlatformCreditAmount } from '@/components/platform-credit-amount'
 import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
@@ -32,7 +33,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { formatLogQuota } from '@/lib/format'
 
 import { hasToolSurcharge } from '../lib/format'
 import type { LogOtherData } from '../types'
@@ -128,7 +128,7 @@ export function LogCostDisplay(props: LogCostDisplayProps) {
               <TooltipContent>{source}</TooltipContent>
             </Tooltip>
           ) : null}
-          <span className='whitespace-nowrap'>{formatLogQuota(quota)}</span>
+          <PlatformCreditAmount value={quota} rawQuota />
         </StatusBadge>
         {showToolSurcharge ? <ToolSurchargeMarker /> : null}
       </div>

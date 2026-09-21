@@ -37,6 +37,7 @@ import { defaultTopNavLinks } from '../config/top-nav.config'
 import type { TopNavLink } from '../types'
 import { BrandContactLine } from './brand-contact-line'
 import { HeaderLogo } from './header-logo'
+import { ModelPassWordmark } from './modelpass-wordmark'
 
 const AUTH_PROMPT_SECONDS = 5
 
@@ -185,7 +186,7 @@ export function PublicHeader(props: PublicHeaderProps) {
         src={systemLogo}
         loading={loading}
         logoLoaded={logoLoaded}
-        className='size-full rounded-lg object-contain'
+        className='size-full object-contain'
       />
     )
   }
@@ -241,7 +242,7 @@ export function PublicHeader(props: PublicHeaderProps) {
                     {loading ? (
                       <Skeleton className='h-4 w-16' />
                     ) : (
-                      displaySiteName
+                      <ModelPassWordmark name={displaySiteName} />
                     )}
                   </span>
                   {!loading && !scrolled && (

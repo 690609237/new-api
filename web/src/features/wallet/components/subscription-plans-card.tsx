@@ -45,6 +45,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { PlatformCreditAmount } from '@/components/platform-credit-amount'
 import {
   getPublicPlans,
   getSelfSubscriptionFull,
@@ -581,7 +582,7 @@ export function SubscriptionPlansCard({
 
                     <div className='py-2'>
                       <span className='text-primary text-2xl font-bold'>
-                        ${price}
+                        <PlatformCreditAmount value={Number(price)} />
                       </span>
                     </div>
 

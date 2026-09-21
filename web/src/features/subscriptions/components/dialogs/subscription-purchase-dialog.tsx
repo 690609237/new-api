@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 
 import { Dialog } from '@/components/dialog'
 import { GroupBadge } from '@/components/group-badge'
+import { PlatformCreditAmount } from '@/components/platform-credit-amount'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
@@ -286,7 +287,9 @@ export function SubscriptionPurchaseDialog(props: Props) {
           <Separator />
           <div className='flex items-center justify-between'>
             <span className='text-sm font-medium'>{t('Amount Due')}</span>
-            <span className='text-primary text-lg font-bold'>${price}</span>
+            <span className='text-primary text-lg font-bold'>
+              <PlatformCreditAmount value={Number(price)} />
+            </span>
           </div>
         </div>
 

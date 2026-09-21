@@ -142,7 +142,7 @@ function getSaveButton(): HTMLButtonElement {
 
 function getControlByLabel(labelText: 'Name'): HTMLInputElement
 function getControlByLabel(labelText: 'Quota (CNY)'): HTMLInputElement
-function getControlByLabel(labelText: 'Quota (USD)'): HTMLInputElement
+function getControlByLabel(labelText: 'Quota (✦)'): HTMLInputElement
 function getControlByLabel(labelText: string): HTMLElement {
   const label = [...document.querySelectorAll<HTMLLabelElement>('label')].find(
     (candidate) => candidate.textContent?.trim() === labelText
@@ -251,7 +251,7 @@ describe('redemption drawer', () => {
 
     await renderDrawer(original)
     await waitForLoadedForm()
-    expect(getControlByLabel('Quota (USD)').value).toBe('1')
+    expect(getControlByLabel('Quota (✦)').value).toBe('1')
 
     changeInput(getControlByLabel('Name'), 'renamed')
     submitForm()
@@ -273,7 +273,7 @@ describe('redemption drawer', () => {
 
     await renderDrawer(original)
     await waitForLoadedForm()
-    changeInput(getControlByLabel('Quota (USD)'), '2')
+    changeInput(getControlByLabel('Quota (✦)'), '2')
     submitForm()
     await waitFor(() => expect(updates).toHaveLength(1))
 

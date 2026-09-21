@@ -27,6 +27,9 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Official pricing': 'Official pricing',
+    'Platform group pricing': 'Platform group pricing',
+    'Remove amount {{amount}}': 'Remove amount {{amount}}',
     'Audit log cleanup': 'Audit log cleanup',
     'Audit log cleanup task started.': 'Audit log cleanup task started.',
     'Clean audit logs': 'Clean audit logs',
@@ -128,6 +131,9 @@ const newKeys = {
       'View the configured sensitive words matched by a request.',
   },
   zh: {
+    'Official pricing': '官方定价',
+    'Platform group pricing': '平台分组定价',
+    'Remove amount {{amount}}': '移除金额 {{amount}}',
     'Audit log cleanup': '审计日志清理',
     'Audit log cleanup task started.': '审计日志清理任务已启动。',
     'Clean audit logs': '清理审计日志',
@@ -226,6 +232,9 @@ const newKeys = {
       '查看请求命中的已配置敏感词。',
   },
   'zh-TW': {
+    'Official pricing': '官方定價',
+    'Platform group pricing': '平台分組定價',
+    'Remove amount {{amount}}': '移除金額 {{amount}}',
     'Audit log cleanup': '稽核日誌清理',
     'Audit log cleanup task started.': '稽核日誌清理工作已啟動。',
     'Clean audit logs': '清理稽核日誌',
@@ -324,6 +333,9 @@ const newKeys = {
       '查看請求命中的已設定敏感詞。',
   },
   fr: {
+    'Official pricing': 'Tarification officielle',
+    'Platform group pricing': 'Tarification par groupe de la plateforme',
+    'Remove amount {{amount}}': 'Supprimer le montant {{amount}}',
     'Audit log cleanup': "Nettoyage du journal d'audit",
     'Audit log cleanup task started.':
       "Tâche de nettoyage du journal d'audit démarrée.",
@@ -427,6 +439,9 @@ const newKeys = {
       'Voir les mots sensibles configurés détectés dans une requête.',
   },
   ja: {
+    'Official pricing': '公式価格',
+    'Platform group pricing': 'プラットフォームのグループ価格',
+    'Remove amount {{amount}}': '金額 {{amount}} を削除',
     'Audit log cleanup': '監査ログのクリーンアップ',
     'Audit log cleanup task started.':
       '監査ログのクリーンアップを開始しました。',
@@ -529,6 +544,9 @@ const newKeys = {
       'リクエストで検出された設定済みの機密語を表示します。',
   },
   ru: {
+    'Official pricing': 'Официальная цена',
+    'Platform group pricing': 'Групповая цена платформы',
+    'Remove amount {{amount}}': 'Удалить сумму {{amount}}',
     'Audit log cleanup': 'Очистка журнала аудита',
     'Audit log cleanup task started.':
       'Задача очистки журнала аудита запущена.',
@@ -633,6 +651,9 @@ const newKeys = {
       'Просматривать настроенные чувствительные слова, совпавшие в запросе.',
   },
   vi: {
+    'Official pricing': 'Giá chính thức',
+    'Platform group pricing': 'Giá theo nhóm nền tảng',
+    'Remove amount {{amount}}': 'Xóa số tiền {{amount}}',
     'Audit log cleanup': 'Dọn dẹp nhật ký kiểm tra',
     'Audit log cleanup task started.':
       'Đã bắt đầu tác vụ dọn dẹp nhật ký kiểm tra.',
@@ -737,6 +758,7 @@ const newKeys = {
 }
 
 const removedKeys = [
+  'Remove ${{amount}}',
   'Seconds to reuse a successful moderation result.',
   'Sensitive word checks',
   'Sensitive word hit rate',

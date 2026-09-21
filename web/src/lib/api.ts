@@ -71,7 +71,11 @@ export async function getUserGroups(): Promise<{
 // ============================================================================
 
 export async function getStatus() {
-  const res = await api.get('/api/status')
+  const res = await api.get('/api/status', {
+    // The response is public and carries an ETag. Let the browser retain a
+    // copy so periodic status checks can revalidate with an empty 304 body.
+    headers: { 'Cache-Control': null },
+  })
   return requireServerSuccess(res.data)?.data as Record<string, unknown>
 }
 

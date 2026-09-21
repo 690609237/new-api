@@ -131,6 +131,12 @@ test('inline system brand shows all contact methods in the mobile app header', a
   expect(mobileContact?.classList).toContain('absolute')
   expect(mobileContact?.classList).toContain('lg:hidden')
 
+  const logo = container.querySelector('img[alt="Logo"]')
+  expect(logo).not.toBeNull()
+  expect(logo?.classList).toContain('object-contain')
+  expect(logo?.classList).not.toContain('rounded-full')
+  expect(logo?.parentElement?.classList).not.toContain('overflow-hidden')
+
   await act(async () => root.unmount())
   container.remove()
   queryClient.clear()

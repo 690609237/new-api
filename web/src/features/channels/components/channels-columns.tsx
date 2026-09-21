@@ -48,7 +48,7 @@ import {
 } from '@/components/ui/tooltip'
 import { toIntlLocale } from '@/i18n/languages'
 import {
-  formatCurrencyFromUSD,
+  formatBillingCurrencyFromUSD,
   formatQuotaWithCurrency,
   getCurrencyLabel,
 } from '@/lib/currency'
@@ -372,7 +372,7 @@ export function BalanceCell({ channel }: { channel: Channel }) {
     })
   )
   const remainingFull = withSuffix(
-    formatCurrencyFromUSD(balance, balanceFormatOptions)
+    formatBillingCurrencyFromUSD(balance, balanceFormatOptions)
   )
   const usedDisplay =
     usedFull.length > MAX_INLINE_BALANCE_CHARS
@@ -387,7 +387,7 @@ export function BalanceCell({ channel }: { channel: Channel }) {
   const remainingDisplay =
     remainingFull.length > MAX_INLINE_BALANCE_CHARS
       ? withSuffix(
-          formatCurrencyFromUSD(balance, {
+          formatBillingCurrencyFromUSD(balance, {
             compact: true,
             locale,
             showSymbol: layout !== 'card',
@@ -467,7 +467,7 @@ export function BalanceCell({ channel }: { channel: Channel }) {
       if (response.success && response.balance !== undefined) {
         toast.success(
           t('Balance updated: {{balance}}', {
-            balance: formatCurrencyFromUSD(response.balance, {
+            balance: formatBillingCurrencyFromUSD(response.balance, {
               digitsLarge: 2,
               digitsSmall: 4,
               abbreviate: false,

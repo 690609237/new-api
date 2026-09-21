@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 
 import { StaticDataTable } from '@/components/data-table/static/static-data-table'
 import { StaticRowActions } from '@/components/data-table/static/static-row-actions'
+import { PlatformCreditAmount } from '@/components/platform-credit-amount'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 
@@ -152,7 +153,12 @@ export function AmountDiscountVisualEditor({
                 id: 'amount',
                 header: t('Recharge Amount'),
                 cell: (discount) => (
-                  <span className='font-mono text-sm'>${discount.amount}</span>
+                  <span className='font-mono text-sm'>
+                    <PlatformCreditAmount
+                      value={discount.amount}
+                      className='font-mono text-sm'
+                    />
+                  </span>
                 ),
               },
               {
@@ -202,7 +208,7 @@ export function AmountDiscountVisualEditor({
                 <div className='mb-3 flex items-start justify-between'>
                   <div className='flex-1'>
                     <div className='mb-2 font-mono text-base font-medium'>
-                      ${discount.amount}
+                      <PlatformCreditAmount value={discount.amount} />
                     </div>
                     <StatusBadge
                       variant={discount.discountRate < 1 ? 'info' : 'neutral'}

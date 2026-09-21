@@ -30,7 +30,7 @@ import { Dialog } from '@/components/dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { IconBadge } from '@/components/ui/icon-badge'
-import { formatCurrencyFromUSD } from '@/lib/currency'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatTimestampToDate } from '@/lib/format'
 import { handleServerError } from '@/lib/handle-server-error'
 import { createServerError } from '@/lib/server-error-message'
@@ -137,7 +137,7 @@ export function BalanceQueryDialog(props: BalanceQueryDialogProps) {
   }
 
   const formatBalance = (bal: number) =>
-    formatCurrencyFromUSD(bal, {
+    formatBillingCurrencyFromUSD(bal, {
       digitsLarge: 2,
       digitsSmall: 4,
       abbreviate: false,
