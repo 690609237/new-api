@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { getDefaultHomePageContent } from '@/features/home/default-home-page-content'
 
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
@@ -54,6 +55,9 @@ const _systemInfoSchema = z.object({
   Footer: z.string().optional(),
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
+  general_setting: z.object({
+    docs_link: z.string(),
+  }),
   legal: z.object({
     user_agreement: z.string().optional(),
     privacy_policy: z.string().optional(),
@@ -74,6 +78,7 @@ function normalizeValue(value: unknown): string {
 export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const defaultHomePageContent = getDefaultHomePageContent(t)
 
   const normalizedDefaults: SystemInfoFormValues = {
     SystemName: normalizeValue(defaultValues.SystemName),
@@ -82,7 +87,11 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Logo: normalizeValue(defaultValues.Logo),
     Footer: normalizeValue(defaultValues.Footer),
     About: normalizeValue(defaultValues.About),
-    HomePageContent: normalizeValue(defaultValues.HomePageContent),
+    HomePageContent:
+      normalizeValue(defaultValues.HomePageContent) || defaultHomePageContent,
+    general_setting: {
+      docs_link: normalizeValue(defaultValues.general_setting?.docs_link),
+    },
     legal: {
       user_agreement: normalizeValue(defaultValues.legal?.user_agreement),
       privacy_policy: normalizeValue(defaultValues.legal?.privacy_policy),
@@ -104,6 +113,9 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: z.string().optional(),
     About: z.string().optional(),
     HomePageContent: z.string().optional(),
+    general_setting: z.object({
+      docs_link: z.string(),
+    }),
     legal: z.object({
       user_agreement: z.string().optional(),
       privacy_policy: z.string().optional(),
@@ -227,6 +239,26 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
 
               <FormField
                 control={form.control}
+                name='general_setting.docs_link'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Documentation Link')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t('https://docs.example.com')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Link to your documentation site')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name='Footer'
                 render={({ field }) => (
                   <FormItem>
@@ -282,14 +314,16 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                       <FormLabel>{t('Home Page Content')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={t('Welcome to our New API...')}
-                          rows={6}
+                          className='min-h-[30rem] resize-y font-mono text-xs leading-5'
+                          placeholder={defaultHomePageContent}
+                          rows={20}
+                          spellCheck={false}
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
                         {t(
-                          'Content displayed on the home page (supports Markdown)'
+                          'Only replaces the home page information card area. Supports sanitized HTML and Markdown; leave empty to use the default template.'
                         )}
                       </FormDescription>
                       <FormMessage />

@@ -21,12 +21,17 @@ import { Link } from '@tanstack/react-router'
 import { AlertTriangle, ArrowRight, BookOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { RichContent } from '@/components/rich-content'
 import { Button } from '@/components/ui/button'
+import { IconBadge } from '@/components/ui/icon-badge'
+import { isLikelyHtml } from '@/lib/content-format'
 
+import { getDefaultHomePageContent } from '../../default-home-page-content'
 import { HeroTerminalDemo } from '../hero-terminal-demo'
 
 interface HeroProps {
   className?: string
+  homePageContent?: string
   isAuthenticated?: boolean
 }
 
@@ -46,6 +51,9 @@ const MoreIcon = () => (
 
 export function Hero(props: HeroProps) {
   const { t } = useTranslation()
+  const homePageContent =
+    props.homePageContent?.trim() || getDefaultHomePageContent(t)
+  const contentIsHtml = isLikelyHtml(homePageContent)
 
   const renderDocsButton = () => {
     return (
@@ -81,54 +89,46 @@ export function Hero(props: HeroProps) {
       />
 
       <div className='mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-8'>
-        {/* Left Column: Title, description, action buttons and application support */}
+        {/* Left Column: notice, pricing details, action buttons and application support */}
         <div className='flex flex-col items-start text-left lg:col-span-6'>
-          <div className='mb-6 flex w-full flex-wrap items-center gap-3'>
-            {/* Top Pill Badge */}
-            <div
-              className='landing-animate-fade-up inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/5 px-3 py-1.5 text-[11px] font-medium text-blue-600 opacity-0 shadow-xs dark:border-blue-400/20 dark:bg-blue-400/5 dark:text-blue-400'
-              style={{ animationDelay: '0ms' }}
+          <div
+            role='note'
+            className='landing-animate-fade-up flex w-full max-w-xl items-center gap-3 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-orange-500/5 px-5 py-4 text-amber-800 opacity-0 shadow-[0_14px_40px_-28px_rgba(245,158,11,0.8)] dark:border-amber-400/35 dark:from-amber-400/15 dark:via-amber-400/10 dark:to-orange-400/5 dark:text-amber-200'
+            style={{ animationDelay: '0ms' }}
+          >
+            <IconBadge
+              tone='warning'
+              size='lg'
+              className='bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/20 dark:bg-amber-400/15 dark:text-amber-300 dark:ring-amber-400/20'
             >
-              <span className='relative flex size-1.5'>
-                <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75' />
-                <span className='relative inline-flex size-1.5 rounded-full bg-blue-500 dark:bg-blue-400' />
-              </span>
-              <span>{t('AI Application Infrastructure Foundation')}</span>
-            </div>
-
-            <div
-              role='note'
-              className='flex w-fit max-w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-amber-700 shadow-sm dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300'
-            >
-              <AlertTriangle className='size-4 shrink-0' aria-hidden='true' />
-              <span>
-                {t('Use responsibly; breaking limits is strictly prohibited!')}
-              </span>
-            </div>
+              <AlertTriangle />
+            </IconBadge>
+            <strong className='text-base font-semibold tracking-wide sm:text-lg'>
+              {t('Use responsibly; breaking limits is strictly prohibited!')}
+            </strong>
           </div>
 
-          <h1
-            className='landing-animate-fade-up text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.15] font-bold tracking-tight'
+          <div
+            role='region'
+            aria-label={t('Platform pricing and channel source summary')}
+            className='landing-animate-fade-up mt-4 flex w-full max-w-xl flex-col gap-3 opacity-0'
             style={{ animationDelay: '60ms' }}
           >
-            {t('Unified API Gateway for')}
-            <br />
-            <span className='bg-gradient-to-r from-blue-400 via-violet-400 to-purple-500 bg-clip-text text-transparent'>
-              {t('Vast Range of AI Models')}
-            </span>
-          </h1>
-          <p
-            className='landing-animate-fade-up text-muted-foreground/80 mt-5 max-w-xl text-base leading-relaxed opacity-0 md:text-[15px]'
-            style={{ animationDelay: '120ms' }}
-          >
-            {t(
-              'Access a vast selection of models via a standard, unified API protocol. Power AI applications, manage digital assets, and connect the Future.'
-            )}
-          </p>
+            <RichContent
+              mode={contentIsHtml ? 'html' : 'markdown'}
+              htmlVariant='isolated'
+              content={homePageContent}
+              className={
+                contentIsHtml
+                  ? 'home-feature-content'
+                  : 'bg-card/60 border-border/60 rounded-2xl border p-5 shadow-sm'
+              }
+            />
+          </div>
 
           <div
-            className='landing-animate-fade-up mt-8 flex flex-wrap items-center gap-3 opacity-0'
-            style={{ animationDelay: '180ms' }}
+            className='landing-animate-fade-up mt-6 flex flex-wrap items-center gap-3 opacity-0'
+            style={{ animationDelay: '120ms' }}
           >
             {props.isAuthenticated ? (
               <>

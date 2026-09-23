@@ -19,17 +19,16 @@ For commercial licensing, please contact support@quantumnous.com
 import i18next from 'i18next'
 import { useEffect, useState } from 'react'
 
-import { isHttpUrl } from '@/lib/content-format'
 import { handleServerError } from '@/lib/handle-server-error'
 
 import { getHomePageContent } from '../api'
 import type { HomePageContentResult } from '../types'
 
-const STORAGE_KEY = 'home_page_content'
+const STORAGE_KEY = 'home_page_information_content_v2'
 
 /**
- * Hook to load and manage custom home page content
- * Supports both Markdown/HTML content and iframe URLs
+ * Loads the configurable Markdown/HTML content for the home-page information
+ * area. The surrounding home-page layout is always rendered by the app.
  */
 export function useHomePageContent(): HomePageContentResult {
   const [content, setContent] = useState<string>('')
@@ -76,7 +75,5 @@ export function useHomePageContent(): HomePageContentResult {
     }
   }, [])
 
-  const isUrl = isHttpUrl(content)
-
-  return { content, isLoaded, isUrl }
+  return { content, isLoaded }
 }

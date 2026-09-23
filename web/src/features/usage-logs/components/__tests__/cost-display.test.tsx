@@ -39,6 +39,13 @@ function renderCost(
   return render(<LogCostDisplay {...props} />)
 }
 
+function expectPlatformAmount(amount: string) {
+  const value = screen.getByText(amount)
+  expect(value).toBeVisible()
+  expect(value.parentElement).toHaveTextContent(`✦${amount}`)
+  return value
+}
+
 describe('log cost display', () => {
   beforeAll(() => {
     i18next.addResourceBundle('en', 'translation', {
@@ -58,10 +65,10 @@ describe('log cost display', () => {
   })
 
   test.each([
-    { consumed: 12500, expected: '$0.025' },
-    { consumed: 0, expected: '$0' },
-    { consumed: 1, expected: '$0.000002' },
-    { consumed: undefined, expected: '$0.01' },
+    { consumed: 12500, expected: '0.025' },
+    { consumed: 0, expected: '0' },
+    { consumed: 1, expected: '0.000002' },
+    { consumed: undefined, expected: '0.01' },
   ])(
     'shows subscription deduction $consumed without hover, falling back only when absent',
     ({ consumed, expected }) => {
@@ -74,7 +81,7 @@ describe('log cost display', () => {
         showBillingSource: true,
       })
 
-      expect(screen.getByText(expected)).toBeVisible()
+      expectPlatformAmount(expected)
       expect(screen.getByRole('img', { name: 'Subscription' })).toBeVisible()
       expect(screen.queryByText('Subscription')).not.toBeInTheDocument()
       expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
@@ -88,44 +95,44 @@ describe('log cost display', () => {
       showBillingSource: true,
     })
 
-    expect(screen.getByText('$0.01')).toBeVisible()
+    expectPlatformAmount('0.01')
     expect(screen.getByRole('img', { name: 'Wallet' })).toBeVisible()
     expect(screen.queryByText('Wallet')).not.toBeInTheDocument()
     expect(screen.queryByText('Subscription')).not.toBeInTheDocument()
   })
 
-  test.each(['wallet', 'subscription'])(
-    'hides the %s icon when subscriptions are unavailable',
-    (source) => {
-      renderCost({
-        quota: 5000,
-        other: { billing_source: source },
-        showBillingSource: false,
-      })
+  test('hides the wallet icon when subscriptions are unavailable', () => {
+    renderCost({
+      quota: 5000,
+      other: { billing_source: 'wallet' },
+      showBillingSource: false,
+    })
 
-      expect(screen.getByText('$0.01')).toBeVisible()
-      expect(screen.queryByText('Wallet')).not.toBeInTheDocument()
-      expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    }
-  )
-
-  test('keeps legacy cost visible without inventing a funding source', () => {
-    renderCost({ quota: 5000, other: null })
-
-    expect(screen.getByText('$0.01')).toBeVisible()
+    expectPlatformAmount('0.01')
     expect(screen.queryByText('Wallet')).not.toBeInTheDocument()
-    expect(screen.queryByText('Subscription')).not.toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
-  test('keeps the subscription deduction when its source icon is hidden', () => {
+  test('keeps the subscription icon on a subscription-billed log when billing sources are hidden', () => {
     renderCost({
       quota: 5000,
       other: { billing_source: 'subscription', subscription_consumed: 12500 },
       showBillingSource: false,
     })
 
-    expect(screen.getByText('$0.025')).toBeVisible()
+    expectPlatformAmount('0.025')
+    expect(screen.getByRole('img', { name: 'Subscription' })).toBeVisible()
+    expect(
+      screen.queryByRole('img', { name: 'Wallet' })
+    ).not.toBeInTheDocument()
+  })
+
+  test('keeps legacy cost visible without inventing a funding source', () => {
+    renderCost({ quota: 5000, other: null })
+
+    expectPlatformAmount('0.01')
+    expect(screen.queryByText('Wallet')).not.toBeInTheDocument()
+    expect(screen.queryByText('Subscription')).not.toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
@@ -136,14 +143,10 @@ describe('log cost display', () => {
       showBillingSource: true,
     })
 
-    const amount = screen.getByText('$4,294.9673')
-    expect(amount).toBeVisible()
-    expect(amount).toHaveClass('whitespace-nowrap')
-    expect(amount.closest('[data-slot="status-badge"]')).toHaveClass(
-      'border',
-      'rounded-md',
-      'tabular-nums'
-    )
+    const amount = expectPlatformAmount('4,294.9673')
+    const badge = amount.closest('[data-slot="status-badge"]')
+    expect(badge).toHaveClass('whitespace-nowrap')
+    expect(badge).toHaveClass('border', 'rounded-md', 'tabular-nums')
     expect(rendered.container.firstElementChild).toHaveClass('inline-flex')
     expect(rendered.container.firstElementChild).not.toHaveClass('flex-col')
     expect(screen.getByRole('img', { name: 'Subscription' })).toBeVisible()
@@ -185,7 +188,7 @@ describe('log cost display', () => {
       },
     })
 
-    expect(screen.getByText('$0.025')).toBeVisible()
+    expectPlatformAmount('0.025')
     const marker = screen.getByRole('img', {
       name: 'Includes tool-call surcharge',
     })
@@ -205,7 +208,7 @@ describe('log cost display', () => {
       showBillingSource: true,
     })
 
-    expect(screen.getByText('$0.01')).toBeVisible()
+    expectPlatformAmount('0.01')
     expect(screen.getByRole('img', { name: 'Subscription' })).toBeVisible()
     expect(
       screen.getByRole('img', { name: 'Includes tool-call surcharge' })

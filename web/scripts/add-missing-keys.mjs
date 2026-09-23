@@ -358,7 +358,7 @@ const newKeys = {
       "Les enregistrements d'audit antérieurs au {{date}} seront définitivement supprimés. Seule la table audit_logs est concernée ; les journaux d'utilisation et fichiers journaux du serveur resteront inchangés.",
     'Delete audit logs': "Supprimer le journal d'audit",
     'Use responsibly; breaking limits is strictly prohibited!':
-      'Utilisez le service de manière responsable ; tout contournement des limites est strictement interdit !',
+      'Utilisation responsable exigée. Contourner les limites est interdit !',
     'Content Moderation': 'Modération du contenu',
     'Save moderation settings': 'Enregistrer les paramètres de modération',
     'Enable content moderation': 'Activer la modération du contenu',
