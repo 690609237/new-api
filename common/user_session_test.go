@@ -7,6 +7,8 @@ import (
 )
 
 func TestInitUserSessionSettingsUsesPositiveFallbacksAndClampsWindow(t *testing.T) {
+	assert.Equal(t, 100, DefaultUserSessionActiveLimit)
+
 	previousActiveLimit := UserSessionActiveLimit
 	previousIssuanceLimit := UserSessionIssuanceLimit
 	previousIssuanceWindow := UserSessionIssuanceWindowSeconds

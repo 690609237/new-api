@@ -9,6 +9,7 @@
 | 违规与封禁 | 违规次数按 24 小时窗口统计；达到用户设置的上限后自动 API 封禁。管理员可调整上限、重置违规次数并解除普通用户的审核封禁。 |
 | 用户输入日志 | 记录当前用户轮次和使用的令牌名称，不记录 system prompt、历史上下文或 assistant/tool continuation；自动化 Codex 请求不重复写入。 |
 | 平台额度与品牌 | 平台内部额度统一使用 `✦` 标识；默认站点 Logo、首页 Logo、Favicon 和桌面端图标保持一致，同时保留管理员自定义 Logo 的覆盖能力。 |
+| 首页信息区域 | 首页左侧信息卡支持在“系统管理 → 站点与品牌 → 系统信息”中使用 HTML 或 Markdown 运维；空配置时按当前界面语言显示默认内容，且不会替换首页其他区域。 |
 | 品牌与帮助 | 保留联系方式、关于页、帮助文档入口、帮助内容和截图资源。 |
 | 注册提示 | 注册页保留邮箱支持/用途说明，并以气泡提示方式展示。 |
 | 支付与订单 | 充值支付方式校验、额度安全保护和待处理订单清理保持启用。 |
@@ -27,6 +28,57 @@
 - `logo.png`、`favicon.ico` 以及 Electron 主图标和托盘图标保持同一品牌视觉，用于不支持 SVG 或需要固定尺寸图标的环境。
 - 管理员在系统设置中配置的 Logo 仍优先于默认图标；未配置或状态数据不可用时才回退到 `/logo.svg?v=2`。
 - 前端启动时先应用本地缓存的系统名称和 Logo，再通过共享的 `/api/status` 查询刷新；该公开接口允许浏览器使用 ETag 重验证，同页多个消费者共用同一查询缓存。
+
+## 首页信息区域配置化（2026-09-24）
+
+### 上线功能
+
+- `HomePageContent` 的替换范围收敛为首页左侧、警示语下方的两张信息卡，不再替换整个首页。
+- “文明使用，严禁破限！”警示语、注册/定价/文档按钮、支持应用区域和右侧终端演示均保留在固定页面结构中，不受该配置影响。
+- 在“系统管理 → 站点与品牌 → 系统信息 → 首页内容”中可以直接维护 HTML 或 Markdown；内容在渲染前会经过净化，HTML 使用隔离的 Shadow DOM 渲染，配置中的样式不会污染首页其他组件。
+- 已移除将完整 URL 解释为 iframe，以及使用配置内容替换整页的旧逻辑。
+- 配置为空时显示内置默认模板。默认模板包含纵向排列的“平台 1:1 充值”和“一手token分组”两张卡片；模型价格使用 `$` 标识，`default`、`standard` 作为自有 token 来源标识保持原文。
+- 首页内容本地缓存键升级为 `home_page_information_content_v2`，避免旧版整页内容缓存继续覆盖新版局部信息区域。
+
+### 多语言行为
+
+- 内置默认模板会使用当前界面语言动态生成，支持 `en`、`zh`、`zh-TW`、`fr`、`ja`、`ru`、`vi`。
+- 管理员保存的自定义 HTML 或 Markdown 属于运维内容，所有界面语言显示同一份配置，不进行自动机器翻译；需要分语言运营时应由管理员在内容或后续配置能力中显式维护。
+- `default`、`standard` 和 `$ USD` 是技术及币种标识，不参与翻译。
+- 本功能使用的主要翻译键包括：
+  - `Use responsibly; breaking limits is strictly prohibited!`
+  - `Platform pricing and channel source summary`
+  - `1:1 platform recharge`
+  - `Model prices use the $ symbol. Overseas models follow international pricing, while domestic models follow domestic pricing.`
+  - `First-party token groups`
+  - `Only replaces the home page information card area. Supports sanitized HTML and Markdown; leave empty to use the default template.`
+
+### 冲突合并索引
+
+合并上游首页、系统设置或多语言改动时，应优先保留以下行为和文件职责：
+
+| 文件 | 需要保留的定制 |
+| --- | --- |
+| `web/src/features/home/default-home-page-content.ts` | 默认信息卡的完整 HTML/CSS、响应式样式、动态翻译和插值内容的 HTML 转义。 |
+| `web/src/features/home/components/sections/hero.tsx` | 固定警示语与首页其他模块，仅在信息卡区域使用 `RichContent`；HTML 使用 `htmlVariant='isolated'`。 |
+| `web/src/features/home/index.tsx` | 将 `HomePageContent` 作为局部信息卡内容传给 `Hero`，不得恢复整页 URL/iframe 或整页内容分支。 |
+| `web/src/features/home/hooks/use-home-page-content.ts` | 使用 `home_page_information_content_v2` 缓存键读取和更新服务端配置。 |
+| `web/src/features/home/types.ts` | 首页内容类型不再包含整页 iframe/替换模式。 |
+| `web/src/features/system-settings/general/system-info-section.tsx` | 空值时向运维人员展示完整默认模板，并说明配置只替换首页信息卡区域。 |
+| `web/src/features/home/components/sections/__tests__/hero-links.test.tsx` | 覆盖固定区域保留、默认模板、自定义内容净化、翻译插值和 HTML 转义。 |
+| `web/src/i18n/locales/*.json` | 保留上述首页文案在七种语言中的翻译。 |
+| `web/scripts/add-missing-keys.mjs` | 保留法文警示语的短版翻译，避免同步脚本恢复为移动端容易产生孤立标点的长文案。 |
+
+处理冲突时，推荐先合并 `default-home-page-content.ts` 和 `hero.tsx` 的渲染边界，再处理设置页和数据传递，最后运行 i18n 同步。不要把 `HomePageContent` 恢复为首页路由级的整页替换开关。
+
+### 上线前验证记录
+
+- 七种界面语言的桌面端首页已完成视觉检查。
+- 法文和俄文长文案没有溢出；法文警示语已缩短为适合当前卡片宽度的版本。
+- 390 × 844 移动端已检查深色和浅色主题，信息卡、按钮及支持应用区域均能正常换行，页面无横向溢出。
+- 定向 Vitest 共 5 项通过，覆盖默认内容、自定义内容净化、本地化和 HTML 转义。
+- `sync-i18n.mjs` 检查结果为所有语言 `missingCount=0`、`extrasCount=0`。
+- Oxlint、TypeScript 类型检查、格式检查、生产构建和 `git diff --check` 均通过。
 
 ## 订阅与计费
 

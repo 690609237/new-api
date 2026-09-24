@@ -98,11 +98,11 @@ func cachedLoginSessionKey(t *testing.T, server *miniredis.Miniredis) string {
 func TestCreateLoginSessionEnforcesActiveLimitAcrossAuthVersions(t *testing.T) {
 	useTestSessionSecret(t)
 	user := setupAuthSessionTestDB(t)
-	common.UserSessionActiveLimit = 50
+	common.UserSessionActiveLimit = common.DefaultUserSessionActiveLimit
 	common.UserSessionIssuanceLimit = 100
 	now := time.Now().Unix()
-	rows := make([]model.UserSession, 0, 49)
-	for i := range 49 {
+	rows := make([]model.UserSession, 0, common.DefaultUserSessionActiveLimit-1)
+	for i := range common.DefaultUserSessionActiveLimit - 1 {
 		authVersion := user.AuthVersion
 		if i == 0 {
 			authVersion++
@@ -123,13 +123,22 @@ func TestCreateLoginSessionEnforcesActiveLimitAcrossAuthVersions(t *testing.T) {
 	require.NoError(t, model.DB.Create(&rows).Error)
 
 	_, err := CreateLoginSession(user.Id, "password", "127.0.0.1", "test-agent")
-	require.NoError(t, err, "49 active sessions must allow creation of the 50th")
+	require.NoError(t, err, "99 active sessions must allow creation of the 100th")
 
 	_, err = CreateLoginSession(user.Id, "password", "127.0.0.1", "test-agent")
 	assert.ErrorIs(t, err, model.ErrUserSessionLimit)
 	var count int64
 	require.NoError(t, model.DB.Model(&model.UserSession{}).Count(&count).Error)
-	assert.Equal(t, int64(50), count)
+	assert.Equal(t, int64(common.DefaultUserSessionActiveLimit), count)
+}
+
+func TestCreateLoginSessionUsesFifteenDayAbsoluteLifetime(t *testing.T) {
+	useTestSessionSecret(t)
+	user := setupAuthSessionTestDB(t)
+
+	bundle, err := CreateLoginSession(user.Id, "password", "127.0.0.1", "test-agent")
+	require.NoError(t, err)
+	assert.Equal(t, int64((15*24*time.Hour)/time.Second), bundle.Session.ExpiresAt-bundle.Session.CreatedAt)
 }
 
 func TestCreateLoginSessionEnforcesIssuanceLimitAcrossAllStatuses(t *testing.T) {
