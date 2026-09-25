@@ -411,6 +411,7 @@ export type SecuritySettings = {
   ModerationBaseURL: string
   ModerationAPIKey: string
   ModerationModel: string
+  ModerationScoreThreshold: number
   ModerationAlertEmail: string
   ModerationAlertThreshold: number
   ModerationCacheTTLSeconds: number
@@ -423,6 +424,12 @@ export type SecuritySettings = {
   ModerationTimeoutWindowSeconds: number
   ModerationTimeoutThreshold: number
   ModerationTimeoutPauseSeconds: number
+  DailyReviewEnabled: boolean
+  DailyReviewHour: number
+  DailyReviewPrompt: string
+  DailyReviewBaseURL: string
+  DailyReviewModel: string
+  DailyReviewAPIKey: string
   'fetch_setting.enable_ssrf_protection': boolean
   'fetch_setting.allow_private_ip': boolean
   'fetch_setting.domain_filter_mode': boolean

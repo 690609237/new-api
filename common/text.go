@@ -22,7 +22,7 @@ import "unicode/utf8"
 
 // ModerationPromptMaxRunes bounds text sent to the moderation provider and
 // retained in moderation logs.
-const ModerationPromptMaxRunes = 4096
+const ModerationPromptMaxRunes = 8192
 
 // TruncateStringFromEnd keeps the newest maxRunes of value.
 func TruncateStringFromEnd(value string, maxRunes int) string {

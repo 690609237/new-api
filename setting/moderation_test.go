@@ -46,6 +46,27 @@ func TestShouldModeratePromptForUserHonorsExemptionsAndSampling(t *testing.T) {
 	require.True(t, ShouldModeratePromptForUser(43, "default"))
 }
 
+func TestModerationScoreThresholdUsesDefaultEnvironmentAndOptionOverride(t *testing.T) {
+	moderationMu.Lock()
+	previousValue := moderationScoreThreshold
+	previousOverrides := moderationOptionOverrides
+	moderationOptionOverrides = map[string]bool{}
+	moderationMu.Unlock()
+	t.Cleanup(func() {
+		moderationMu.Lock()
+		defer moderationMu.Unlock()
+		moderationScoreThreshold = previousValue
+		moderationOptionOverrides = previousOverrides
+	})
+
+	t.Setenv(moderationScoreThresholdEnv, "")
+	require.Equal(t, 0.6, ModerationScoreThreshold())
+	t.Setenv(moderationScoreThresholdEnv, "0.75")
+	require.Equal(t, 0.75, ModerationScoreThreshold())
+	UpdateModerationOption("ModerationScoreThreshold", "0.8")
+	require.Equal(t, 0.8, ModerationScoreThreshold())
+}
+
 func TestModerationOptionsSupportConcurrentReadsAndUpdates(t *testing.T) {
 	moderationMu.Lock()
 	oldEnabled := moderationEnabled

@@ -155,6 +155,8 @@ export interface LogOtherData {
       source?: 'api' | 'cache' | string
       policy?: string
       rules?: string[]
+      scores?: Record<string, number>
+      threshold?: number
     }
   }
   root_info?: {

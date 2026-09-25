@@ -20,6 +20,8 @@ import (
 const (
 	userMessageLogPrefix           = "user-messages-"
 	userMessageLogSuffix           = ".jsonl"
+	dailyReviewReportPrefix        = "daily-review-"
+	dailyReviewReportSuffix        = ".md"
 	defaultUserMessageLogMaxSizeMB = 100
 	defaultUserMessageLogMaxFiles  = 100
 	defaultUserMessageLogRetention = 15
@@ -49,8 +51,9 @@ type userMessageLogConfig struct {
 type userMessageLogWriter struct {
 	mu sync.Mutex
 
-	config userMessageLogConfig
-	now    func() time.Time
+	config      userMessageLogConfig
+	now         func() time.Time
+	reportsOnly bool
 
 	file        *os.File
 	currentPath string
@@ -70,9 +73,10 @@ var (
 
 func setupUserMessageLogger() {
 	userMessageLoggerOnce.Do(func() {
-		if *common.LogDir == "" || !common.GetEnvOrDefaultBool("USER_MESSAGE_LOG_ENABLED", true) {
+		if *common.LogDir == "" {
 			return
 		}
+		logEnabled := common.GetEnvOrDefaultBool("USER_MESSAGE_LOG_ENABLED", true)
 
 		maxSizeMB := common.GetEnvOrDefault("USER_MESSAGE_LOG_MAX_SIZE_MB", defaultUserMessageLogMaxSizeMB)
 		if maxSizeMB <= 0 {
@@ -103,9 +107,12 @@ func setupUserMessageLogger() {
 				dedupWindow:   time.Duration(dedupSeconds) * time.Second,
 			},
 			now:            time.Now,
+			reportsOnly:    !logEnabled,
 			recentMessages: make(map[[sha256.Size]byte]time.Time),
 		}
-		userMessageLogger = writer
+		if logEnabled {
+			userMessageLogger = writer
+		}
 
 		if err := writer.cleanup(writer.now()); err != nil {
 			common.SysError("failed to clean user message logs: " + err.Error())
@@ -333,12 +340,32 @@ func (w *userMessageLogWriter) cleanupLocked(now time.Time) error {
 		path    string
 		modTime time.Time
 	}
-	files := make([]fileInfo, 0)
+	// Source logs and review reports share retention settings but have
+	// independent file-count limits, so reports cannot evict source logs.
+	var files [2][]fileInfo
 	cutoff := now.AddDate(0, 0, -w.config.retentionDays)
 	var cleanupErrors []string
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasPrefix(entry.Name(), userMessageLogPrefix) || !strings.HasSuffix(entry.Name(), userMessageLogSuffix) {
+		if entry.IsDir() {
+			continue
+		}
+		group := -1
+		name := entry.Name()
+		switch {
+		case strings.HasPrefix(name, userMessageLogPrefix) && strings.HasSuffix(name, userMessageLogSuffix):
+			if w.reportsOnly {
+				continue
+			}
+			group = 0
+		case strings.HasPrefix(name, dailyReviewReportPrefix) && strings.HasSuffix(name, dailyReviewReportSuffix):
+			day := strings.TrimSuffix(strings.TrimPrefix(name, dailyReviewReportPrefix), dailyReviewReportSuffix)
+			parsed, parseErr := time.Parse("20060102", day)
+			if len(day) == 8 && parseErr == nil && parsed.Format("20060102") == day {
+				group = 1
+			}
+		}
+		if group < 0 {
 			continue
 		}
 		info, infoErr := entry.Info()
@@ -346,25 +373,30 @@ func (w *userMessageLogWriter) cleanupLocked(now time.Time) error {
 			cleanupErrors = append(cleanupErrors, infoErr.Error())
 			continue
 		}
-		path := filepath.Join(w.config.dir, entry.Name())
+		if group == 1 && !info.Mode().IsRegular() {
+			continue
+		}
+		path := filepath.Join(w.config.dir, name)
 		if path != w.currentPath && info.ModTime().Before(cutoff) {
 			if removeErr := os.Remove(path); removeErr != nil {
 				cleanupErrors = append(cleanupErrors, removeErr.Error())
 			}
 			continue
 		}
-		files = append(files, fileInfo{path: path, modTime: info.ModTime()})
+		files[group] = append(files[group], fileInfo{path: path, modTime: info.ModTime()})
 	}
 
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].modTime.After(files[j].modTime)
-	})
-	for i := w.config.maxFiles; i < len(files); i++ {
-		if files[i].path == w.currentPath {
-			continue
-		}
-		if removeErr := os.Remove(files[i].path); removeErr != nil {
-			cleanupErrors = append(cleanupErrors, removeErr.Error())
+	for _, groupFiles := range files {
+		sort.Slice(groupFiles, func(i, j int) bool {
+			return groupFiles[i].modTime.After(groupFiles[j].modTime)
+		})
+		for i := w.config.maxFiles; i < len(groupFiles); i++ {
+			if groupFiles[i].path == w.currentPath {
+				continue
+			}
+			if removeErr := os.Remove(groupFiles[i].path); removeErr != nil {
+				cleanupErrors = append(cleanupErrors, removeErr.Error())
+			}
 		}
 	}
 

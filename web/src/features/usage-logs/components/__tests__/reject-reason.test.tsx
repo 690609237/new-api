@@ -52,22 +52,28 @@ function makeLog(other: LogOtherData): UsageLog {
   }
 }
 
-function renderDetails(isAdmin: boolean): void {
+function renderDetails(
+  isAdmin: boolean,
+  other: LogOtherData = {
+    admin_info: { reject_reason: 'blocked by channel policy' },
+  }
+): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   const freshAt = Date.now() + 60_000
   queryClient.setQueryData(['status'], {}, { updatedAt: freshAt })
+  queryClient.setQueryData(
+    ['usage-log-moderation-detail', 'req-1', 5],
+    { other: JSON.stringify(other) },
+    { updatedAt: freshAt }
+  )
   queryClients.push(queryClient)
 
   render(
     <QueryClientProvider client={queryClient}>
       <DetailsDialog
-        log={makeLog({
-          admin_info: {
-            reject_reason: 'blocked by channel policy',
-          },
-        })}
+        log={makeLog(other)}
         isAdmin={isAdmin}
         isRoot={false}
         open
@@ -97,5 +103,37 @@ describe('usage log reject reason', () => {
 
     expect(screen.queryByText('Reject Reason')).toBeNull()
     expect(screen.queryByText('blocked by channel policy')).toBeNull()
+  })
+})
+
+describe('moderation rejection details', () => {
+  const moderationLog: LogOtherData = {
+    admin_info: {
+      moderation: {
+        policy: 'moderation_api',
+        flagged: true,
+        prompt: 'sample prompt',
+        rules: ['violence', 'harassment'],
+        scores: { violence: 0.827431, harassment: 0.6 },
+        threshold: 0.6,
+      },
+    },
+  }
+
+  test('shows matched categories, original scores and threshold to admins', () => {
+    renderDetails(true, moderationLog)
+
+    expect(screen.getByText('Matched categories and scores')).toBeVisible()
+    expect(screen.getByText('violence: 0.827431')).toBeVisible()
+    expect(screen.getByText('harassment: 0.6')).toBeVisible()
+    expect(screen.getByText('Score threshold')).toBeVisible()
+    expect(screen.getByText('sample prompt')).toBeVisible()
+  })
+
+  test('hides matched categories and scores from non-admin users', () => {
+    renderDetails(false, moderationLog)
+
+    expect(screen.queryByText('violence: 0.827431')).toBeNull()
+    expect(screen.queryByText('sample prompt')).toBeNull()
   })
 })

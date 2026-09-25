@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { CheckCircle2, ExternalLink, Loader2, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -36,8 +37,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { handleServerError } from '@/lib/handle-server-error'
+import { requireServerSuccess } from '@/lib/server-error-message'
 
-import { testModerationEndpoint } from '../api'
+import {
+  getSystemTask,
+  startDailyReviewNow,
+  testModerationEndpoint,
+} from '../api'
 import {
   SettingsForm,
   SettingsSwitchContent,
@@ -54,6 +61,7 @@ const createModerationSchema = (t: (key: string) => string) =>
     ModerationBaseURL: z.string(),
     ModerationAPIKey: z.string(),
     ModerationModel: z.string(),
+    ModerationScoreThreshold: z.number().gt(0).max(1),
     ModerationAlertEmail: z
       .string()
       .refine(
@@ -71,6 +79,12 @@ const createModerationSchema = (t: (key: string) => string) =>
     ModerationTimeoutWindowSeconds: z.number().int().min(1).max(86400),
     ModerationTimeoutThreshold: z.number().int().min(1).max(100),
     ModerationTimeoutPauseSeconds: z.number().int().min(1).max(86400),
+    DailyReviewEnabled: z.boolean(),
+    DailyReviewHour: z.number().int().min(0).max(23),
+    DailyReviewPrompt: z.string().trim().min(1).max(20000),
+    DailyReviewBaseURL: z.string().url(),
+    DailyReviewModel: z.string().trim().min(1).max(128),
+    DailyReviewAPIKey: z.string(),
   })
 
 type ModerationFormValues = z.infer<ReturnType<typeof createModerationSchema>>
@@ -86,6 +100,25 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
     'idle' | 'testing' | 'success' | 'error'
   >('idle')
   const [testMessage, setTestMessage] = useState('')
+  const [reviewTaskId, setReviewTaskId] = useState('')
+  const runReview = useMutation({
+    mutationFn: async () => requireServerSuccess(await startDailyReviewNow()),
+    onSuccess: (response) => {
+      if (response.data) setReviewTaskId(response.data.task_id)
+    },
+    onError: (error: Error) =>
+      handleServerError(error, t('Failed to start daily review')),
+  })
+  const reviewTask = useQuery({
+    queryKey: ['daily-review-task', reviewTaskId],
+    queryFn: async () =>
+      requireServerSuccess(await getSystemTask(reviewTaskId)),
+    enabled: Boolean(reviewTaskId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.data?.status
+      return status === 'succeeded' || status === 'failed' ? false : 3000
+    },
+  })
   const schema = createModerationSchema(t)
   const form = useForm<ModerationFormValues>({
     resolver: zodResolver(schema),
@@ -136,7 +169,12 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
 
   const onSubmit = async (values: ModerationFormValues) => {
     const updates = Object.entries(values).filter(([key, value]) => {
-      if (key === 'ModerationAPIKey' && value === '') return false
+      if (
+        (key === 'ModerationAPIKey' || key === 'DailyReviewAPIKey') &&
+        value === ''
+      ) {
+        return false
+      }
       return value !== defaultValues[key as keyof ModerationFormValues]
     })
 
@@ -320,6 +358,31 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                   <FormDescription>
                     {t(
                       'Receive an email after repeated moderation upstream failures.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='ModerationScoreThreshold'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Moderation score threshold')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='number'
+                      min={0}
+                      max={1}
+                      step='any'
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Reject when any category score reaches this value (greater than 0 and at most 1). Default: 0.6.'
                     )}
                   </FormDescription>
                   <FormMessage />
@@ -568,6 +631,151 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                 </FormItem>
               )}
             />
+          </div>
+
+          <div className='space-y-4 rounded-lg border p-4'>
+            <div>
+              <h3 className='font-semibold'>{t('Daily content review')}</h3>
+              <p className='text-muted-foreground text-sm'>
+                {t(
+                  'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.'
+                )}
+              </p>
+            </div>
+            <FormField
+              control={form.control}
+              name='DailyReviewEnabled'
+              render={({ field }) => (
+                <SettingsSwitchItem>
+                  <SettingsSwitchContent>
+                    <FormLabel>{t('Enable daily review')}</FormLabel>
+                    <FormDescription>
+                      {t(
+                        'Send user-message logs to the configured Responses API for inspection.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </SettingsSwitchItem>
+              )}
+            />
+            <div className='grid gap-4 md:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='DailyReviewHour'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Daily review hour')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={0}
+                        max={23}
+                        step={1}
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Server-local hour, 0–23.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='DailyReviewModel'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Daily review model')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='DailyReviewBaseURL'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Daily review API base URL')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Include /v1; localhost may use HTTP.')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='DailyReviewAPIKey'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Daily review API key')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='password'
+                        autoComplete='new-password'
+                        placeholder={t('Leave blank to keep the existing key')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name='DailyReviewPrompt'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Daily review prompt')}</FormLabel>
+                  <FormControl>
+                    <Textarea rows={10} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className='flex flex-wrap items-center gap-3'>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={
+                  runReview.isPending ||
+                  reviewTask.data?.data?.status === 'running' ||
+                  reviewTask.data?.data?.status === 'pending'
+                }
+                onClick={() => runReview.mutate()}
+              >
+                {runReview.isPending ? (
+                  <Loader2 className='animate-spin' />
+                ) : null}
+                {t('Review today now')}
+              </Button>
+              {reviewTask.data?.data ? (
+                <span role='status' className='text-muted-foreground text-sm'>
+                  {t('Review status')}: {t(reviewTask.data.data.status)}
+                  {reviewTask.data.data.error
+                    ? ` — ${reviewTask.data.data.error}`
+                    : ''}
+                </span>
+              ) : null}
+            </div>
           </div>
         </SettingsForm>
       </Form>

@@ -114,6 +114,18 @@ func TestSystemTaskHistoryDatabaseMatrix(t *testing.T) {
 			deleted, err = DeleteSystemTaskHistory(SystemTaskFilter{})
 			require.NoError(t, err)
 			assert.Zero(t, deleted, "repeated cleanup preserves the scheduler's latest runs")
+
+			review, err := CreateSystemTask(SystemTaskTypeDailyReview, map[string]string{"date": "20260924"}, nil)
+			require.NoError(t, err)
+			activeReview, err := GetActiveSystemTask(SystemTaskTypeDailyReview)
+			require.NoError(t, err)
+			require.NotNil(t, activeReview)
+			assert.Equal(t, review.TaskID, activeReview.TaskID)
+			page, total, err = ListSystemTasks(SystemTaskFilter{Type: SystemTaskTypeDailyReview}, 0, 10)
+			require.NoError(t, err)
+			assert.EqualValues(t, 1, total)
+			require.Len(t, page, 1)
+			assert.Equal(t, review.TaskID, page[0].TaskID)
 		})
 	}
 }

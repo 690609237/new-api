@@ -59,3 +59,21 @@ export async function getModerationUsageStats(params: {
   }
   return response.data.data
 }
+
+export type DailyReviewReport = {
+  date: string
+  content: string
+  available_dates: string[]
+}
+
+export async function getDailyReviewReport(date?: string) {
+  const response = await api.get<{
+    success: boolean
+    message: string
+    data?: DailyReviewReport
+  }>('/api/moderation/daily-review', { params: date ? { date } : {} })
+  if (!response.data.success || !response.data.data) {
+    throw new Error(response.data.message || 'Failed to load daily review')
+  }
+  return response.data.data
+}

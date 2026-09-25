@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/QuantumNous/new-api/common"
 	moderationmodel "github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/cachex"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -16,7 +17,7 @@ import (
 	"github.com/samber/hot"
 )
 
-const sensitiveResultCacheNamespace = "new-api:sensitive-result:v1"
+const sensitiveResultCacheNamespace = "new-api:sensitive-result:v2"
 
 var (
 	sensitiveResultCacheOnce sync.Once
@@ -166,6 +167,11 @@ func matchSensitiveRules(text string, returnImmediately bool) ([]string, []strin
 		}
 		if !matched {
 			continue
+		}
+		if len(rule.words) > 1 {
+			if _, _, nearby := common.FindSensitiveRuleSpan(text, rule.words); !nearby {
+				continue
+			}
 		}
 
 		matchedRules = append(matchedRules, rule.label)

@@ -43,7 +43,7 @@ docker exec new-api sh -lc 'find /data -maxdepth 2 -type f -printf "%p %s bytes\
 # 查找常见 SQLite 数据库文件
 docker exec new-api sh -lc 'find / -type f \( -name "one-api.db" -o -name "*.db" -o -name "*.db-wal" -o -name "*.db-shm" \) 2>/dev/null'
 
-# 查看应用文件日志；本项目 Compose 通常将 /app/logs 映射到独立 volume
+# 查看应用文件日志；默认 Compose 将项目下的 ./logs 映射到容器 /app/logs
 docker exec new-api sh -lc 'find /app/logs -maxdepth 2 -type f -printf "%p %s bytes\n" | sort'
 
 # 进入容器临时排查（退出不会停止容器）
@@ -58,9 +58,8 @@ SQLite 使用 WAL 模式时，数据库目录中的 `one-api.db-wal` 和 `one-ap
 # 列出所有 volume
 docker volume ls
 
-# 查看某个 volume 的实际挂载点
+# 查看某个 volume 的实际挂载点（旧版 Compose 的日志卷；当前默认日志使用项目目录）
 docker volume inspect dmxapi_new_api_data
-docker volume inspect dmxapi_new_api_logs
 
 # 只打印 volume 名称和挂载点
 docker volume inspect dmxapi_new_api_data \
@@ -122,11 +121,7 @@ docker run --rm \
   alpine:3.20 \
   tar czf /backup/new_api_data-$(date +%Y%m%d-%H%M%S).tar.gz -C /source .
 
-docker run --rm \
-  -v dmxapi_new_api_logs:/source:ro \
-  -v "$PWD/backup":/backup \
-  alpine:3.20 \
-  tar czf /backup/new_api_logs-$(date +%Y%m%d-%H%M%S).tar.gz -C /source .
+tar czf ./backup/new_api_logs-$(date +%Y%m%d-%H%M%S).tar.gz -C ./logs .
 ```
 
 备份前最好先停止会写入数据库的应用，尤其是 SQLite。停止 Compose 服务：
@@ -179,10 +174,10 @@ docker logs new-api 2>&1 | grep -Ei 'using (SQLite|MySQL|PostgreSQL)|SQL_DSN not
 
 ```text
 dmxapi_new_api_data -> /data
-dmxapi_new_api_logs -> /app/logs
+<项目根目录>/logs -> /app/logs
 ```
 
-当前容器的 `SQL_DSN` 指向 PostgreSQL，因此 `/data` 为空并不表示数据丢失；主数据在 PostgreSQL 容器的数据库 volume 中。当前应用文件日志位于 `/app/logs`，Docker 标准输出日志由 `json-file` 驱动保存。
+当前容器的 `SQL_DSN` 指向 PostgreSQL，因此 `/data` 为空并不表示数据丢失；主数据在 PostgreSQL 容器的数据库 volume 中。当前应用文件日志位于项目根目录的 `./logs`，容器内路径为 `/app/logs`，Docker 标准输出日志由 `json-file` 驱动保存。升级旧版配置时，原 `new_api_logs` 命名卷不会自动复制到 `./logs`，需要按需手动迁移或备份。
 
 请以你机器上 `docker inspect` 的实时输出为准，不要假设 volume 名称一定是 `dmxapi_*`；Compose 项目名改变后，volume 前缀也会改变。
 

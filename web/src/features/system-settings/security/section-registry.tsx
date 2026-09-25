@@ -53,6 +53,7 @@ const SECURITY_SECTIONS = [
           ModerationBaseURL: settings.ModerationBaseURL,
           ModerationAPIKey: settings.ModerationAPIKey,
           ModerationModel: settings.ModerationModel,
+          ModerationScoreThreshold: settings.ModerationScoreThreshold,
           ModerationAlertEmail: settings.ModerationAlertEmail,
           ModerationAlertThreshold: settings.ModerationAlertThreshold,
           ModerationCacheTTLSeconds: settings.ModerationCacheTTLSeconds,
@@ -66,6 +67,12 @@ const SECURITY_SECTIONS = [
             settings.ModerationTimeoutWindowSeconds,
           ModerationTimeoutThreshold: settings.ModerationTimeoutThreshold,
           ModerationTimeoutPauseSeconds: settings.ModerationTimeoutPauseSeconds,
+          DailyReviewEnabled: settings.DailyReviewEnabled,
+          DailyReviewHour: settings.DailyReviewHour,
+          DailyReviewPrompt: settings.DailyReviewPrompt,
+          DailyReviewBaseURL: settings.DailyReviewBaseURL,
+          DailyReviewModel: settings.DailyReviewModel,
+          DailyReviewAPIKey: settings.DailyReviewAPIKey,
         }}
       />
     ),

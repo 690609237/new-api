@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, RefreshCw } from 'lucide-react'
+import { BarChart3, RefreshCw, ScanSearch } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -15,6 +15,7 @@ import { CompactDateTimeRangePicker } from '@/features/usage-logs/components/com
 import { dateToUnixTimestamp, getRollingDateRange } from '@/lib/time'
 
 import { getModerationUsageStats, type ModerationUsageDimension } from './api'
+import { DailyReviewDialog } from './daily-review-dialog'
 
 type StatsQueryParams = {
   start_timestamp: number
@@ -47,6 +48,7 @@ export function ModerationStats() {
   const [end, setEnd] = useState(defaultRange.end)
   const [userID, setUserID] = useState('')
   const [tokenID, setTokenID] = useState('')
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [queryParams, setQueryParams] = useState<StatsQueryParams>({
     start_timestamp: dateToUnixTimestamp(start),
     end_timestamp: dateToUnixTimestamp(end),
@@ -149,6 +151,10 @@ export function ModerationStats() {
         {t('Moderation Statistics')}
       </SectionPageLayout.Title>
       <SectionPageLayout.Actions>
+        <Button variant='outline' size='sm' onClick={() => setReviewOpen(true)}>
+          <ScanSearch />
+          {t('Daily review results')}
+        </Button>
         <Button
           variant='outline'
           size='sm'
@@ -160,6 +166,7 @@ export function ModerationStats() {
         </Button>
       </SectionPageLayout.Actions>
       <SectionPageLayout.Content>
+        <DailyReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} />
         <div className='flex flex-col gap-4'>
           <Card>
             <CardContent className='grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end'>

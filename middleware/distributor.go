@@ -218,7 +218,7 @@ func runPreChannelModeration(c *gin.Context) bool {
 	}
 	common.SetContextKey(c, constant.ContextKeyModerationChecked, true)
 	if decision.Flagged {
-		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), string(moderationSource), decision.Rules)
+		model.RecordModerationLog(c, c.GetInt("id"), prompt, setting.ModerationModel(), string(moderationSource), decision.Rules, decision.Scores, decision.Threshold)
 		count, limit, banned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 		abortWithOpenAiMessage(c, http.StatusBadRequest, service.ModerationViolationMessage(count, limit, banned), types.ErrorCodePromptBlocked)
 		return false

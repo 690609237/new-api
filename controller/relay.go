@@ -187,7 +187,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 				}
 			}
 			if decision.Flagged {
-				model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), string(moderationSource), decision.Rules)
+				model.RecordModerationLog(c, c.GetInt("id"), moderationText, setting.ModerationModel(), string(moderationSource), decision.Rules, decision.Scores, decision.Threshold)
 				violationCount, violationLimit, accountBanned := service.RecordPromptViolation(c.Request.Context(), c.GetInt("id"))
 				newAPIError = types.NewErrorWithStatusCode(
 					errors.New(service.ModerationViolationMessage(violationCount, violationLimit, accountBanned)),

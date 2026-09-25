@@ -149,6 +149,47 @@ func TestModeratePromptReusesCachedResult(t *testing.T) {
 	require.Equal(t, int32(2), calls.Load())
 }
 
+func TestModeratePromptUsesConfiguredCategoryScoreThreshold(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		_, _ = w.Write([]byte(`{"results":[{"flagged":true,"categories":{"violence":true},"category_scores":{"violence":0.59,"harassment":0.6,"hate":0.9}}]}`))
+	}))
+	defer server.Close()
+	t.Setenv("MODERATION_BASE_URL", server.URL)
+	t.Setenv("MODERATION_API_KEY", "test-key")
+	t.Setenv("MODERATION_SCORE_THRESHOLD", "0.6")
+
+	decision, _, err := ModeratePromptWithDetails(context.Background(), "threshold boundary")
+	require.NoError(t, err)
+	require.True(t, decision.Flagged)
+	require.Equal(t, []string{"harassment", "hate"}, decision.Rules)
+	require.Equal(t, map[string]float64{"harassment": 0.6, "hate": 0.9}, decision.Scores)
+	require.Equal(t, 0.6, decision.Threshold)
+
+	t.Setenv("MODERATION_SCORE_THRESHOLD", "0.95")
+	decision, _, err = ModeratePromptWithDetails(context.Background(), "threshold boundary")
+	require.NoError(t, err)
+	require.False(t, decision.Flagged)
+	require.Empty(t, decision.Rules)
+	require.Equal(t, 0.95, decision.Threshold)
+	require.Equal(t, int32(2), calls.Load(), "a changed threshold must not reuse a stale cached decision")
+}
+
+func TestModeratePromptFallsBackToProviderFlagWhenScoresAreMissing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[{"flagged":true,"categories":{"violence":true}}]}`))
+	}))
+	defer server.Close()
+
+	decision, err := requestModeration(context.Background(), server.URL, "test-key", "omni-moderation-latest", "fallback case", 0.6)
+	require.NoError(t, err)
+	require.True(t, decision.Flagged)
+	require.Equal(t, []string{"violence"}, decision.Rules)
+	require.Empty(t, decision.Scores)
+	require.Zero(t, decision.Threshold)
+}
+
 func TestModeratePromptRejectsEmptyResults(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"results":[]}`))

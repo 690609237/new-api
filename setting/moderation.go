@@ -18,6 +18,7 @@ const (
 	moderationBaseURLEnv          = "MODERATION_BASE_URL"
 	moderationAPIKeyEnv           = "MODERATION_API_KEY"
 	moderationModelEnv            = "MODERATION_MODEL"
+	moderationScoreThresholdEnv   = "MODERATION_SCORE_THRESHOLD"
 	moderationAlertEmailEnv       = "MODERATION_ALERT_EMAIL"
 	moderationAlertThresholdEnv   = "MODERATION_ALERT_THRESHOLD"
 	moderationCacheTTLEnv         = "MODERATION_CACHE_TTL_SECONDS"
@@ -40,6 +41,7 @@ var (
 	moderationBaseURL              = os.Getenv(moderationBaseURLEnv)
 	moderationAPIKey               = os.Getenv(moderationAPIKeyEnv)
 	moderationModel                = os.Getenv(moderationModelEnv)
+	moderationScoreThreshold       = envModerationScoreThreshold()
 	moderationAlertEmail           = strings.TrimSpace(os.Getenv(moderationAlertEmailEnv))
 	moderationAlertThreshold       = envPositiveInt(moderationAlertThresholdEnv, 20)
 	moderationCacheTTL             = envPositiveInt(moderationCacheTTLEnv, 600)
@@ -134,6 +136,25 @@ func ModerationModel() string {
 		return model
 	}
 	return "omni-moderation-latest"
+}
+
+func envModerationScoreThreshold() float64 {
+	value, err := strconv.ParseFloat(strings.TrimSpace(os.Getenv(moderationScoreThresholdEnv)), 64)
+	if err != nil || !(value > 0 && value <= 1) {
+		return 0.6
+	}
+	return value
+}
+
+func ModerationScoreThreshold() float64 {
+	moderationMu.RLock()
+	overridden := moderationOptionOverrides["ModerationScoreThreshold"]
+	value := moderationScoreThreshold
+	moderationMu.RUnlock()
+	if !overridden {
+		return envModerationScoreThreshold()
+	}
+	return value
 }
 
 func ModerationAlertEmail() string {
@@ -330,6 +351,12 @@ func UpdateModerationOption(key, value string) bool {
 		moderationAPIKey = strings.TrimSpace(value)
 	case "ModerationModel":
 		moderationModel = strings.TrimSpace(value)
+	case "ModerationScoreThreshold":
+		if parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64); err == nil && parsed > 0 && parsed <= 1 {
+			moderationScoreThreshold = parsed
+		} else {
+			moderationScoreThreshold = 0.6
+		}
 	case "ModerationAlertEmail":
 		moderationAlertEmail = strings.TrimSpace(value)
 	case "ModerationAlertThreshold":

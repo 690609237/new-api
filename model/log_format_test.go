@@ -298,6 +298,7 @@ func TestFormatAdminLogsForListDefersModerationContent(t *testing.T) {
 				"flagged": true,
 				"prompt":  "private prompt",
 				"rules":   []string{"secret"},
+				"scores":  map[string]float64{"violence": 0.8},
 			},
 		},
 	})}}
@@ -310,4 +311,5 @@ func TestFormatAdminLogsForListDefersModerationContent(t *testing.T) {
 	assert.Equal(t, true, moderation["flagged"])
 	assert.NotContains(t, moderation, "prompt")
 	assert.NotContains(t, moderation, "rules")
+	assert.NotContains(t, moderation, "scores")
 }

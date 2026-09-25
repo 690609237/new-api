@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, within } from '@testing-library/react'
+import { fireEvent, render, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { ModerationSection } from '../moderation-section'
@@ -28,6 +28,7 @@ const defaultValues = {
   ModerationBaseURL: 'https://api.openai.com/v1',
   ModerationAPIKey: '',
   ModerationModel: 'omni-moderation-latest',
+  ModerationScoreThreshold: 0.6,
   ModerationAlertEmail: '',
   ModerationAlertThreshold: 3,
   ModerationCacheTTLSeconds: 300,
@@ -40,6 +41,12 @@ const defaultValues = {
   ModerationTimeoutWindowSeconds: 300,
   ModerationTimeoutThreshold: 3,
   ModerationTimeoutPauseSeconds: 60,
+  DailyReviewEnabled: false,
+  DailyReviewHour: 2,
+  DailyReviewPrompt: 'Review user messages',
+  DailyReviewBaseURL: 'https://api.openai.com/v1',
+  DailyReviewModel: 'gpt-6-luna',
+  DailyReviewAPIKey: '',
 }
 
 function renderModerationSection() {
@@ -58,6 +65,34 @@ function renderModerationSection() {
 }
 
 describe('content moderation layout', () => {
+  it('rejects an invalid moderation score threshold in the settings form', async () => {
+    const view = renderModerationSection()
+    const threshold = within(view.container).getByLabelText(
+      'Moderation score threshold'
+    )
+    expect(threshold).toHaveValue(0.6)
+
+    fireEvent.change(threshold, { target: { value: '0' } })
+    await waitFor(() =>
+      expect(threshold).toHaveAttribute('aria-invalid', 'true')
+    )
+  })
+
+  it('shows the daily review configuration and rejects an out-of-range hour', async () => {
+    const view = renderModerationSection()
+    const hour = within(view.container).getByLabelText('Daily review hour')
+    expect(hour).toHaveValue(2)
+    expect(
+      within(view.container).getByLabelText('Daily review prompt')
+    ).toHaveValue('Review user messages')
+    expect(
+      within(view.container).getByRole('button', { name: 'Review today now' })
+    ).toBeEnabled()
+
+    fireEvent.change(hour, { target: { value: '24' } })
+    await waitFor(() => expect(hour).toHaveAttribute('aria-invalid', 'true'))
+  })
+
   it('keeps the connection test with the API key input', () => {
     const view = renderModerationSection()
     const connectionRegion = view.container.querySelector(
@@ -110,6 +145,8 @@ describe('content moderation layout', () => {
       exemptGroups.compareDocumentPosition(forcedTokens) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()
-    expect(audienceRegion?.nextElementSibling).toBeNull()
+    expect(audienceRegion?.nextElementSibling).toHaveTextContent(
+      'Daily content review'
+    )
   })
 })

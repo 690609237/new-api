@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ModerationStats } from '..'
@@ -74,5 +74,53 @@ describe('moderation statistics dashboard', () => {
     expect(
       screen.queryByText('Sensitive word hit rate')
     ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Daily review results' })
+    ).toBeInTheDocument()
+  })
+
+  it('opens the latest available report with its log date and highlighted high-risk row', async () => {
+    vi.spyOn(moderationStatsAPI, 'getModerationUsageStats').mockResolvedValue({
+      start_timestamp: 0,
+      end_timestamp: 0,
+      api_requests: 0,
+      api_passed: 0,
+      api_violations: 0,
+      api_succeeded: 0,
+      api_failed: 0,
+      cache_hits: 0,
+      api_latency_total_ms: 0,
+      api_latency_average_ms: 0,
+      api_timeouts: 0,
+      circuit_skips: 0,
+      sensitive_word_hits: 0,
+      buckets: [],
+      dimensions: [],
+    })
+    const getReport = vi
+      .spyOn(moderationStatsAPI, 'getDailyReviewReport')
+      .mockResolvedValue({
+        date: '20260924',
+        available_dates: ['20260924', '20260922'],
+        content:
+          '| username | 行为 | 风险分档 | 简要描述 | 示例requestid（最多3个） |\n| --- | --- | --- | --- | --- |\n| alice | 测试 | 高 | 描述 | req1 |',
+      })
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <ModerationStats />
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Daily review results' })
+    )
+    await waitFor(() => expect(getReport).toHaveBeenCalledWith(undefined))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByText('Log date: 2026-09-24')).toBeInTheDocument()
+    expect(screen.getByText('高').closest('mark')).not.toBeNull()
   })
 })

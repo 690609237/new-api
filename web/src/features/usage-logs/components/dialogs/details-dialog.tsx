@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -17,7 +18,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import type { TFunction } from 'i18next'
-import { useQuery } from '@tanstack/react-query'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -63,18 +63,18 @@ import { BILLING_PRICING_VARS } from '@/features/pricing/lib/billing-expr'
 import { pluginUsageSchema } from '@/features/pricing/lib/plugin-pricing'
 import { PolicyDecisionRecord } from '@/features/system-settings/request-policies/decision-record'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
-import { formatBillingCurrencyFromUSD } from '@/lib/currency'
-import { formatLogQuota, formatTokens, formatUseTime } from '@/lib/format'
 import {
   ADMIN_PERMISSION_ACTIONS,
   ADMIN_PERMISSION_RESOURCES,
   hasPermission,
 } from '@/lib/admin-permissions'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
+import { formatLogQuota, formatTokens, formatUseTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { AuditDetailFields } from '../../audit/components/audit-detail-fields'
 import { getLogDetail } from '../../api'
+import { AuditDetailFields } from '../../audit/components/audit-detail-fields'
 import type { UsageLog } from '../../data/schema'
 import {
   parseLogOther,
@@ -488,7 +488,11 @@ export function DetailsDialog(props: DetailsDialogProps) {
   const { copiedText, copyToClipboard } = useCopyToClipboard({ notify: false })
   const listOther = parseLogOther(props.log.other)
   const moderationDetailQuery = useQuery({
-    queryKey: ['usage-log-moderation-detail', props.log.request_id, props.log.type],
+    queryKey: [
+      'usage-log-moderation-detail',
+      props.log.request_id,
+      props.log.type,
+    ],
     queryFn: () => getLogDetail(props.log.request_id, props.log.type),
     enabled:
       props.open &&
@@ -497,7 +501,9 @@ export function DetailsDialog(props: DetailsDialogProps) {
       !!listOther?.admin_info?.moderation,
     retry: false,
   })
-  const other = parseLogOther(moderationDetailQuery.data?.other ?? props.log.other)
+  const other = parseLogOther(
+    moderationDetailQuery.data?.other ?? props.log.other
+  )
   const typeConfig = getLogTypeConfig(props.log.type)
 
   const isViolation = isViolationFeeLog(other)
@@ -1099,9 +1105,31 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 mono
               />
             )}
+            {moderationAudit.threshold != null && (
+              <DetailRow
+                label={t('Score threshold')}
+                value={String(moderationAudit.threshold)}
+                mono
+              />
+            )}
+            {moderationAudit.policy === 'moderation_api' &&
+            moderationAudit.rules?.length ? (
+              <DetailRow
+                label={t('Matched categories and scores')}
+                value={moderationAudit.rules.map((category) => (
+                  <span className='block' key={category}>
+                    {category}
+                    {moderationAudit.scores?.[category] != null
+                      ? `: ${moderationAudit.scores[category]}`
+                      : ''}
+                  </span>
+                ))}
+                mono
+              />
+            ) : null}
             {canViewSensitiveWords &&
-              moderationAudit.policy === 'sensitive_word' &&
-              moderationAudit.rules?.length ? (
+            moderationAudit.policy === 'sensitive_word' &&
+            moderationAudit.rules?.length ? (
               <DetailRow
                 label={t('Matched sensitive words')}
                 value={moderationAudit.rules.join(', ')}

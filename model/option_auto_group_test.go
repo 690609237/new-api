@@ -37,3 +37,27 @@ func TestValidateOptionValueRejectsInvalidModerationForceIDs(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateOptionValueModerationScoreThreshold(t *testing.T) {
+	for _, value := range []string{"0.01", "0.6", "1"} {
+		require.NoError(t, validateOptionValue("ModerationScoreThreshold", value))
+	}
+	for _, value := range []string{"", "0", "-0.1", "1.1", "NaN", "Inf", "invalid"} {
+		assert.Error(t, validateOptionValue("ModerationScoreThreshold", value))
+	}
+}
+
+func TestValidateOptionValueDailyReview(t *testing.T) {
+	for _, hour := range []string{"0", "2", "23"} {
+		require.NoError(t, validateOptionValue("DailyReviewHour", hour))
+	}
+	for _, hour := range []string{"", "-1", "24", "2.5"} {
+		assert.Error(t, validateOptionValue("DailyReviewHour", hour))
+	}
+	require.NoError(t, validateOptionValue("DailyReviewBaseURL", "http://localhost:3000/v1"))
+	require.NoError(t, validateOptionValue("DailyReviewBaseURL", "https://www.modelpass.work/v1"))
+	assert.Error(t, validateOptionValue("DailyReviewBaseURL", "http://example.com/v1"))
+	assert.Error(t, validateOptionValue("DailyReviewBaseURL", "https://example.com/v1?key=secret"))
+	assert.Error(t, validateOptionValue("DailyReviewPrompt", "  "))
+	assert.Error(t, validateOptionValue("DailyReviewEnabled", "sometimes"))
+}

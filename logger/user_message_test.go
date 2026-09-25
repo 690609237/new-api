@@ -115,6 +115,68 @@ func TestUserMessageLogCleanupAppliesAgeAndFileCountLimits(t *testing.T) {
 	assert.Len(t, files, 2)
 }
 
+func TestUserMessageLogCleanupRetainsReviewReportsByAgeAndSeparateCount(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Date(2026, time.August, 20, 12, 0, 0, 0, time.UTC)
+	writer := &userMessageLogWriter{
+		config: userMessageLogConfig{dir: dir, maxFiles: 2, retentionDays: 15},
+	}
+
+	oldReport := filepath.Join(dir, "daily-review-20260801.md")
+	require.NoError(t, os.WriteFile(oldReport, []byte("old"), 0600))
+	oldTime := now.AddDate(0, 0, -16)
+	require.NoError(t, os.Chtimes(oldReport, oldTime, oldTime))
+	for i, day := range []string{"20260820", "20260819", "20260818"} {
+		path := filepath.Join(dir, "daily-review-"+day+".md")
+		require.NoError(t, os.WriteFile(path, []byte(day), 0600))
+		modTime := now.Add(-time.Duration(i) * time.Hour)
+		require.NoError(t, os.Chtimes(path, modTime, modTime))
+	}
+	for i := range 2 {
+		path := filepath.Join(dir, userMessageLogPrefix+string(rune('a'+i))+userMessageLogSuffix)
+		require.NoError(t, os.WriteFile(path, []byte("log"), 0600))
+	}
+	unrelated := filepath.Join(dir, "daily-review-20260899.md")
+	require.NoError(t, os.WriteFile(unrelated, []byte("keep"), 0600))
+
+	require.NoError(t, writer.cleanup(now))
+	for _, day := range []string{"20260801", "20260818"} {
+		_, err := os.Stat(filepath.Join(dir, "daily-review-"+day+".md"))
+		assert.ErrorIs(t, err, os.ErrNotExist)
+	}
+	for _, day := range []string{"20260820", "20260819"} {
+		_, err := os.Stat(filepath.Join(dir, "daily-review-"+day+".md"))
+		assert.NoError(t, err)
+	}
+	_, err := os.Stat(unrelated)
+	assert.NoError(t, err)
+	logs, err := filepath.Glob(filepath.Join(dir, userMessageLogPrefix+"*"+userMessageLogSuffix))
+	require.NoError(t, err)
+	assert.Len(t, logs, 2, "reports must not consume the source-log file quota")
+}
+
+func TestUserMessageLogCleanupWhenLoggingDisabledOnlyRemovesReports(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Date(2026, time.August, 20, 12, 0, 0, 0, time.UTC)
+	writer := &userMessageLogWriter{
+		config:      userMessageLogConfig{dir: dir, maxFiles: 10, retentionDays: 15},
+		reportsOnly: true,
+	}
+	messagePath := filepath.Join(dir, "user-messages-20260801-old.jsonl")
+	reportPath := filepath.Join(dir, "daily-review-20260801.md")
+	for _, path := range []string{messagePath, reportPath} {
+		require.NoError(t, os.WriteFile(path, []byte("old"), 0600))
+		oldTime := now.AddDate(0, 0, -16)
+		require.NoError(t, os.Chtimes(path, oldTime, oldTime))
+	}
+
+	require.NoError(t, writer.cleanup(now))
+	_, err := os.Stat(reportPath)
+	assert.ErrorIs(t, err, os.ErrNotExist)
+	_, err = os.Stat(messagePath)
+	assert.NoError(t, err)
+}
+
 func TestUserMessageLogDeduplicatesRepeatedContentWithinWindow(t *testing.T) {
 	dir := t.TempDir()
 	now := time.Date(2026, time.August, 10, 12, 0, 0, 0, time.UTC)

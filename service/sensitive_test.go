@@ -49,6 +49,30 @@ func TestSensitiveWordContainsSupportsCombinedRules(t *testing.T) {
 			wantMatch: true,
 			wantRules: []string{"alpha|beta"},
 		},
+		{
+			name:      "combined terms exactly within 100 characters",
+			rules:     []string{"甲|乙"},
+			text:      "甲" + strings.Repeat("中", 98) + "乙",
+			wantMatch: true,
+			wantRules: []string{"甲|乙"},
+		},
+		{
+			name:  "combined terms beyond 100 characters",
+			rules: []string{"甲|乙"},
+			text:  "甲" + strings.Repeat("中", 99) + "乙",
+		},
+		{
+			name:  "all three terms must share the same window",
+			rules: []string{"alpha|beta|gamma"},
+			text:  "alpha beta" + strings.Repeat("中", 100) + "gamma",
+		},
+		{
+			name:      "nearby later occurrence still matches",
+			rules:     []string{"alpha|beta"},
+			text:      "alpha" + strings.Repeat("中", 110) + "beta and ALPHA",
+			wantMatch: true,
+			wantRules: []string{"alpha|beta"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -79,6 +103,12 @@ func TestSensitiveWordReplaceRequiresCompleteCombination(t *testing.T) {
 	assert.True(t, matched)
 	assert.Equal(t, []string{"alpha|beta"}, rules)
 	assert.Equal(t, "先 **###**，再 **###**", replaced)
+
+	far := "alpha" + strings.Repeat("中", 100) + "beta"
+	matched, rules, replaced = SensitiveWordReplace(far, false)
+	assert.False(t, matched)
+	assert.Nil(t, rules)
+	assert.Equal(t, far, replaced)
 }
 
 func TestCheckSensitiveTextCacheTracksRuleConfiguration(t *testing.T) {

@@ -179,6 +179,7 @@ func InitOptionMap() {
 	common.OptionMap["ModerationBaseURL"] = setting.ModerationBaseURL()
 	common.OptionMap["ModerationAPIKey"] = setting.ModerationAPIKey()
 	common.OptionMap["ModerationModel"] = setting.ModerationModel()
+	common.OptionMap["ModerationScoreThreshold"] = strconv.FormatFloat(setting.ModerationScoreThreshold(), 'f', -1, 64)
 	common.OptionMap["ModerationAlertEmail"] = setting.ModerationAlertEmail()
 	common.OptionMap["ModerationAlertThreshold"] = strconv.Itoa(setting.ModerationAlertThreshold())
 	common.OptionMap["ModerationCacheTTLSeconds"] = strconv.Itoa(int(setting.ModerationCacheTTL().Seconds()))
@@ -192,6 +193,12 @@ func InitOptionMap() {
 	common.OptionMap["ModerationTimeoutWindowSeconds"] = strconv.Itoa(int(setting.ModerationTimeoutWindow().Seconds()))
 	common.OptionMap["ModerationTimeoutThreshold"] = strconv.Itoa(setting.ModerationTimeoutThreshold())
 	common.OptionMap["ModerationTimeoutPauseSeconds"] = strconv.Itoa(int(setting.ModerationTimeoutPause().Seconds()))
+	common.OptionMap["DailyReviewEnabled"] = "false"
+	common.OptionMap["DailyReviewHour"] = setting.DailyReviewDefaultHour
+	common.OptionMap["DailyReviewPrompt"] = setting.DailyReviewDefaultPrompt
+	common.OptionMap["DailyReviewBaseURL"] = setting.DailyReviewDefaultBaseURL
+	common.OptionMap["DailyReviewModel"] = setting.DailyReviewDefaultModel
+	common.OptionMap["DailyReviewAPIKey"] = ""
 	common.OptionMap["DemoSiteEnabled"] = strconv.FormatBool(operation_setting.DemoSiteEnabled)
 	common.OptionMap["SelfUseModeEnabled"] = strconv.FormatBool(operation_setting.SelfUseModeEnabled)
 	common.OptionMap["ModelRequestRateLimitEnabled"] = strconv.FormatBool(setting.ModelRequestRateLimitEnabled)
@@ -246,6 +253,24 @@ func SyncOptions(frequency int) {
 }
 
 func validateOptionValue(key string, value string) error {
+	if key == "DailyReviewHour" {
+		hour, err := strconv.Atoi(value)
+		if err != nil || hour < 0 || hour > 23 {
+			return fmt.Errorf("%s must be an hour between 0 and 23", key)
+		}
+	}
+	if key == "DailyReviewEnabled" && value != "true" && value != "false" {
+		return fmt.Errorf("%s must be true or false", key)
+	}
+	if key == "DailyReviewPrompt" && (strings.TrimSpace(value) == "" || len(value) > 20000) {
+		return fmt.Errorf("%s must be non-empty and at most 20000 bytes", key)
+	}
+	if key == "DailyReviewModel" && (strings.TrimSpace(value) == "" || len(value) > 128) {
+		return fmt.Errorf("%s must be non-empty and at most 128 bytes", key)
+	}
+	if key == "DailyReviewBaseURL" {
+		return setting.ValidateDailyReviewBaseURL(value)
+	}
 	if key == "SensitiveWords" {
 		return setting.ValidateSensitiveWords(value)
 	}
@@ -275,6 +300,12 @@ func validateOptionValue(key string, value string) error {
 		limits := map[string]int{"ModerationTimeoutSeconds": 300, "ModerationTimeoutWindowSeconds": 86400, "ModerationTimeoutThreshold": 100, "ModerationTimeoutPauseSeconds": 86400}
 		if max, ok := limits[key]; ok && parsed > max {
 			return fmt.Errorf("%s exceeds the maximum allowed value", key)
+		}
+	}
+	if key == "ModerationScoreThreshold" {
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+		if err != nil || !(parsed > 0 && parsed <= 1) {
+			return fmt.Errorf("%s must be greater than 0 and at most 1", key)
 		}
 	}
 	if key == "ModerationSampleRate" {

@@ -25,6 +25,7 @@ import type {
   LogCleanupTask,
   ModerationTestResponse,
   SystemOptionsResponse,
+  SystemTask,
   SystemTaskListResponse,
   SystemTaskFilters,
   SystemTaskResponse,
@@ -44,6 +45,21 @@ export async function testModerationEndpoint(request: {
   const res = await api.post<ModerationTestResponse>(
     '/api/option/moderation_test',
     request
+  )
+  return res.data
+}
+
+export async function startDailyReviewNow() {
+  const res = await api.post<SystemTaskResponse<SystemTask>>(
+    '/api/moderation/daily-review/run'
+  )
+  return res.data
+}
+
+export async function getCurrentDailyReviewTask() {
+  const res = await api.get<SystemTaskResponse>(
+    '/api/system-task/current',
+    { params: { type: 'daily_review' } }
   )
   return res.data
 }

@@ -339,7 +339,7 @@ func stripModerationContent(value string) string {
 		return value
 	}
 	changed := false
-	for _, key := range []string{"prompt", "rules"} {
+	for _, key := range []string{"prompt", "rules", "scores"} {
 		if _, exists := moderation[key]; exists {
 			delete(moderation, key)
 			changed = true

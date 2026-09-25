@@ -6,8 +6,10 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +23,7 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-const moderationCacheNamespace = "new-api:moderation:v2"
+const moderationCacheNamespace = "new-api:moderation:v3"
 
 // ModerationResultSource identifies whether a moderation decision came from
 // the configured upstream API or a previously cached result.
@@ -50,14 +52,17 @@ type ModerationIdentity struct {
 }
 
 type ModerationDecision struct {
-	Flagged bool     `json:"flagged"`
-	Rules   []string `json:"rules,omitempty"`
+	Flagged   bool               `json:"flagged"`
+	Rules     []string           `json:"rules,omitempty"`
+	Scores    map[string]float64 `json:"scores,omitempty"`
+	Threshold float64            `json:"threshold,omitempty"`
 }
 
 type moderationResponse struct {
 	Results []struct {
-		Flagged    bool            `json:"flagged"`
-		Categories map[string]bool `json:"categories"`
+		Flagged        bool               `json:"flagged"`
+		Categories     map[string]bool    `json:"categories"`
+		CategoryScores map[string]float64 `json:"category_scores"`
 	} `json:"results"`
 }
 
@@ -93,11 +98,11 @@ func TestModerationEndpoint(ctx context.Context, baseURL, apiKey, model string) 
 	if model == "" {
 		model = "omni-moderation-latest"
 	}
-	decision, err := requestModeration(ctx, baseURL, apiKey, model, moderationTestPrompt)
+	decision, err := requestModeration(ctx, baseURL, apiKey, model, moderationTestPrompt, setting.ModerationScoreThreshold())
 	return decision.Flagged, err
 }
 
-func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt string) (ModerationDecision, error) {
+func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt string, threshold float64) (ModerationDecision, error) {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
 		return ModerationDecision{}, nil
@@ -133,6 +138,23 @@ func requestModeration(ctx context.Context, baseURL, apiKey, model, prompt strin
 		return ModerationDecision{}, fmt.Errorf("moderation response contains no results")
 	}
 	result := moderationResult.Results[0]
+	if len(result.CategoryScores) > 0 {
+		scores := make(map[string]float64)
+		rules := make([]string, 0)
+		for category, score := range result.CategoryScores {
+			if math.IsNaN(score) || math.IsInf(score, 0) || score < 0 || score > 1 {
+				return ModerationDecision{}, fmt.Errorf("moderation response contains invalid category score")
+			}
+			if score >= threshold {
+				scores[category] = score
+				rules = append(rules, category)
+			}
+		}
+		sort.Strings(rules)
+		return ModerationDecision{Flagged: len(rules) > 0, Rules: rules, Scores: scores, Threshold: threshold}, nil
+	}
+	// Some OpenAI-compatible endpoints do not return scores. Preserve their
+	// provider decision, but do not invent a score for the audit log.
 	rules := make([]string, 0, len(result.Categories))
 	for category, matched := range result.Categories {
 		if matched {
@@ -178,10 +200,10 @@ func getModerationCache() *cachex.HybridCache[ModerationDecision] {
 	return moderationCache
 }
 
-func moderationCacheKey(prompt string) string {
+func moderationCacheKey(prompt string, threshold float64) string {
 	baseURL := strings.TrimRight(strings.TrimSpace(setting.ModerationBaseURL()), "/")
 	model := strings.TrimSpace(setting.ModerationModel())
-	value := model + "\x00" + baseURL + "\x00" + prompt
+	value := model + "\x00" + baseURL + "\x00" + strconv.FormatFloat(threshold, 'f', -1, 64) + "\x00" + prompt
 	sum := sha256.Sum256([]byte(value))
 	return fmt.Sprintf("%x", sum[:])
 }
@@ -211,12 +233,13 @@ func ModeratePromptWithDetails(ctx context.Context, prompt string, identities ..
 	baseURL := strings.TrimRight(strings.TrimSpace(setting.ModerationBaseURL()), "/")
 	apiKey := strings.TrimSpace(setting.ModerationAPIKey())
 	model := strings.TrimSpace(setting.ModerationModel())
+	threshold := setting.ModerationScoreThreshold()
 	if baseURL == "" || apiKey == "" {
 		return ModerationDecision{}, ModerationResultSourceAPI, fmt.Errorf("moderation is enabled but base URL or API key is not configured")
 	}
 
 	cache := getModerationCache()
-	cacheKey := moderationCacheKey(prompt)
+	cacheKey := moderationCacheKey(prompt, threshold)
 	if decision, found, err := cache.Get(cacheKey); err != nil {
 		common.SysError(fmt.Sprintf("moderation cache get failed: %v", err))
 	} else if found {
@@ -238,7 +261,7 @@ func ModeratePromptWithDetails(ctx context.Context, prompt string, identities ..
 
 		startedAt := time.Now()
 		requestCtx, cancel := context.WithTimeout(ctx, setting.ModerationTimeout())
-		decision, requestErr := requestModeration(requestCtx, baseURL, apiKey, model, prompt)
+		decision, requestErr := requestModeration(requestCtx, baseURL, apiKey, model, prompt, threshold)
 		cancel()
 		delta := moderationmodel.ModerationUsageStatDelta{
 			UserID:            userID,
