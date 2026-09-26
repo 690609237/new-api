@@ -80,6 +80,107 @@ func TestDailyReviewPartsContinueAndResume(t *testing.T) {
 	assert.Equal(t, 4, requests)
 }
 
+func TestDailyReviewConnectionUsesSyntheticFileAndSavedKeyFallback(t *testing.T) {
+	dir := t.TempDir()
+	previousDir := common.LogDir
+	common.LogDir = &dir
+	t.Cleanup(func() { common.LogDir = previousDir })
+	t.Setenv("DAILY_REVIEW_API_KEY", "saved-secret")
+	common.OptionMapRWMutex.Lock()
+	mapWasNil := common.OptionMap == nil
+	if mapWasNil {
+		common.OptionMap = make(map[string]string)
+	}
+	previousKey := common.OptionMap["DailyReviewAPIKey"]
+	common.OptionMap["DailyReviewAPIKey"] = ""
+	common.OptionMapRWMutex.Unlock()
+	t.Cleanup(func() {
+		common.OptionMapRWMutex.Lock()
+		common.OptionMap["DailyReviewAPIKey"] = previousKey
+		if mapWasNil {
+			common.OptionMap = nil
+		}
+		common.OptionMapRWMutex.Unlock()
+	})
+
+	requests := 0
+	expectedKey := "saved-secret"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		assert.Equal(t, "/v1/responses", r.URL.Path)
+		assert.Equal(t, "Bearer "+expectedKey, r.Header.Get("Authorization"))
+		var body struct {
+			Model string `json:"model"`
+			Store bool   `json:"store"`
+			Input []struct {
+				Content []struct {
+					Text     string `json:"text"`
+					Filename string `json:"filename"`
+					FileData string `json:"file_data"`
+				} `json:"content"`
+			} `json:"input"`
+		}
+		require.NoError(t, common.DecodeJson(r.Body, &body))
+		assert.Equal(t, "test-model", body.Model)
+		assert.False(t, body.Store)
+		require.Len(t, body.Input, 1)
+		require.Len(t, body.Input[0].Content, 2)
+		assert.Contains(t, body.Input[0].Content[0].Text, "connectivity test")
+		assert.Equal(t, "daily-review-connection-test.txt", body.Input[0].Content[1].Filename)
+		file, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(body.Input[0].Content[1].FileData, "data:text/plain;base64,"))
+		require.NoError(t, err)
+		assert.Contains(t, string(file), "No user messages")
+		response, err := common.Marshal(map[string]any{"status": "completed", "output": []any{map[string]any{"content": []any{map[string]any{"type": "output_text", "text": "OK"}}}}})
+		require.NoError(t, err)
+		_, _ = w.Write(response)
+	}))
+	defer server.Close()
+
+	require.NoError(t, TestDailyReviewEndpoint(context.Background(), server.URL+"/v1", "", "test-model"))
+	common.OptionMapRWMutex.Lock()
+	common.OptionMap["DailyReviewAPIKey"] = "persisted-secret"
+	common.OptionMapRWMutex.Unlock()
+	expectedKey = "persisted-secret"
+	require.NoError(t, TestDailyReviewEndpoint(context.Background(), server.URL+"/v1", "", "test-model"))
+	expectedKey = "unsaved-secret"
+	require.NoError(t, TestDailyReviewEndpoint(context.Background(), server.URL+"/v1", "unsaved-secret", "test-model"))
+	assert.Equal(t, 3, requests)
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}
+
+func TestDailyReviewConnectionRejectsInvalidURLAndMissingKey(t *testing.T) {
+	assert.ErrorContains(t, TestDailyReviewEndpoint(context.Background(), "http://example.com/v1", "secret", "test-model"), "HTTPS")
+	t.Setenv("DAILY_REVIEW_API_KEY", "")
+	t.Setenv("OPENAI_API_KEY", "")
+	common.OptionMapRWMutex.Lock()
+	mapWasNil := common.OptionMap == nil
+	if mapWasNil {
+		common.OptionMap = make(map[string]string)
+	}
+	previousKey := common.OptionMap["DailyReviewAPIKey"]
+	common.OptionMap["DailyReviewAPIKey"] = ""
+	common.OptionMapRWMutex.Unlock()
+	t.Cleanup(func() {
+		common.OptionMapRWMutex.Lock()
+		common.OptionMap["DailyReviewAPIKey"] = previousKey
+		if mapWasNil {
+			common.OptionMap = nil
+		}
+		common.OptionMapRWMutex.Unlock()
+	})
+	assert.ErrorContains(t, TestDailyReviewEndpoint(context.Background(), "https://api.example.com/v1", "", "test-model"), "API key is not configured")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = io.WriteString(w, "unsaved-secret")
+	}))
+	defer server.Close()
+	err := TestDailyReviewEndpoint(context.Background(), server.URL+"/v1", "unsaved-secret", "test-model")
+	assert.ErrorContains(t, err, "HTTP 401")
+	assert.NotContains(t, err.Error(), "unsaved-secret")
+}
+
 func TestDailyReviewRiskEmailOnlyForNewHighRiskRows(t *testing.T) {
 	previousRecipient := dailyReviewAlertRecipient
 	dailyReviewAlertRecipient = func() string { return "admin@example.com" }

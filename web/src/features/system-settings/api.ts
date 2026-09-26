@@ -24,6 +24,7 @@ import type {
   FetchUpstreamRatiosRequest,
   LogCleanupTask,
   ModerationTestResponse,
+  DailyReviewTestResponse,
   SystemOptionsResponse,
   SystemTask,
   SystemTaskListResponse,
@@ -49,6 +50,18 @@ export async function testModerationEndpoint(request: {
   return res.data
 }
 
+export async function testDailyReviewEndpoint(request: {
+  base_url: string
+  api_key: string
+  model: string
+}) {
+  const res = await api.post<DailyReviewTestResponse>(
+    '/api/option/daily_review_test',
+    request
+  )
+  return res.data
+}
+
 export async function startDailyReviewNow() {
   const res = await api.post<SystemTaskResponse<SystemTask>>(
     '/api/moderation/daily-review/run'
@@ -57,10 +70,9 @@ export async function startDailyReviewNow() {
 }
 
 export async function getCurrentDailyReviewTask() {
-  const res = await api.get<SystemTaskResponse>(
-    '/api/system-task/current',
-    { params: { type: 'daily_review' } }
-  )
+  const res = await api.get<SystemTaskResponse>('/api/system-task/current', {
+    params: { type: 'daily_review' },
+  })
   return res.data
 }
 

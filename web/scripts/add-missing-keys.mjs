@@ -27,15 +27,24 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Test daily review connection': 'Test daily review connection',
+    'Daily review connection succeeded.': 'Daily review connection succeeded.',
+    'Daily review connection test failed.':
+      'Daily review connection test failed.',
+    'Uses synthetic content only; no review task or live request is affected.':
+      'Uses synthetic content only; no review task or live request is affected.',
     'Daily content review': 'Daily content review',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': 'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.',
     'Enable daily review': 'Enable daily review',
-    'Send user-message logs to the configured Responses API for inspection.': 'Send user-message logs to the configured Responses API for inspection.',
+    'Send user-message logs to the configured Responses API for inspection.':
+      'Send user-message logs to the configured Responses API for inspection.',
     'Daily review hour': 'Daily review hour',
     'Server-local hour, 0–23.': 'Server-local hour, 0–23.',
     'Daily review model': 'Daily review model',
     'Daily review API base URL': 'Daily review API base URL',
-    'Include /v1; localhost may use HTTP.': 'Include /v1; localhost may use HTTP.',
+    'Include /v1; localhost may use HTTP.':
+      'Include /v1; localhost may use HTTP.',
     'Daily review API key': 'Daily review API key',
     'Daily review prompt': 'Daily review prompt',
     'Review today now': 'Review today now',
@@ -149,15 +158,23 @@ const newKeys = {
       'View the configured sensitive words matched by a request.',
   },
   zh: {
+    'Test daily review connection': '测试巡查连接',
+    'Daily review connection succeeded.': '巡查连接测试成功。',
+    'Daily review connection test failed.': '巡查连接测试失败。',
+    'Uses synthetic content only; no review task or live request is affected.':
+      '仅发送合成测试内容；不会启动巡查任务或影响正常请求。',
     'Daily content review': '每日内容巡检',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': '每天在指定的服务器本地小时巡检昨天的用户消息日志；手动巡检则检查今天。',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      '每天在指定的服务器本地小时巡检昨天的用户消息日志；手动巡检则检查今天。',
     'Enable daily review': '启用每日巡检',
-    'Send user-message logs to the configured Responses API for inspection.': '将用户消息日志发送到配置的 Responses API 进行巡检。',
+    'Send user-message logs to the configured Responses API for inspection.':
+      '将用户消息日志发送到配置的 Responses API 进行巡检。',
     'Daily review hour': '每日巡检时间',
     'Server-local hour, 0–23.': '服务器本地时间，0–23 时。',
     'Daily review model': '巡检模型',
     'Daily review API base URL': '巡检 API 基础地址',
-    'Include /v1; localhost may use HTTP.': '地址需包含 /v1；localhost 可使用 HTTP。',
+    'Include /v1; localhost may use HTTP.':
+      '地址需包含 /v1；localhost 可使用 HTTP。',
     'Daily review API key': '巡检 API 密钥',
     'Daily review prompt': '巡检提示词',
     'Review today now': '立即巡检今天',
@@ -268,15 +285,23 @@ const newKeys = {
       '查看请求命中的已配置敏感词。',
   },
   'zh-TW': {
+    'Test daily review connection': '測試巡查連線',
+    'Daily review connection succeeded.': '巡查連線測試成功。',
+    'Daily review connection test failed.': '巡查連線測試失敗。',
+    'Uses synthetic content only; no review task or live request is affected.':
+      '僅傳送合成測試內容；不會啟動巡查任務或影響正常請求。',
     'Daily content review': '每日內容巡檢',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': '每天在指定的伺服器本地小時巡檢昨天的使用者訊息日誌；手動巡檢則檢查今天。',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      '每天在指定的伺服器本地小時巡檢昨天的使用者訊息日誌；手動巡檢則檢查今天。',
     'Enable daily review': '啟用每日巡檢',
-    'Send user-message logs to the configured Responses API for inspection.': '將使用者訊息日誌傳送至設定的 Responses API 進行巡檢。',
+    'Send user-message logs to the configured Responses API for inspection.':
+      '將使用者訊息日誌傳送至設定的 Responses API 進行巡檢。',
     'Daily review hour': '每日巡檢時間',
     'Server-local hour, 0–23.': '伺服器本地時間，0–23 時。',
     'Daily review model': '巡檢模型',
     'Daily review API base URL': '巡檢 API 基礎位址',
-    'Include /v1; localhost may use HTTP.': '位址須包含 /v1；localhost 可使用 HTTP。',
+    'Include /v1; localhost may use HTTP.':
+      '位址須包含 /v1；localhost 可使用 HTTP。',
     'Daily review API key': '巡檢 API 金鑰',
     'Daily review prompt': '巡檢提示詞',
     'Review today now': '立即巡檢今天',
@@ -387,15 +412,24 @@ const newKeys = {
       '查看請求命中的已設定敏感詞。',
   },
   fr: {
+    'Test daily review connection': 'Tester la connexion de revue',
+    'Daily review connection succeeded.': 'Connexion de revue réussie.',
+    'Daily review connection test failed.':
+      'Échec du test de connexion de revue.',
+    'Uses synthetic content only; no review task or live request is affected.':
+      'Utilise uniquement des données fictives ; aucune revue ni requête réelle n’est affectée.',
     'Daily content review': 'Inspection quotidienne du contenu',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': 'Analyse les journaux des messages d’hier à l’heure locale du serveur définie. Le lancement manuel analyse aujourd’hui.',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      'Analyse les journaux des messages d’hier à l’heure locale du serveur définie. Le lancement manuel analyse aujourd’hui.',
     'Enable daily review': 'Activer l’inspection quotidienne',
-    'Send user-message logs to the configured Responses API for inspection.': 'Envoyer les journaux des messages à l’API Responses configurée pour inspection.',
+    'Send user-message logs to the configured Responses API for inspection.':
+      'Envoyer les journaux des messages à l’API Responses configurée pour inspection.',
     'Daily review hour': 'Heure de l’inspection',
     'Server-local hour, 0–23.': 'Heure locale du serveur, de 0 à 23.',
     'Daily review model': 'Modèle d’inspection',
     'Daily review API base URL': 'URL de base de l’API d’inspection',
-    'Include /v1; localhost may use HTTP.': 'Inclure /v1 ; localhost peut utiliser HTTP.',
+    'Include /v1; localhost may use HTTP.':
+      'Inclure /v1 ; localhost peut utiliser HTTP.',
     'Daily review API key': 'Clé API d’inspection',
     'Daily review prompt': 'Consigne d’inspection',
     'Review today now': 'Inspecter aujourd’hui',
@@ -511,15 +545,24 @@ const newKeys = {
       'Voir les mots sensibles configurés détectés dans une requête.',
   },
   ja: {
+    'Test daily review connection': '日次レビューの接続をテスト',
+    'Daily review connection succeeded.': '日次レビューの接続に成功しました。',
+    'Daily review connection test failed.':
+      '日次レビューの接続テストに失敗しました。',
+    'Uses synthetic content only; no review task or live request is affected.':
+      'テスト用データのみ送信します。レビュータスクや通常のリクエストには影響しません。',
     'Daily content review': '日次コンテンツ点検',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': '設定したサーバー現地時刻に昨日のユーザーメッセージログを点検します。手動実行では今日を点検します。',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      '設定したサーバー現地時刻に昨日のユーザーメッセージログを点検します。手動実行では今日を点検します。',
     'Enable daily review': '日次点検を有効にする',
-    'Send user-message logs to the configured Responses API for inspection.': 'ユーザーメッセージログを設定済みの Responses API に送信して点検します。',
+    'Send user-message logs to the configured Responses API for inspection.':
+      'ユーザーメッセージログを設定済みの Responses API に送信して点検します。',
     'Daily review hour': '日次点検の時刻',
     'Server-local hour, 0–23.': 'サーバー現地時刻の 0～23 時。',
     'Daily review model': '点検モデル',
     'Daily review API base URL': '点検 API のベース URL',
-    'Include /v1; localhost may use HTTP.': '/v1 を含めてください。localhost では HTTP を使用できます。',
+    'Include /v1; localhost may use HTTP.':
+      '/v1 を含めてください。localhost では HTTP を使用できます。',
     'Daily review API key': '点検 API キー',
     'Daily review prompt': '点検プロンプト',
     'Review today now': '今日のログを今すぐ点検',
@@ -634,15 +677,23 @@ const newKeys = {
       'リクエストで検出された設定済みの機密語を表示します。',
   },
   ru: {
+    'Test daily review connection': 'Проверить подключение проверки',
+    'Daily review connection succeeded.': 'Подключение проверки успешно.',
+    'Daily review connection test failed.': 'Не удалось проверить подключение.',
+    'Uses synthetic content only; no review task or live request is affected.':
+      'Отправляются только тестовые данные; задачи проверки и обычные запросы не затрагиваются.',
     'Daily content review': 'Ежедневная проверка содержимого',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': 'Проверка вчерашних журналов сообщений в заданный час по времени сервера. Ручной запуск проверяет сегодняшний день.',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      'Проверка вчерашних журналов сообщений в заданный час по времени сервера. Ручной запуск проверяет сегодняшний день.',
     'Enable daily review': 'Включить ежедневную проверку',
-    'Send user-message logs to the configured Responses API for inspection.': 'Отправлять журналы сообщений в настроенный Responses API для проверки.',
+    'Send user-message logs to the configured Responses API for inspection.':
+      'Отправлять журналы сообщений в настроенный Responses API для проверки.',
     'Daily review hour': 'Час ежедневной проверки',
     'Server-local hour, 0–23.': 'Местное время сервера, от 0 до 23 часов.',
     'Daily review model': 'Модель проверки',
     'Daily review API base URL': 'Базовый URL API проверки',
-    'Include /v1; localhost may use HTTP.': 'Укажите /v1; для localhost разрешён HTTP.',
+    'Include /v1; localhost may use HTTP.':
+      'Укажите /v1; для localhost разрешён HTTP.',
     'Daily review API key': 'Ключ API проверки',
     'Daily review prompt': 'Инструкция проверки',
     'Review today now': 'Проверить сегодня',
@@ -759,15 +810,24 @@ const newKeys = {
       'Просматривать настроенные чувствительные слова, совпавшие в запросе.',
   },
   vi: {
+    'Test daily review connection': 'Kiểm tra kết nối rà soát',
+    'Daily review connection succeeded.': 'Kết nối rà soát thành công.',
+    'Daily review connection test failed.':
+      'Kiểm tra kết nối rà soát thất bại.',
+    'Uses synthetic content only; no review task or live request is affected.':
+      'Chỉ gửi dữ liệu giả lập; không tạo tác vụ rà soát hay ảnh hưởng yêu cầu thông thường.',
     'Daily content review': 'Kiểm tra nội dung hằng ngày',
-    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.': 'Kiểm tra nhật ký tin nhắn hôm qua vào giờ địa phương của máy chủ đã đặt. Chạy thủ công sẽ kiểm tra hôm nay.',
+    'Review yesterday’s user-message logs at the configured server-local hour. The manual run reviews today.':
+      'Kiểm tra nhật ký tin nhắn hôm qua vào giờ địa phương của máy chủ đã đặt. Chạy thủ công sẽ kiểm tra hôm nay.',
     'Enable daily review': 'Bật kiểm tra hằng ngày',
-    'Send user-message logs to the configured Responses API for inspection.': 'Gửi nhật ký tin nhắn người dùng đến Responses API đã cấu hình để kiểm tra.',
+    'Send user-message logs to the configured Responses API for inspection.':
+      'Gửi nhật ký tin nhắn người dùng đến Responses API đã cấu hình để kiểm tra.',
     'Daily review hour': 'Giờ kiểm tra hằng ngày',
     'Server-local hour, 0–23.': 'Giờ địa phương của máy chủ, từ 0 đến 23.',
     'Daily review model': 'Mô hình kiểm tra',
     'Daily review API base URL': 'URL gốc API kiểm tra',
-    'Include /v1; localhost may use HTTP.': 'Bao gồm /v1; localhost có thể dùng HTTP.',
+    'Include /v1; localhost may use HTTP.':
+      'Bao gồm /v1; localhost có thể dùng HTTP.',
     'Daily review API key': 'Khóa API kiểm tra',
     'Daily review prompt': 'Lời nhắc kiểm tra',
     'Review today now': 'Kiểm tra hôm nay ngay',

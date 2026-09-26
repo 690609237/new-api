@@ -120,6 +120,40 @@ func dailyReviewConfiguration() (dailyReviewConfig, error) {
 	return cfg, nil
 }
 
+// TestDailyReviewEndpoint probes the configured Responses file-input protocol
+// with synthetic data only. It never starts a task, reads logs, or writes a report.
+func TestDailyReviewEndpoint(ctx context.Context, baseURL, apiKey, modelName string) error {
+	if strings.TrimSpace(baseURL) == "" {
+		baseURL = dailyReviewOption("DailyReviewBaseURL", setting.DailyReviewDefaultBaseURL)
+	}
+	if strings.TrimSpace(modelName) == "" {
+		modelName = dailyReviewOption("DailyReviewModel", setting.DailyReviewDefaultModel)
+	}
+	if strings.TrimSpace(apiKey) == "" {
+		apiKey = dailyReviewOption("DailyReviewAPIKey", os.Getenv("DAILY_REVIEW_API_KEY"))
+		if apiKey == "" {
+			apiKey = os.Getenv("OPENAI_API_KEY")
+		}
+	}
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if err := setting.ValidateDailyReviewBaseURL(baseURL); err != nil {
+		return err
+	}
+	if strings.TrimSpace(apiKey) == "" {
+		return errors.New("daily review API key is not configured")
+	}
+	if strings.TrimSpace(modelName) == "" {
+		return errors.New("daily review model is not configured")
+	}
+	_, err := reviewResponse(ctx, dailyReviewConfig{
+		BaseURL: baseURL,
+		APIKey:  strings.TrimSpace(apiKey),
+		Model:   strings.TrimSpace(modelName),
+		Prompt:  "This is a connectivity test. Read the attached harmless sample and reply briefly.",
+	}, "daily-review-connection-test", []byte("Daily review connectivity test. No user messages are included."))
+	return err
+}
+
 func StartDailyReviewTask(date string) (*model.SystemTask, bool, error) {
 	if !validDailyReviewDate(date) {
 		return nil, false, ErrInvalidDailyReviewDate

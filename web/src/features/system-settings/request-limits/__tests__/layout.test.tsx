@@ -18,7 +18,9 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { api } from '@/lib/api'
 
 import { ModerationSection } from '../moderation-section'
 
@@ -65,6 +67,8 @@ function renderModerationSection() {
 }
 
 describe('content moderation layout', () => {
+  afterEach(() => vi.restoreAllMocks())
+
   it('rejects an invalid moderation score threshold in the settings form', async () => {
     const view = renderModerationSection()
     const threshold = within(view.container).getByLabelText(
@@ -110,6 +114,58 @@ describe('content moderation layout', () => {
         name: 'Test moderation connection',
       })
     ).toBeTruthy()
+  })
+
+  it('tests unsaved daily review settings without requiring the saved API key to be shown', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({
+      data: { success: true, message: '' },
+    })
+    const view = renderModerationSection()
+    fireEvent.change(
+      within(view.container).getByLabelText('Daily review model'),
+      {
+        target: { value: 'new-model' },
+      }
+    )
+    const button = within(view.container).getByRole('button', {
+      name: 'Test daily review connection',
+    })
+    fireEvent.click(button)
+
+    await waitFor(() =>
+      expect(within(view.container).getByRole('status')).toHaveTextContent(
+        'Daily review connection succeeded.'
+      )
+    )
+    expect(post).toHaveBeenCalledWith('/api/option/daily_review_test', {
+      base_url: 'https://api.openai.com/v1',
+      api_key: '',
+      model: 'new-model',
+    })
+    expect(button).toBeEnabled()
+  })
+
+  it('shows a failed daily review connection test without starting a review', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({
+      data: { success: false, message: 'Responses endpoint unavailable' },
+    })
+    const view = renderModerationSection()
+    fireEvent.click(
+      within(view.container).getByRole('button', {
+        name: 'Test daily review connection',
+      })
+    )
+
+    await waitFor(() =>
+      expect(within(view.container).getByRole('status')).toHaveTextContent(
+        'Responses endpoint unavailable'
+      )
+    )
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith(
+      '/api/option/daily_review_test',
+      expect.any(Object)
+    )
   })
 
   it('groups forced user and token IDs after both exemption fields', () => {

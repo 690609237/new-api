@@ -45,6 +45,11 @@ export type ModerationTestResponse = {
   data?: { flagged: boolean }
 }
 
+export type DailyReviewTestResponse = {
+  success: boolean
+  message: string
+}
+
 export interface PasskeyDomainChange {
   rp_id: string
   legacy_rp_ids: string

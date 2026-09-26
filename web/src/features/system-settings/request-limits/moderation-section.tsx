@@ -43,6 +43,7 @@ import { requireServerSuccess } from '@/lib/server-error-message'
 import {
   getSystemTask,
   startDailyReviewNow,
+  testDailyReviewEndpoint,
   testModerationEndpoint,
 } from '../api'
 import {
@@ -100,6 +101,10 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
     'idle' | 'testing' | 'success' | 'error'
   >('idle')
   const [testMessage, setTestMessage] = useState('')
+  const [reviewTestState, setReviewTestState] = useState<
+    'idle' | 'testing' | 'success' | 'error'
+  >('idle')
+  const [reviewTestMessage, setReviewTestMessage] = useState('')
   const [reviewTaskId, setReviewTaskId] = useState('')
   const runReview = useMutation({
     mutationFn: async () => requireServerSuccess(await startDailyReviewNow()),
@@ -163,6 +168,30 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
         error instanceof Error
           ? error.message
           : t('Moderation connection test failed.')
+      )
+    }
+  }
+
+  const handleTestDailyReview = async () => {
+    const values = form.getValues()
+    setReviewTestState('testing')
+    setReviewTestMessage('')
+    try {
+      requireServerSuccess(
+        await testDailyReviewEndpoint({
+          base_url: values.DailyReviewBaseURL,
+          api_key: values.DailyReviewAPIKey,
+          model: values.DailyReviewModel,
+        })
+      )
+      setReviewTestState('success')
+      setReviewTestMessage(t('Daily review connection succeeded.'))
+    } catch (error) {
+      setReviewTestState('error')
+      setReviewTestMessage(
+        error instanceof Error
+          ? error.message
+          : t('Daily review connection test failed.')
       )
     }
   }
@@ -737,6 +766,43 @@ export function ModerationSection({ defaultValues }: ModerationSectionProps) {
                   </FormItem>
                 )}
               />
+            </div>
+            <div className='flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3'>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={reviewTestState === 'testing'}
+                onClick={() => void handleTestDailyReview()}
+              >
+                {reviewTestState === 'testing' ? (
+                  <Loader2 className='animate-spin' />
+                ) : (
+                  <CheckCircle2 />
+                )}
+                {t('Test daily review connection')}
+              </Button>
+              <span className='text-muted-foreground text-sm'>
+                {t(
+                  'Uses synthetic content only; no review task or live request is affected.'
+                )}
+              </span>
+              {reviewTestState !== 'idle' && reviewTestMessage ? (
+                <span
+                  role='status'
+                  className={`inline-flex items-center gap-1 text-sm ${
+                    reviewTestState === 'success'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-destructive'
+                  }`}
+                >
+                  {reviewTestState === 'success' ? (
+                    <CheckCircle2 className='size-4' aria-hidden='true' />
+                  ) : (
+                    <XCircle className='size-4' aria-hidden='true' />
+                  )}
+                  {reviewTestMessage}
+                </span>
+              ) : null}
             </div>
             <FormField
               control={form.control}

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -34,4 +35,23 @@ func RunDailyReviewNow(c *gin.Context) {
 	}
 	recordManageAudit(c, "daily_review.run", map[string]any{"date": time.Now().Format("20060102")})
 	common.ApiSuccess(c, task.ToResponse())
+}
+
+func TestDailyReviewConnection(c *gin.Context) {
+	var request struct {
+		BaseURL string `json:"base_url"`
+		APIKey  string `json:"api_key"`
+		Model   string `json:"model"`
+	}
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	if err := service.TestDailyReviewEndpoint(ctx, request.BaseURL, request.APIKey, request.Model); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, nil)
 }
