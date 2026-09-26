@@ -38,24 +38,21 @@ import {
 } from '@/components/ui/popover'
 import { useApiInfo } from '@/features/dashboard/hooks/use-status-data'
 import { useStatus } from '@/hooks/use-status'
+import { PUBLIC_API_BASE_URL } from '@/lib/public-api-url'
 
 import { useApiKeys } from './api-keys-provider'
 
 export function ApiKeysPrimaryButtons() {
   const { t } = useTranslation()
   const { setOpen } = useApiKeys()
-  const { status, loading } = useStatus()
+  const { loading } = useStatus()
   const { items } = useApiInfo()
-  const serverAddress =
-    (typeof status?.server_address === 'string' &&
-      status.server_address.trim()) ||
-    ''
   const addresses = items.length
     ? items
     : [
         {
-          url: serverAddress || window.location.origin,
-          route: serverAddress ? t('Default API address') : t('Current domain'),
+          url: PUBLIC_API_BASE_URL,
+          route: t('Default API address'),
           description: '',
         },
       ]

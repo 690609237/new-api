@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useStatus } from '@/hooks/use-status'
 import { useStatusContent } from '@/hooks/use-status-content'
+import { resolvePublicApiBaseUrl } from '@/lib/public-api-url'
 
 import type { AnnouncementItem, ApiInfoItem, FAQItem } from '../types'
 
@@ -25,7 +26,14 @@ import type { AnnouncementItem, ApiInfoItem, FAQItem } from '../types'
  * Get API info list
  */
 export function useApiInfo() {
-  return useStatusContent<ApiInfoItem>('api_info_enabled', 'api-info')
+  const result = useStatusContent<ApiInfoItem>('api_info_enabled', 'api-info')
+  return {
+    ...result,
+    items: result.items.map((item) => ({
+      ...item,
+      url: resolvePublicApiBaseUrl(item.url),
+    })),
+  }
 }
 
 /**

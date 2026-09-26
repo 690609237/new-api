@@ -29,6 +29,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { STATUS_QUERY_KEY, type StatusData } from '@/lib/status-query'
+import { PUBLIC_API_BASE_URL } from '@/lib/public-api-url'
 
 import { ApiKeysPrimaryButtons } from '../api-keys-primary-buttons'
 import { ApiKeysProvider } from '../api-keys-provider'
@@ -71,7 +72,7 @@ it('shows every configured address and copies only the chosen visible URL', asyn
       {
         route: 'Global',
         description: 'Worldwide access',
-        url: 'https://api.example.com/v1',
+        url: 'https://www.modelpass.work/v1',
         color: 'blue',
       },
       {
@@ -89,7 +90,7 @@ it('shows every configured address and copies only the chosen visible URL', asyn
   expect(rows).toHaveLength(2)
   expect(rows[0]).toHaveTextContent('Global')
   expect(rows[0]).toHaveTextContent('Worldwide access')
-  expect(within(rows[0]).getByText('https://api.example.com/v1')).toBeVisible()
+  expect(within(rows[0]).getByText(PUBLIC_API_BASE_URL)).toBeVisible()
   expect(rows[1]).toHaveTextContent('Asia')
   expect(rows[1]).toHaveTextContent('Regional access')
   expect(
@@ -108,24 +109,21 @@ it('shows every configured address and copies only the chosen visible URL', asyn
   ).toBeVisible()
   expect(
     within(rows[0]).getByRole('button', {
-      name: 'Copy API URL: https://api.example.com/v1',
+      name: `Copy API URL: ${PUBLIC_API_BASE_URL}`,
     })
   ).toBeVisible()
 })
 
 it.each([
   {
-    status: {
-      api_info: [],
-      server_address: 'https://gateway.example.com/proxy/',
-    },
+    status: { api_info: [], server_address: 'https://gateway.example.com/proxy/' },
     label: 'Default API address',
-    url: 'https://gateway.example.com/proxy/',
+    url: PUBLIC_API_BASE_URL,
   },
   {
     status: { api_info: [] },
-    label: 'Current domain',
-    url: window.location.origin,
+    label: 'Default API address',
+    url: PUBLIC_API_BASE_URL,
   },
   {
     status: {
@@ -141,7 +139,7 @@ it.each([
       server_address: 'https://gateway.example.com',
     },
     label: 'Default API address',
-    url: 'https://gateway.example.com',
+    url: PUBLIC_API_BASE_URL,
   },
 ])(
   'shows and copies the fallback $label when no configured addresses are available',

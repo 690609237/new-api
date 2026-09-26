@@ -55,6 +55,7 @@ import { getUserModels } from '@/lib/api'
 import { handleServerError } from '@/lib/handle-server-error'
 import { MOTION_TRANSITION } from '@/lib/motion'
 import { ROLE } from '@/lib/roles'
+import { resolvePublicApiBaseUrl } from '@/lib/public-api-url'
 import { requireServerSuccess } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -140,24 +141,16 @@ function saveSetupGuideExpanded(expanded: boolean): void {
   )
 }
 
-function getCurrentOrigin(): string {
-  if (typeof window === 'undefined') return ''
-  return window.location.origin
-}
-
 function normalizeEndpoint(sourceUrl?: string): string {
-  const fallback = `${getCurrentOrigin()}/v1/chat/completions`
-  const trimmed = sourceUrl?.trim()
-  if (!trimmed) return fallback
+  const trimmed = resolvePublicApiBaseUrl(sourceUrl).replace(/\/+$/, '')
 
-  const withoutTrailingSlash = trimmed.replace(/\/+$/, '')
-  if (withoutTrailingSlash.endsWith('/v1/chat/completions')) {
-    return withoutTrailingSlash
+  if (trimmed.endsWith('/v1/chat/completions')) {
+    return trimmed
   }
-  if (withoutTrailingSlash.endsWith('/v1')) {
-    return `${withoutTrailingSlash}/chat/completions`
+  if (trimmed.endsWith('/v1')) {
+    return `${trimmed}/chat/completions`
   }
-  return `${withoutTrailingSlash}/v1/chat/completions`
+  return `${trimmed}/v1/chat/completions`
 }
 
 function getPreferredKey(keys: ApiKey[]): ApiKey | null {
