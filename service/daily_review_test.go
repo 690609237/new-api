@@ -80,6 +80,62 @@ func TestDailyReviewPartsContinueAndResume(t *testing.T) {
 	assert.Equal(t, 4, requests)
 }
 
+func TestDailyReviewRiskEmailOnlyForNewHighRiskRows(t *testing.T) {
+	previousRecipient := dailyReviewAlertRecipient
+	dailyReviewAlertRecipient = func() string { return "admin@example.com" }
+	t.Cleanup(func() { dailyReviewAlertRecipient = previousRecipient })
+	previousSender := dailyReviewEmailSender
+	t.Cleanup(func() { dailyReviewEmailSender = previousSender })
+
+	var emails []string
+	dailyReviewEmailSender = func(subject, receiver, content string) error {
+		assert.Contains(t, subject, "每日巡查高风险提醒")
+		assert.Equal(t, "admin@example.com", receiver)
+		emails = append(emails, content)
+		return nil
+	}
+	answer := "| username | 行为 | 风险分档 | 简要描述 | 示例requestid |\n" +
+		"| --- | --- | --- | --- | --- |\n" +
+		"| alice | <img src=x onerror=alert(1)> | <mark>极高</mark> | suspicious & quoted | req1 |\n" +
+		"| bob | normal | 中 | safe | req2 |\n" +
+		"| charlie | unusual | 高 | please review | req3 |"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		response, err := common.Marshal(map[string]any{"status": "completed", "output": []any{map[string]any{"content": []any{map[string]any{"type": "output_text", "text": answer}}}}})
+		require.NoError(t, err)
+		_, _ = w.Write(response)
+	}))
+	defer server.Close()
+	report, err := os.OpenFile(filepath.Join(t.TempDir(), "review.md"), os.O_CREATE|os.O_RDWR, 0600)
+	require.NoError(t, err)
+	defer report.Close()
+	cfg := dailyReviewConfig{BaseURL: server.URL, APIKey: "example-secret", Model: "test", Prompt: "review"}
+	completed := map[string]bool{}
+	assert.Zero(t, reviewDailyPart(context.Background(), report, completed, cfg, "user-messages-20260924-a.jsonl", []byte("input")))
+	require.Len(t, emails, 1)
+	assert.Contains(t, emails[0], "alice")
+	assert.Contains(t, emails[0], "charlie")
+	assert.NotContains(t, emails[0], "bob")
+	assert.NotContains(t, emails[0], "<img")
+	assert.Contains(t, emails[0], "&lt;img")
+	assert.Contains(t, emails[0], "suspicious &amp; quoted")
+	assert.NotContains(t, emails[0], "example-secret")
+	assert.Zero(t, reviewDailyPart(context.Background(), report, completed, cfg, "user-messages-20260924-a.jsonl", []byte("input")))
+	assert.Len(t, emails, 1)
+}
+
+func TestDailyReviewRiskEmailIgnoresNonRiskText(t *testing.T) {
+	previousRecipient := dailyReviewAlertRecipient
+	dailyReviewAlertRecipient = func() string { return "admin@example.com" }
+	t.Cleanup(func() { dailyReviewAlertRecipient = previousRecipient })
+	previousSender := dailyReviewEmailSender
+	t.Cleanup(func() { dailyReviewEmailSender = previousSender })
+	dailyReviewEmailSender = func(_, _, _ string) error {
+		t.Fatal("no high-risk row should send an email")
+		return nil
+	}
+	sendDailyReviewRiskAlert(context.Background(), "part", "高风险说明\n| username | 行为 | 风险分档 | 简要描述 | requestid |\n| alice | 高风险词引用 | 低 | none | req1 |\n| bob | x | 高风险 | none | req2 |")
+}
+
 func TestDailyReviewBoundedLineAndCancellation(t *testing.T) {
 	longLine := bytes.NewReader(bytes.Repeat([]byte("x"), dailyReviewPartBytes+1))
 	_, err := readDailyReviewLine(context.Background(), bufio.NewReader(longLine))

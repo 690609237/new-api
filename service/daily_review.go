@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"os"
@@ -29,6 +30,8 @@ import (
 const dailyReviewPartBytes = 5_000_000
 
 var dailyReviewDatePattern = regexp.MustCompile(`^\d{8}$`)
+var dailyReviewEmailSender = common.SendEmail
+var dailyReviewAlertRecipient = setting.ModerationAlertEmail
 
 var ErrInvalidDailyReviewDate = errors.New("invalid daily review date")
 
@@ -415,7 +418,54 @@ func reviewDailyPart(ctx context.Context, report *os.File, completed map[string]
 		return 1
 	}
 	completed[marker] = true
+	sendDailyReviewRiskAlert(ctx, name, answer)
 	return 0
+}
+
+// Only the risk column of a five-column result table can trigger an alert.
+// Model output is untrusted, so never render its Markdown or HTML in email.
+func sendDailyReviewRiskAlert(ctx context.Context, name, answer string) {
+	recipient := dailyReviewAlertRecipient()
+	if recipient == "" {
+		return
+	}
+	var rows [][]string
+	for line := range strings.SplitSeq(answer, "\n") {
+		cells := strings.Split(strings.TrimSpace(line), "|")
+		if len(cells) != 7 || strings.TrimSpace(cells[0]) != "" || strings.TrimSpace(cells[6]) != "" {
+			continue
+		}
+		risk := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(cells[3], "<mark>", ""), "</mark>", ""))
+		if risk != "极高" && risk != "高" {
+			continue
+		}
+		row := make([]string, 5)
+		for i := range row {
+			row[i] = strings.TrimSpace(cells[i+1])
+		}
+		row[2] = risk
+		rows = append(rows, row)
+	}
+	if len(rows) == 0 {
+		return
+	}
+	var content strings.Builder
+	content.WriteString("<p>每日内容巡查发现极高/高风险线索，请人工核查。模型判断不等于实际风控结论。</p><p>巡查批次：")
+	content.WriteString(html.EscapeString(name))
+	content.WriteString("</p><table border=\"1\"><thead><tr><th>username</th><th>行为</th><th>风险分档</th><th>简要描述</th><th>示例requestid</th></tr></thead><tbody>")
+	for _, row := range rows {
+		content.WriteString("<tr>")
+		for _, cell := range row {
+			content.WriteString("<td>")
+			content.WriteString(html.EscapeString(cell))
+			content.WriteString("</td>")
+		}
+		content.WriteString("</tr>")
+	}
+	content.WriteString("</tbody></table>")
+	if err := dailyReviewEmailSender(common.SystemName+" 每日巡查高风险提醒", recipient, content.String()); err != nil {
+		logger.LogWarn(ctx, fmt.Sprintf("daily review risk alert email failed for %s: %v", name, err))
+	}
 }
 
 func appendDailyReviewFailure(report *os.File, name string, err error) {

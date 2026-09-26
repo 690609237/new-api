@@ -8,6 +8,7 @@
 - “审核统计”中的“巡检结果”弹窗默认请求最新报告，显示**日志日期**，并允许选择已有报告的日期。关闭后重新打开回到最新报告。若今天未巡检则展示最近的昨天/更早日期；若今天有报告则展示今天。没有报告时显示空状态。
 - 系统选项 `DailyReviewEnabled` 默认 `false`，`DailyReviewHour` 默认 `2`，`DailyReviewModel` 默认 `gpt-6-luna`，`DailyReviewBaseURL` 默认 `https://api.openai.com/v1`，`DailyReviewPrompt` 默认值定义在 `setting/daily_review.go`。
 - `DailyReviewAPIKey` 属于敏感选项，保存后不在选项接口回显；表单留空表示保留旧值。执行时优先使用已保存的选项，其次 `DAILY_REVIEW_API_KEY`，最后 `OPENAI_API_KEY`；没有可用密钥则拒绝入队。
+- 每个新审核成功批次如有风险分档为“极高”或“高”的表格行，会通过已配置的 SMTP 向“内容审核告警邮箱”（`ModerationAlertEmail` / `MODERATION_ALERT_EMAIL`）发一封提醒，列出该批次的相关行；邮箱留空则不发送。邮件中的模型文本按纯文本转义，不包含原始日志或 API Key。邮件发送失败会写入服务日志，不影响已落盘报告；相同内容的成功批次重跑不会重复发送。
 - API 基础地址必须以 `/v1` 结尾：远端须用 HTTPS，例如 `https://www.modelpass.work/v1`；仅 `localhost`、`127.0.0.1`、`::1` 可用 HTTP，例如 `http://localhost:3000/v1`。不能包含 URL 凭据、查询或片段。`localhost` 是**运行巡检的进程所在网络命名空间**；服务在容器里时它指向容器自身，并不自动指向宿主机。
 
 默认提示词要求 `username，行为，风险分档，简要描述，示例requestid（最多3个）` 五列表格，风险为“极高/高/中/低/无风险”五档。它明确把附件视为待分析数据、避免将引用和角色扮演直接判违规、不臆造实际风控结论或缺失的 request ID，并要求“极高/高”的风险分档单元格用 `<mark>` 包裹。**完整默认文本只以 `setting/daily_review.go` 为准**；独立脚本 `inspection/daily_review.py` 目前另有一份默认提示词，修改默认口径时应同步核对两处。管理员保存的自定义提示词是一个整体选项，不能用分散的固定片段覆盖它；服务仅要求模型返回非空文本，不把可配置提示词强制限定为默认表头。
