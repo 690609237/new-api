@@ -17,6 +17,27 @@ func moderationViolationWindowActive(user *User, now int64) bool {
 	return age >= 0 && age < int64(moderationViolationWindow/time.Second)
 }
 
+func expiredModerationViolationQuery(tx *gorm.DB, now int64) *gorm.DB {
+	cutoff := now - int64(moderationViolationWindow/time.Second)
+	return tx.Unscoped().Model(&User{}).
+		Where("violation_count > ?", 0).
+		Where("(violation_window_start <= ? OR violation_window_start > ?)", cutoff, now)
+}
+
+func resetExpiredModerationViolations(tx *gorm.DB, now int64) error {
+	return expiredModerationViolationQuery(tx, now).Updates(map[string]any{
+		"violation_count":        0,
+		"violation_window_start": 0,
+	}).Error
+}
+
+func resetExpiredModerationViolationsForUser(tx *gorm.DB, userID int, now int64) error {
+	return expiredModerationViolationQuery(tx, now).Where("id = ?", userID).Updates(map[string]any{
+		"violation_count":        0,
+		"violation_window_start": 0,
+	}).Error
+}
+
 // RecordModerationViolation increments a user's daily moderation counter and
 // disables common users once their configured limit is reached. The row lock
 // keeps concurrent flagged requests from losing increments.
@@ -44,7 +65,7 @@ func RecordModerationViolation(userID int) (*User, int, bool, error) {
 		if banned {
 			user.APIBlocked = true
 		}
-		return tx.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		return tx.Model(&User{}).Where("id = ?", userID).Updates(map[string]any{
 			"violation_count":        user.ViolationCount,
 			"violation_limit":        user.ViolationLimit,
 			"violation_window_start": user.ViolationWindowStart,
@@ -74,7 +95,7 @@ func UpdateViolationLimit(userID, limit int) error {
 		if err := lockForUpdate(tx).First(&user, userID).Error; err != nil {
 			return err
 		}
-		updates := map[string]interface{}{"violation_limit": limit}
+		updates := map[string]any{"violation_limit": limit}
 		activeCount := user.ViolationCount
 		if !moderationViolationWindowActive(&user, time.Now().Unix()) {
 			activeCount = 0
@@ -110,7 +131,7 @@ func ResetModerationViolations(userID int) error {
 		if err := lockForUpdate(tx).First(&user, userID).Error; err != nil {
 			return err
 		}
-		updates := map[string]interface{}{
+		updates := map[string]any{
 			"violation_count":        0,
 			"violation_window_start": 0,
 		}

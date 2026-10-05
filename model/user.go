@@ -431,6 +431,10 @@ func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (use
 			tx.Rollback()
 		}
 	}()
+	if err = resetExpiredModerationViolations(tx, time.Now().Unix()); err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
 
 	// Get total count within transaction
 	err = tx.Unscoped().Model(&User{}).Count(&total).Error
@@ -470,6 +474,10 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 			tx.Rollback()
 		}
 	}()
+	if err = resetExpiredModerationViolations(tx, time.Now().Unix()); err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
 
 	// 构建基础查询
 	query := tx.Unscoped().Model(&User{})
@@ -529,6 +537,9 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 		return nil, errors.New("id 为空！")
 	}
 	user := User{Id: id}
+	if err := resetExpiredModerationViolationsForUser(DB, id, time.Now().Unix()); err != nil {
+		return nil, err
+	}
 	var err error = nil
 	if selectAll {
 		err = DB.First(&user, "id = ?", id).Error
@@ -543,6 +554,9 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 func GetSelfUserById(id int) (*User, error) {
 	if id == 0 {
 		return nil, errors.New("id 为空！")
+	}
+	if err := resetExpiredModerationViolationsForUser(DB, id, time.Now().Unix()); err != nil {
+		return nil, err
 	}
 	var profile struct {
 		User

@@ -180,6 +180,32 @@ func TestUpdateViolationLimitIgnoresExpiredViolationWindow(t *testing.T) {
 	assert.False(t, got.APIBlocked)
 }
 
+func TestUserReadsClearExpiredModerationViolationWindow(t *testing.T) {
+	setupUserUpdateTestState(t)
+
+	user := User{
+		Username:             "expired-read-moderation-user",
+		Password:             "password",
+		Role:                 common.RoleCommonUser,
+		Status:               common.UserStatusEnabled,
+		ViolationCount:       2,
+		ViolationLimit:       3,
+		ViolationWindowStart: time.Now().Add(-moderationViolationWindow).Add(-time.Second).Unix(),
+	}
+	require.NoError(t, DB.Create(&user).Error)
+
+	users, _, err := GetAllUsers(&common.PageInfo{Page: 1, PageSize: 20}, NewUserSortOptions("id", "asc"))
+	require.NoError(t, err)
+	require.Len(t, users, 1)
+	assert.Zero(t, users[0].ViolationCount)
+	assert.Zero(t, users[0].ViolationWindowStart)
+
+	var got User
+	require.NoError(t, DB.First(&got, user.Id).Error)
+	assert.Zero(t, got.ViolationCount)
+	assert.Zero(t, got.ViolationWindowStart)
+}
+
 func TestResetModerationViolationsClearsCountAndBlock(t *testing.T) {
 	setupUserUpdateTestState(t)
 
