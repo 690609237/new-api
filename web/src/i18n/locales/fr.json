@@ -3262,6 +3262,7 @@
     "Leave empty to use default": "Laisser vide pour utiliser la valeur par défaut",
     "Leave empty to use system temp directory": "Laisser vide pour utiliser le répertoire temporaire",
     "Leave empty to use username": "Laissez vide pour utiliser le nom d'utilisateur",
+    "Leave me a message": "Laissez-moi un message",
     "Leave the final split empty as the fallback for models not matched above.": "Laissez la dernière répartition vide comme solution de secours pour les modèles non appariés plus haut.",
     "Leave this empty only for the final fallback split; it catches client models not matched above.": "Laissez vide uniquement pour la dernière branche de repli ; elle reçoit les modèles client non associés plus haut.",
     "Left to Right": "De gauche à droite",

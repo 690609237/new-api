@@ -172,12 +172,12 @@ function ContactEmailForm() {
     <div className='border-border/70 bg-card rounded-xl border p-4 shadow-sm sm:p-5'>
       <div className='mb-4 flex items-start justify-between gap-4'>
         <div>
-          <h2 className='text-foreground text-lg font-semibold tracking-tight'>
-            {t('Send a message')}
+          <h2 className='text-foreground flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg font-semibold tracking-tight'>
+            <span>{t('Leave me a message')}</span>
+            <span className='text-muted-foreground text-xs font-normal'>
+              {t('Signed-in users can send up to 3 messages per day.')}
+            </span>
           </h2>
-          <p className='text-muted-foreground mt-1 text-sm leading-6'>
-            {t('Signed-in users can send up to 3 messages per day.')}
-          </p>
         </div>
         <Mail className='text-primary mt-1 size-5' aria-hidden='true' />
       </div>
@@ -211,7 +211,7 @@ function ContactEmailForm() {
                   <Textarea
                     {...field}
                     maxLength={5000}
-                    rows={6}
+                    rows={8}
                     placeholder={t(
                       'Describe your question, feedback, or collaboration idea'
                     )}

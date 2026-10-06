@@ -3262,6 +3262,7 @@
     "Leave empty to use default": "留空使用默认",
     "Leave empty to use system temp directory": "留空使用系统临时目录",
     "Leave empty to use username": "留空以使用用户名",
+    "Leave me a message": "给我留言",
     "Leave the final split empty as the fallback for models not matched above.": "将最后一个分流留空作为兜底，用于匹配前面未命中的模型。",
     "Leave this empty only for the final fallback split; it catches client models not matched above.": "只有最后一个兜底分流可以留空；它会匹配前面未命中的客户端模型。",
     "Left to Right": "从左到右",

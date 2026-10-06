@@ -27,6 +27,7 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Leave me a message': 'Leave me a message',
     'About ModelPass': 'About ModelPass',
     'Contact us': 'Contact us',
     'Usage agreement': 'Usage agreement',
@@ -200,6 +201,7 @@ const newKeys = {
       'View the configured sensitive words matched by a request.',
   },
   zh: {
+    'Leave me a message': '给我留言',
     'About ModelPass': '关于 ModelPass',
     'Contact us': '联系我们',
     'Usage agreement': '使用协议',
@@ -369,6 +371,7 @@ const newKeys = {
       '查看请求命中的已配置敏感词。',
   },
   'zh-TW': {
+    'Leave me a message': '給我留言',
     'About ModelPass': '關於 ModelPass',
     'Contact us': '聯絡我們',
     'Usage agreement': '使用協議',
@@ -538,6 +541,7 @@ const newKeys = {
       '查看請求命中的已設定敏感詞。',
   },
   fr: {
+    'Leave me a message': 'Laissez-moi un message',
     'About ModelPass': 'À propos de ModelPass',
     'Contact us': 'Nous contacter',
     'Usage agreement': "Accord d'utilisation",
@@ -713,6 +717,7 @@ const newKeys = {
       'Voir les mots sensibles configurés détectés dans une requête.',
   },
   ja: {
+    'Leave me a message': 'メッセージを残す',
     'About ModelPass': 'ModelPassについて',
     'Contact us': 'お問い合わせ',
     'Usage agreement': '利用規約',
@@ -887,6 +892,7 @@ const newKeys = {
       'リクエストで検出された設定済みの機密語を表示します。',
   },
   ru: {
+    'Leave me a message': 'Оставьте мне сообщение',
     'About ModelPass': 'О ModelPass',
     'Contact us': 'Связаться с нами',
     'Usage agreement': 'Условия использования',
@@ -1062,6 +1068,7 @@ const newKeys = {
       'Просматривать настроенные чувствительные слова, совпавшие в запросе.',
   },
   vi: {
+    'Leave me a message': 'Để lại lời nhắn',
     'About ModelPass': 'Về ModelPass',
     'Contact us': 'Liên hệ',
     'Usage agreement': 'Thỏa thuận sử dụng',

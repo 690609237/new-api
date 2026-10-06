@@ -3262,6 +3262,7 @@
     "Leave empty to use default": "Оставьте пустым для использования по умолчанию",
     "Leave empty to use system temp directory": "Оставьте пустым для системного временного каталога",
     "Leave empty to use username": "Оставьте пустым, чтобы использовать имя пользователя",
+    "Leave me a message": "Оставьте мне сообщение",
     "Leave the final split empty as the fallback for models not matched above.": "Оставьте последний маршрут пустым как резервный для моделей, не совпавших выше.",
     "Leave this empty only for the final fallback split; it catches client models not matched above.": "Оставляйте пустым только последнюю резервную ветку; она принимает модели клиента, не совпавшие выше.",
     "Left to Right": "Слева направо",
