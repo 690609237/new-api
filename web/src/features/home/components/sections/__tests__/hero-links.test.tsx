@@ -150,4 +150,22 @@ describe('Hero documentation link', () => {
     expect(screen.getByRole('note')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Docs' })).toBeInTheDocument()
   })
+
+  test('removes the legacy upstream branding from configured home content', () => {
+    render(
+      <Hero homePageContent='<p>支持一键配置并完美适配 NewAPI 多协议配置</p>' />
+    )
+
+    const summary = screen.getByRole('region', {
+      name: 'Platform pricing and channel source summary',
+    })
+    const contentRoot = summary.querySelector<HTMLElement>(
+      '.home-feature-content'
+    )?.shadowRoot
+
+    expect(contentRoot?.textContent).toContain(
+      'Connect popular AI applications with flexible API compatibility.'
+    )
+    expect(contentRoot?.textContent).not.toContain('NewAPI')
+  })
 })

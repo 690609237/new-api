@@ -41,6 +41,33 @@ const isolatedContentBaseStyles = `
     font: inherit;
   }
 
+  /*
+   * Isolated content may come from an administrator-configured HTML snippet.
+   * Keep ordinary copy tied to the active application theme instead of
+   * allowing a light-only text color to become unreadable in dark mode.
+   */
+  :where(.html-content-root) {
+    color: var(--foreground) !important;
+  }
+
+  :where(.html-content-root p,
+    .html-content-root h1,
+    .html-content-root h2,
+    .html-content-root h3,
+    .html-content-root h4,
+    .html-content-root h5,
+    .html-content-root h6,
+    .html-content-root li,
+    .html-content-root span:not([aria-hidden='true']):not(.home-feature-tag),
+    .html-content-root strong,
+    .html-content-root div) {
+    color: inherit !important;
+  }
+
+  :where(.html-content-root a) {
+    color: var(--primary) !important;
+  }
+
   *,
   *::before,
   *::after {
@@ -157,6 +184,7 @@ function IsolatedHtmlContent(props: {
     ].map((node) => node.cloneNode(true))
 
     const wrapper = document.createElement('div')
+    wrapper.className = 'html-content-root'
     syncDarkClass(wrapper)
     wrapper.innerHTML = props.html
 

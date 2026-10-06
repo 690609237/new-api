@@ -53,7 +53,16 @@ export function Hero(props: HeroProps) {
   const { t } = useTranslation()
   const homePageContent =
     props.homePageContent?.trim() || getDefaultHomePageContent(t)
-  const contentIsHtml = isLikelyHtml(homePageContent)
+  const displayHomePageContent = homePageContent
+    .replaceAll(
+      'Supports one-click configuration and perfectly adapts to NewAPI multi-protocol configuration.',
+      t('Connect popular AI applications with flexible API compatibility.')
+    )
+    .replaceAll(
+      /支持一键配置并完美适配\s*NewAPI\s*多协议配置[。.]?/g,
+      t('Connect popular AI applications with flexible API compatibility.')
+    )
+  const contentIsHtml = isLikelyHtml(displayHomePageContent)
 
   const renderDocsButton = () => {
     return (
@@ -117,7 +126,7 @@ export function Hero(props: HeroProps) {
             <RichContent
               mode={contentIsHtml ? 'html' : 'markdown'}
               htmlVariant='isolated'
-              content={homePageContent}
+              content={displayHomePageContent}
               className={
                 contentIsHtml
                   ? 'home-feature-content'
@@ -173,7 +182,7 @@ export function Hero(props: HeroProps) {
               </span>
               <p className='text-muted-foreground/60 text-xs leading-relaxed'>
                 {t(
-                  'Supports one-click configuration and perfectly adapts to NewAPI multi-protocol configuration.'
+                  'Connect popular AI applications with flexible API compatibility.'
                 )}
               </p>
             </div>
