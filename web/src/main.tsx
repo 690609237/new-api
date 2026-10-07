@@ -27,6 +27,7 @@ import { applyFaviconToDom } from '@/lib/dom-utils'
 import '@/lib/dayjs'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
 import { createAppQueryClient } from '@/lib/query-client'
+import { isPublicSeoPath } from '@/lib/seo'
 import {
   mapStatusDataToConfig,
   readCachedStatus,
@@ -72,11 +73,13 @@ const rootElement = document.querySelector<HTMLElement>('#root')
 if (!rootElement) {
   throw new Error('Root element not found')
 }
+document.querySelector<HTMLElement>('#seo-content')?.remove()
 // Set document.title and favicon from cached status, then refresh from network
 ;(function initSystemBranding() {
   try {
     if (typeof window === 'undefined' || typeof document === 'undefined') return
     const apply = (name: string) => {
+      if (isPublicSeoPath(window.location.pathname)) return
       document.title = name
       const metaTitle = document.querySelector(
         'meta[name="title"]'
