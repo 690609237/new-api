@@ -37,10 +37,11 @@ function careButton(action,label,id='',style='') {
 }
 function renderCareLibrary() {
   ensureCareData();
+  if(careUi.library==='products')return renderShopLibrary();
   const type=careUi.library, items=state.catalog[type].filter(item=>`${item.name} ${item.category}`.includes(careUi.search));
   return `<div class="page-heading between"><div><div class="eyebrow">CARE CONTENT LIBRARY</div><h1>照护内容库</h1><p>内容统一维护，医护按患者情况选择与组合。</p></div>${careAdmin()?careButton('catalog-new','＋ 新增'+(type==='actions'?'动作':'食材'),'','primary'):sourceTag('普通医护 · 只读使用','green')}</div>
     <div class="notice">${careAdmin()?'当前为医护 + 内容管理员演示身份，可新增、编辑和停用内容。':'普通医护可查看内容，并在计划编辑器中选用；只有内容管理员可以维护库。'} 库条目不是处方，选用仍需逐人核对。</div>
-    <div class="care-toolbar"><div class="care-tabs">${['actions','foods'].map(key=>`<button class="btn ${key===type?'primary':''}" data-action="care-library-tab" data-id="${key}">${key==='actions'?'动作库':'食材库'} · ${state.catalog[key].length}</button>`).join('')}</div><label class="care-search">搜索名称 / 分类<input id="care-search" value="${escapeHtml(careUi.search)}" placeholder="输入后回车搜索"></label></div>
+    <div class="care-toolbar"><div class="care-tabs">${['actions','foods'].map(key=>`<button class="btn ${key===type?'primary':''}" data-action="care-library-tab" data-id="${key}">${key==='actions'?'动作库':'食材库'} · ${state.catalog[key].length}</button>`).join('')}${careButton('library-tab','商品库','products')}</div><label class="care-search">搜索名称 / 分类<input id="care-search" value="${escapeHtml(careUi.search)}" placeholder="输入后回车搜索"></label></div>
     <div class="care-grid">${items.map(item=>`<article class="care-card"><div class="between"><span class="task-icon">${icon(type==='actions'?'training':'food')}</span>${sourceTag(item.active?'可选用':'已停用',item.active?'green':'')}</div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.category)} · 单位：${escapeHtml(item.unit)} · V${item.version}</p><p>${escapeHtml(item.note)}</p>${type==='foods'?`<p>过敏 / 耐受提示：${escapeHtml(item.allergens)}</p>${foodReferenceCard(item,item.reference?.amount||1)}`:''}<div class="care-card-actions">${careButton('catalog-detail','查看详情',item.id)}${careAdmin()?careButton('catalog-edit','编辑',item.id)+careButton('catalog-toggle',item.active?'停用':'重新启用',item.id):''}</div></article>`).join('')||'<div class="empty">没有匹配内容，请更换搜索词。</div>'}</div>`;
 }
 function careCatalogForm(id) {
