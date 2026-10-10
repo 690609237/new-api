@@ -88,6 +88,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 
 	// 无条件新建 StreamStatus
 	info.StreamStatus = relaycommon.NewStreamStatus()
+	info.StreamStatus.RecordUpstreamHTTPStatus(resp.StatusCode)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

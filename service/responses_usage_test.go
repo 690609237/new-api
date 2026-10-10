@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -136,6 +137,122 @@ func TestObserveResponsesOutcomeRecordsProtocolFacts(t *testing.T) {
 			assert.Equal(t, tc.wantIncompl, outcome.IncompleteReason)
 		})
 	}
+}
+
+func TestResponsesStreamFailureDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		event       string
+		httpStatus  int
+		eventStatus int
+		hint        string
+		code        string
+	}{
+		{
+			name:       "capacity error without numeric status",
+			event:      `{"type":"response.failed","response":{"status":"failed","error":{"code":"server_error","type":"server_error","message":"Selected model is at capacity. Please try a different model."}}}`,
+			httpStatus: 200, hint: "capacity", code: "server_error",
+		},
+		{
+			name:       "error with top-level status",
+			event:      `{"type":"error","status":503,"code":"overloaded","message":"busy"}`,
+			httpStatus: 200, eventStatus: 503, code: "overloaded",
+		},
+		{
+			name:       "failed response with embedded status",
+			event:      `{"type":"response.failed","response":{"status":"failed","error":{"status":529,"type":"server_error","code":"capacity_exceeded","message":"busy"}}}`,
+			httpStatus: 200, eventStatus: 529, hint: "capacity", code: "capacity_exceeded",
+		},
+		{
+			name:       "top-level error object with status",
+			event:      `{"type":"error","error":{"status":503,"type":"server_error","code":"overloaded","message":"busy"}}`,
+			httpStatus: 200, eventStatus: 503, code: "overloaded",
+		},
+		{
+			name:       "malformed status is not invented",
+			event:      `{"type":"error","status":"503","code":"server_error","message":"unavailable"}`,
+			httpStatus: 200, code: "server_error",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var event dto.ResponsesStreamResponse
+			require.NoError(t, common.UnmarshalJsonStr(tc.event, &event))
+			info := &relaycommon.RelayInfo{IsStream: true, StreamStatus: relaycommon.NewStreamStatus()}
+			info.StreamStatus.RecordUpstreamHTTPStatus(tc.httpStatus)
+			ObserveResponsesOutcome(info, &event)
+			info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonEOF, nil)
+
+			other := model.NewLogOther()
+			appendStreamStatus(info, other)
+			var logged map[string]any
+			require.NoError(t, common.UnmarshalJsonStr(other.JSONString(), &logged))
+			stream, ok := logged["stream_status"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "error", stream["status"])
+			assert.Equal(t, "upstream_event", stream["failure_source"])
+			assert.Equal(t, "UPSTREAM_STREAM_ERROR", stream["diagnostic_code"])
+			assert.Equal(t, float64(tc.httpStatus), stream["upstream_http_status"])
+			assert.Equal(t, tc.code, logged["admin_info"].(map[string]any)["upstream_stream_error_code"])
+			if tc.eventStatus == 0 {
+				assert.NotContains(t, stream, "upstream_event_status")
+			} else {
+				assert.Equal(t, float64(tc.eventStatus), stream["upstream_event_status"])
+			}
+			if tc.hint == "" {
+				assert.NotContains(t, stream, "failure_hint")
+			} else {
+				assert.Equal(t, tc.hint, stream["failure_hint"])
+			}
+			assert.NotContains(t, stream, "message")
+			assert.NotContains(t, other.JSONString(), "Selected model is at capacity")
+		})
+	}
+}
+
+func TestStreamFailureSourceWithoutUpstreamErrorEvent(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		reason relaycommon.StreamEndReason
+		source string
+		code   string
+	}{
+		{"gateway timeout", relaycommon.StreamEndReasonTimeout, "gateway_processing", "GATEWAY_STREAM_TIMEOUT"},
+		{"read error", relaycommon.StreamEndReasonScannerErr, "transport", "STREAM_READ_ERROR"},
+		{"client cancel", relaycommon.StreamEndReasonClientGone, "client_disconnected", "CLIENT_DISCONNECTED"},
+		{"unexplained eof", relaycommon.StreamEndReasonEOF, "unknown", "STREAM_EOF_NO_TERMINAL"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			info := &relaycommon.RelayInfo{IsStream: true, StreamStatus: relaycommon.NewStreamStatus()}
+			info.StreamStatus.RecordUpstreamHTTPStatus(200)
+			info.StreamStatus.RequireTerminal()
+			info.StreamStatus.SetEndReason(tc.reason, nil)
+			other := model.NewLogOther()
+			appendStreamStatus(info, other)
+			var logged map[string]any
+			require.NoError(t, common.UnmarshalJsonStr(other.JSONString(), &logged))
+			stream := logged["stream_status"].(map[string]any)
+			assert.Equal(t, "error", stream["status"])
+			assert.Equal(t, tc.source, stream["failure_source"])
+			assert.Equal(t, tc.code, stream["diagnostic_code"])
+			assert.NotContains(t, stream, "upstream_event_status")
+		})
+	}
+}
+
+func TestStreamStatusOmitsUpstreamHTTPStatusOnSuccess(t *testing.T) {
+	info := &relaycommon.RelayInfo{IsStream: true, StreamStatus: relaycommon.NewStreamStatus()}
+	info.StreamStatus.RecordUpstreamHTTPStatus(200)
+	info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonDone, nil)
+	info.StreamStatus.MarkCompleted()
+
+	other := model.NewLogOther()
+	appendStreamStatus(info, other)
+	var logged map[string]any
+	require.NoError(t, common.UnmarshalJsonStr(other.JSONString(), &logged))
+	stream, ok := logged["stream_status"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "ok", stream["status"])
+	assert.NotContains(t, stream, "upstream_http_status")
 }
 
 func TestResponsesUsageAccumulatorDisconnectBillsCompletedImage(t *testing.T) {

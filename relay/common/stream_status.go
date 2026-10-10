@@ -49,29 +49,54 @@ type StreamStatus struct {
 	Errors     []StreamErrorEntry
 	ErrorCount int
 
-	response         ResponseOutcome
-	errorCode        string
-	errorType        string
-	errorStatus      int
-	incompleteReason string
-	expectsTerminal  bool
+	upstreamHTTPStatus int
+	failureHint        string
+	response           ResponseOutcome
+	errorCode          string
+	errorType          string
+	errorStatus        int
+	incompleteReason   string
+	expectsTerminal    bool
 }
 
 // StreamOutcome holds classification facts only; upstream messages never
 // enter it because they may contain credentials or request content.
 type StreamOutcome struct {
-	EndReason        StreamEndReason
-	HasErrors        bool
-	ExpectsTerminal  bool
-	Response         ResponseOutcome
-	ErrorCode        string
-	ErrorType        string
-	ErrorStatus      int
-	IncompleteReason string
+	EndReason          StreamEndReason
+	HasErrors          bool
+	ExpectsTerminal    bool
+	UpstreamHTTPStatus int
+	FailureHint        string
+	Response           ResponseOutcome
+	ErrorCode          string
+	ErrorType          string
+	ErrorStatus        int
+	IncompleteReason   string
 }
 
 func NewStreamStatus() *StreamStatus {
 	return &StreamStatus{}
+}
+
+// RecordUpstreamHTTPStatus records the actual status received before the
+// streaming body begins; it must not be confused with an in-stream error.
+func (s *StreamStatus) RecordUpstreamHTTPStatus(status int) {
+	if s == nil || status < 100 || status > 599 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.upstreamHTTPStatus = status
+}
+
+// MarkCapacityFailure records a bounded diagnostic, never the upstream message.
+func (s *StreamStatus) MarkCapacityFailure() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.failureHint = "capacity"
 }
 
 func (s *StreamStatus) SetEndReason(reason StreamEndReason, err error) {
@@ -177,14 +202,16 @@ func (s *StreamStatus) OutcomeSnapshot() StreamOutcome {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return StreamOutcome{
-		EndReason:        s.EndReason,
-		HasErrors:        s.ErrorCount > 0,
-		ExpectsTerminal:  s.expectsTerminal,
-		Response:         s.response,
-		ErrorCode:        s.errorCode,
-		ErrorType:        s.errorType,
-		ErrorStatus:      s.errorStatus,
-		IncompleteReason: s.incompleteReason,
+		EndReason:          s.EndReason,
+		HasErrors:          s.ErrorCount > 0,
+		ExpectsTerminal:    s.expectsTerminal,
+		UpstreamHTTPStatus: s.upstreamHTTPStatus,
+		FailureHint:        s.failureHint,
+		Response:           s.response,
+		ErrorCode:          s.errorCode,
+		ErrorType:          s.errorType,
+		ErrorStatus:        s.errorStatus,
+		IncompleteReason:   s.incompleteReason,
 	}
 }
 

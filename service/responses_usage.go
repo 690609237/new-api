@@ -123,16 +123,36 @@ func ObserveResponsesOutcome(info *relaycommon.RelayInfo, event *dto.ResponsesSt
 	}
 	switch {
 	case event.Type == "error" || event.Type == "response.failed" || event.Type == "response.error" || responseStatus == "failed":
-		code, errorType := event.Code, ""
-		if event.Response != nil {
-			if oaiErr := event.Response.GetOpenAIError(); oaiErr != nil {
-				if oaiErr.Code != nil {
-					code = fmt.Sprint(oaiErr.Code)
-				}
-				errorType = oaiErr.Type
+		code, errorType, message, status := event.Code, "", event.Message, 0
+		if len(event.Status) > 0 {
+			var reportedStatus int
+			if err := common.Unmarshal(event.Status, &reportedStatus); err == nil && reportedStatus >= 100 && reportedStatus <= 599 {
+				status = reportedStatus
 			}
 		}
-		info.StreamStatus.MarkFailed(code, errorType, 0)
+		errorField := event.Error
+		if event.Response != nil && event.Response.Error != nil {
+			errorField = event.Response.Error
+		}
+		if oaiErr := dto.GetOpenAIError(errorField); oaiErr != nil {
+			if oaiErr.Code != nil {
+				code = fmt.Sprint(oaiErr.Code)
+			}
+			errorType = oaiErr.Type
+			if oaiErr.Message != "" {
+				message = oaiErr.Message
+			}
+		}
+		if reported, ok := errorField.(map[string]any); ok && status == 0 {
+			if number, ok := reported["status"].(float64); ok && number >= 100 && number <= 599 && number == float64(int(number)) {
+				status = int(number)
+			}
+		}
+		info.StreamStatus.MarkFailed(code, errorType, status)
+		if strings.Contains(strings.ToLower(message), "selected model is at capacity") ||
+			strings.Contains(strings.ToLower(code), "capacity") {
+			info.StreamStatus.MarkCapacityFailure()
+		}
 	case event.Type == "response.incomplete" || responseStatus == "incomplete":
 		reason := ""
 		if event.Response != nil && event.Response.IncompleteDetails != nil {

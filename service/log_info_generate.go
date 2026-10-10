@@ -158,16 +158,70 @@ func appendStreamStatus(relayInfo *relaycommon.RelayInfo, other *model.LogOther)
 		return
 	}
 	ss := relayInfo.StreamStatus
+	outcome := ss.OutcomeSnapshot()
 	status := "ok"
-	if !ss.IsNormalEnd() || ss.HasErrors() || ss.ResponseFailed() {
+	if !ss.IsNormalEnd() || outcome.HasErrors || outcome.Response == relaycommon.ResponseOutcomeFailed ||
+		(outcome.ExpectsTerminal && outcome.Response == relaycommon.ResponseOutcomeUnknown && outcome.EndReason != relaycommon.StreamEndReasonDone) {
 		status = "error"
 	}
 	streamInfo := map[string]any{
 		"status":     status,
 		"end_reason": string(ss.EndReason),
 	}
-	if outcome := ss.ResponseOutcome(); outcome != "" {
-		streamInfo["response_status"] = outcome
+	if outcome.Response != relaycommon.ResponseOutcomeUnknown {
+		streamInfo["response_status"] = string(outcome.Response)
+	}
+	if status == "error" && outcome.UpstreamHTTPStatus != 0 {
+		streamInfo["upstream_http_status"] = outcome.UpstreamHTTPStatus
+	}
+	if outcome.Response == relaycommon.ResponseOutcomeFailed {
+		streamInfo["failure_source"] = "upstream_event"
+		streamInfo["diagnostic_code"] = "UPSTREAM_STREAM_ERROR"
+		if outcome.ErrorStatus != 0 {
+			streamInfo["upstream_event_status"] = outcome.ErrorStatus
+		}
+		unsafeRune := func(r rune) bool {
+			return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+				(r >= '0' && r <= '9') || r == '_' || r == '-' || r == '.')
+		}
+		if outcome.ErrorCode != "" && len(outcome.ErrorCode) <= 80 && strings.IndexFunc(outcome.ErrorCode, unsafeRune) == -1 {
+			other.SetAdmin("upstream_stream_error_code", outcome.ErrorCode)
+		}
+		if outcome.ErrorType != "" && len(outcome.ErrorType) <= 80 && strings.IndexFunc(outcome.ErrorType, unsafeRune) == -1 {
+			other.SetAdmin("upstream_stream_error_type", outcome.ErrorType)
+		}
+		if outcome.FailureHint != "" {
+			streamInfo["failure_hint"] = outcome.FailureHint
+		}
+	} else if status == "error" {
+		switch outcome.EndReason {
+		case relaycommon.StreamEndReasonClientGone:
+			streamInfo["failure_source"] = "client_disconnected"
+			streamInfo["diagnostic_code"] = "CLIENT_DISCONNECTED"
+		case relaycommon.StreamEndReasonTimeout:
+			streamInfo["failure_source"] = "gateway_processing"
+			streamInfo["diagnostic_code"] = "GATEWAY_STREAM_TIMEOUT"
+		case relaycommon.StreamEndReasonPanic:
+			streamInfo["failure_source"] = "gateway_processing"
+			streamInfo["diagnostic_code"] = "GATEWAY_STREAM_PANIC"
+		case relaycommon.StreamEndReasonHandlerStop:
+			streamInfo["failure_source"] = "gateway_processing"
+			streamInfo["diagnostic_code"] = "GATEWAY_HANDLER_STOP"
+		case relaycommon.StreamEndReasonPingFail:
+			streamInfo["failure_source"] = "gateway_processing"
+			streamInfo["diagnostic_code"] = "GATEWAY_PING_FAILURE"
+		case relaycommon.StreamEndReasonScannerErr:
+			streamInfo["failure_source"] = "transport"
+			streamInfo["diagnostic_code"] = "STREAM_READ_ERROR"
+		default:
+			if outcome.HasErrors {
+				streamInfo["failure_source"] = "stream_processing"
+				streamInfo["diagnostic_code"] = "STREAM_PROCESSING_ERROR"
+			} else {
+				streamInfo["failure_source"] = "unknown"
+				streamInfo["diagnostic_code"] = "STREAM_EOF_NO_TERMINAL"
+			}
+		}
 	}
 	if ss.EndError != nil {
 		streamInfo["end_error"] = ss.EndError.Error()
