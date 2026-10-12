@@ -26,24 +26,47 @@ import type { HomePageContentResult } from '../types'
 
 const STORAGE_KEY = 'home_page_information_content_v2'
 
+function readStartupHomePageContent(): string | null {
+  const bootstrap = document.querySelector<HTMLScriptElement>(
+    '#home-page-bootstrap'
+  )
+  if (bootstrap) {
+    try {
+      const content: unknown = JSON.parse(bootstrap.textContent ?? '')
+      if (typeof content === 'string') return content
+    } catch {
+      // Development HTML may still contain the unresolved template token.
+    }
+  }
+
+  return null
+}
+
+function readLegacyCachedHomePageContent(): string | null {
+  return localStorage.getItem(STORAGE_KEY)
+}
+
 /**
  * Loads the configurable Markdown/HTML content for the home-page information
  * area. The surrounding home-page layout is always rendered by the app.
  */
 export function useHomePageContent(): HomePageContentResult {
-  const [content, setContent] = useState<string>('')
+  const [content, setContent] = useState<string>(
+    () => readStartupHomePageContent() ?? readLegacyCachedHomePageContent() ?? ''
+  )
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
 
-    const loadContent = async () => {
-      // Load from localStorage first for immediate display
-      const cached = localStorage.getItem(STORAGE_KEY)
-      if (cached && mounted) {
-        setContent(cached)
+    if (readStartupHomePageContent() !== null) {
+      setIsLoaded(true)
+      return () => {
+        mounted = false
       }
+    }
 
+    const loadContent = async () => {
       try {
         const response = await getHomePageContent()
         const { success, data } = response
@@ -54,7 +77,6 @@ export function useHomePageContent(): HomePageContentResult {
           setContent(data)
           localStorage.setItem(STORAGE_KEY, data)
         } else {
-          // Clear content if API returns empty
           setContent('')
           localStorage.removeItem(STORAGE_KEY)
         }

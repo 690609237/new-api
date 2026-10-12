@@ -2,6 +2,7 @@ package router
 
 import (
 	"embed"
+	stdhtml "html"
 	"net/http"
 	"strings"
 
@@ -11,12 +12,14 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	htmlparser "golang.org/x/net/html"
 )
 
 // WebAssets holds the embedded dashboard frontend assets.
 type WebAssets struct {
-	BuildFS   embed.FS
-	IndexPage []byte
+	BuildFS         embed.FS
+	IndexPage       []byte
+	HomePageContent string
 }
 
 type webSEOPage struct {
@@ -33,7 +36,22 @@ var publicWebSEOPages = map[string]webSEOPage{
 		description: "ModelPass 是统一的 AI API 网关与模型服务平台，聚合多家模型服务，提供兼容 OpenAI 的 API、模型价格、用量统计与开发者文档。",
 		keywords:    "AI API,统一 AI 网关,大模型 API,OpenAI 兼容 API,模型服务,开发者平台",
 		canonical:   "https://www.modelpass.work/",
-		content:     `<h1>ModelPass 统一 AI API 网关与模型服务平台</h1><p>ModelPass 聚合多家 AI 模型服务，提供兼容 OpenAI 的 API、模型价格、用量统计与开发者文档。</p><nav aria-label="主要页面"><a href="/docs">开发者文档</a><a href="/pricing">模型价格</a><a href="/about">关于 ModelPass</a></nav>`,
+		content: `<h1>ModelPass 统一 AI API 网关与模型服务平台</h1>
+			<p>ModelPass 面向开发者、团队和 AI 应用提供统一的模型接入入口。通过一个兼容 OpenAI 的 API 网关，即可管理多家上游模型服务、API Key、模型价格、用量与成本。</p>
+			<p>平台按 1:1 充值展示模型价格，价格使用美元标识；自有 token 分组使用 <code>default</code> 和 <code>standard</code> 等固定技术标识。请合理使用服务，严禁破限。</p>
+			<section aria-labelledby="modelpass-models"><h2 id="modelpass-models">统一接入主流 AI 模型</h2>
+			<p>平台支持 OpenAI、Anthropic Claude、Google Gemini、DeepSeek、通义千问（Qwen）、Llama 等模型服务，并提供 OpenAI Chat Completions、Responses、Anthropic Messages 和 Gemini 等常用协议的兼容路由。你可以在客户端保持稳定的 API 地址，在后台按需切换模型和渠道。</p>
+			<ul><li>多渠道模型聚合与模型名称映射</li><li>流式输出、工具调用和多模态请求支持（以渠道能力为准）</li><li>统一的 API Key、用户分组和访问权限管理</li></ul></section>
+			<section aria-labelledby="modelpass-platform"><h2 id="modelpass-platform">为生产环境设计的 API 管理能力</h2>
+			<p>ModelPass 提供渠道调度、负载均衡、失败重试、限流和用量统计，帮助团队将模型调用接入现有产品。控制台可查看请求、令牌和成本数据，并按模型或用户配置透明的按量计费规则。</p>
+			<ul><li>开发者文档和常见客户端配置示例</li><li>实时用量、余额与模型价格查询</li><li>适合团队协作的用户、分组和权限控制</li><li>支持自托管部署与可扩展的上游渠道</li></ul></section>
+			<section aria-labelledby="modelpass-start"><h2 id="modelpass-start">三步开始使用 ModelPass</h2>
+			<ol><li>注册账号并创建 API Key。</li><li>在控制台配置上游渠道、模型和访问分组。</li><li>将 API 地址和密钥填入 OpenAI、Claude、Gemini 或其他兼容客户端。</li></ol></section>
+			<section aria-labelledby="modelpass-faq"><h2 id="modelpass-faq">常见问题</h2>
+			<details><summary>ModelPass 是什么？</summary><p>ModelPass 是把多个 AI 模型服务统一到一个 API 入口的网关和管理平台，适用于个人项目、团队应用和自托管部署。</p></details>
+			<details><summary>需要修改现有 AI 应用代码吗？</summary><p>对于支持自定义 Base URL 的 OpenAI 兼容客户端，通常只需替换 API 地址并使用 ModelPass API Key；具体协议和模型能力取决于已配置的渠道。</p></details>
+			<details><summary>在哪里查看模型价格和接入方式？</summary><p>请查看<a href="/pricing">模型价格</a>和<a href="/docs">开发者文档</a>，了解当前公开的模型信息、计费项目和配置步骤。</p></details></section>
+			<nav aria-label="主要页面"><a href="/docs">开发者文档</a><a href="/pricing">模型价格</a><a href="/rankings">AI 模型排行榜</a><a href="/about">关于 ModelPass</a></nav>`,
 	},
 	"/docs": {
 		title:       "ModelPass API 开发者文档｜统一 AI API 网关",
@@ -80,8 +98,12 @@ var publicWebSEOPages = map[string]webSEOPage{
 }
 
 func renderWebPage(indexPage []byte, requestPath string) []byte {
+	return renderWebPageWithHomeContent(indexPage, requestPath, "")
+}
+
+func renderWebPageWithHomeContent(indexPage []byte, requestPath, homePageContent string) []byte {
 	path := strings.TrimSuffix(requestPath, "/")
-	if path == "" {
+	if path == "" || path == "/index.html" {
 		path = "/"
 	}
 	page, ok := publicWebSEOPages[path]
@@ -98,21 +120,96 @@ func renderWebPage(indexPage []byte, requestPath string) []byte {
 	}
 
 	content := string(indexPage)
-	for placeholder, value := range map[string]string{
-		"__SEO_TITLE__":       page.title,
-		"__SEO_DESCRIPTION__": page.description,
-		"__SEO_KEYWORDS__":    page.keywords,
-		"__SEO_CANONICAL__":   page.canonical,
-		"__SEO_ROBOTS__":      robots,
-		"__SEO_CONTENT__":     page.content,
-	} {
-		content = strings.ReplaceAll(content, placeholder, value)
+	seoContent := page.content
+	if path == "/" {
+		seoContent += renderConfiguredHomeContent(homePageContent)
 	}
-	return []byte(content)
+	homePageSnapshotJSON := marshalHomePageSnapshot(homePageContent)
+	// Replace all template markers in one pass. A loop of ReplaceAll calls can
+	// rescan administrator content inserted by an earlier replacement and
+	// corrupt it when that content happens to contain a marker-like string.
+	return []byte(strings.NewReplacer(
+		"__SEO_TITLE__", page.title,
+		"__SEO_DESCRIPTION__", page.description,
+		"__SEO_KEYWORDS__", page.keywords,
+		"__SEO_CANONICAL__", page.canonical,
+		"__SEO_ROBOTS__", robots,
+		"__SEO_CONTENT__", seoContent,
+		"__HOME_PAGE_CONTENT_JSON__", homePageSnapshotJSON,
+	).Replace(content))
+}
+
+func marshalHomePageSnapshot(content string) string {
+	encoded, err := common.Marshal(content)
+	if err != nil {
+		return `""`
+	}
+	// A JSON string inside a script element must not be allowed to terminate
+	// that element when an administrator enters "</script>" in the content.
+	return strings.NewReplacer(
+		"<", `\u003c`,
+		">", `\u003e`,
+		"&", `\u0026`,
+	).Replace(string(encoded))
+}
+
+func renderConfiguredHomeContent(content string) string {
+	text := visibleHomeContentText(content)
+	if text == "" {
+		return ""
+	}
+	return `<section aria-labelledby="modelpass-configured-home"><h2 id="modelpass-configured-home">首页平台信息</h2><p>` + stdhtml.EscapeString(text) + `</p></section>`
+}
+
+func visibleHomeContentText(content string) string {
+	if strings.TrimSpace(content) == "" {
+		return ""
+	}
+	tokenizer := htmlparser.NewTokenizer(strings.NewReader(content))
+	var text strings.Builder
+	skipDepth := 0
+	for {
+		tokenType := tokenizer.Next()
+		switch tokenType {
+		case htmlparser.ErrorToken:
+			return strings.Join(strings.Fields(text.String()), " ")
+		case htmlparser.StartTagToken:
+			token := tokenizer.Token()
+			if isNonTextHomeTag(token.Data) {
+				skipDepth++
+			}
+		case htmlparser.EndTagToken:
+			token := tokenizer.Token()
+			if skipDepth > 0 && isNonTextHomeTag(token.Data) {
+				skipDepth--
+			}
+		case htmlparser.TextToken:
+			if skipDepth == 0 {
+				text.WriteString(tokenizer.Token().Data)
+				text.WriteByte(' ')
+			}
+		}
+	}
+}
+
+func isNonTextHomeTag(tagName string) bool {
+	switch strings.ToLower(tagName) {
+	case "script", "style", "svg", "iframe", "noscript":
+		return true
+	default:
+		return false
+	}
+}
+
+func isReservedWebPath(path string) bool {
+	return path == "/api" || strings.HasPrefix(path, "/api/") ||
+		path == "/v1" || strings.HasPrefix(path, "/v1/") ||
+		path == "/assets" || strings.HasPrefix(path, "/assets/")
 }
 
 func SetWebRouter(router *gin.Engine, assets WebAssets, pluginDispatcher gin.HandlerFunc) {
 	frontendFS := common.EmbedFolder(assets.BuildFS, "web/dist")
+	homePage := renderWebPageWithHomeContent(assets.IndexPage, "/", assets.HomePageContent)
 
 	router.NoRoute(
 		pluginDispatcher,
@@ -123,12 +220,16 @@ func SetWebRouter(router *gin.Engine, assets WebAssets, pluginDispatcher gin.Han
 		middleware.Cache(),
 		static.Serve("/", frontendFS),
 		func(c *gin.Context) {
-			if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") || strings.HasPrefix(c.Request.RequestURI, "/assets") {
+			if isReservedWebPath(c.Request.URL.Path) {
 				controller.RelayNotFound(c)
 				return
 			}
 			c.Header("Cache-Control", "no-cache")
-			c.Data(http.StatusOK, "text/html; charset=utf-8", renderWebPage(assets.IndexPage, c.Request.URL.Path))
+			if c.Request.URL.Path == "/" || c.Request.URL.Path == "/index.html" {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", homePage)
+				return
+			}
+			c.Data(http.StatusOK, "text/html; charset=utf-8", renderWebPageWithHomeContent(assets.IndexPage, c.Request.URL.Path, assets.HomePageContent))
 		},
 	)
 }

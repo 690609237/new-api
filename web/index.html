@@ -48,11 +48,32 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "ModelPass",
-        "url": "__SEO_CANONICAL__",
-        "description": "__SEO_DESCRIPTION__",
-        "inLanguage": "zh-CN"
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "__SEO_CANONICAL__#website",
+            "name": "ModelPass",
+            "url": "__SEO_CANONICAL__",
+            "description": "__SEO_DESCRIPTION__",
+            "inLanguage": "zh-CN"
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://www.modelpass.work/#organization",
+            "name": "ModelPass",
+            "url": "https://www.modelpass.work/",
+            "logo": "https://www.modelpass.work/logo.png",
+            "description": "__SEO_DESCRIPTION__"
+          },
+          {
+            "@type": "WebApplication",
+            "name": "ModelPass AI API Gateway",
+            "url": "__SEO_CANONICAL__",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Web",
+            "description": "__SEO_DESCRIPTION__"
+          }
+        ]
       }
     </script>
 
@@ -65,6 +86,7 @@
     <main id="seo-content">
       __SEO_CONTENT__
     </main>
+    <script id="home-page-bootstrap" type="application/json">__HOME_PAGE_CONTENT_JSON__</script>
     <div id="root" translate="no" class="notranslate"></div>
   </body>
 </html>

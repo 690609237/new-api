@@ -30,7 +30,7 @@ type publicContentDataResponse struct {
 // Modified. The ETag is a weak validator derived from the content, so it is
 // stable across replicas and JSON encodings, and a new one is issued when
 // the content changes. Cache-Control: no-cache forces revalidation before
-// reuse, so an admin edit takes effect on the next request; Vary:
+// reuse while the startup snapshot remains unchanged; Vary:
 // Accept-Encoding keeps the gzip and identity encodings apart in shared
 // caches.
 func serveRevalidatedJSON(c *gin.Context, content string) {

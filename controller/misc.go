@@ -230,10 +230,7 @@ func GetMidjourney(c *gin.Context) {
 }
 
 func GetHomePageContent(c *gin.Context) {
-	common.OptionMapRWMutex.RLock()
-	homePageContent := common.OptionMap["HomePageContent"]
-	common.OptionMapRWMutex.RUnlock()
-	serveRevalidatedJSON(c, homePageContent)
+	serveRevalidatedJSON(c, common.GetHomePageContentSnapshot())
 }
 
 func SendEmailVerification(c *gin.Context) {

@@ -25,13 +25,11 @@ import type { HomePageContentResponse } from './types'
 // ============================================================================
 
 /**
- * Get custom home page content
- * Returns Markdown/HTML content or iframe URL
+ * Get the startup snapshot of the configurable home-page content.
  */
 export async function getHomePageContent(): Promise<HomePageContentResponse> {
-  // See getNotice in @/lib/api: the global `Cache-Control: no-store` is dropped
-  // so the browser can hold an ETag and revalidate, letting the server answer
-  // 304. Server-side `no-cache` keeps admin edits immediate.
+  // The public endpoint serves the startup snapshot. The ETag still avoids
+  // downloading the same snapshot again after a page refresh.
   const res = await api.get('/api/home_page_content', {
     headers: { 'Cache-Control': null },
   })

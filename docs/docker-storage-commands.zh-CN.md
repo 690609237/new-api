@@ -168,19 +168,6 @@ docker logs new-api 2>&1 | grep -Ei 'using (SQLite|MySQL|PostgreSQL)|SQL_DSN not
 - 其他普通 SQL DSN：项目按 MySQL 处理，例如 `user:password@tcp(mysql:3306)/new-api`。
 - `LOG_SQL_DSN` 只影响独立日志库，不一定等于主数据库。
 
-## 当前 Compose 部署的实测结果
-
-在本仓库当前 Compose 配置中，`new-api` 容器挂载关系是：
-
-```text
-dmxapi_new_api_data -> /data
-<项目根目录>/logs -> /app/logs
-```
-
-当前容器的 `SQL_DSN` 指向 PostgreSQL，因此 `/data` 为空并不表示数据丢失；主数据在 PostgreSQL 容器的数据库 volume 中。当前应用文件日志位于项目根目录的 `./logs`，容器内路径为 `/app/logs`，Docker 标准输出日志由 `json-file` 驱动保存。升级旧版配置时，原 `new_api_logs` 命名卷不会自动复制到 `./logs`，需要按需手动迁移或备份。
-
-请以你机器上 `docker inspect` 的实时输出为准，不要假设 volume 名称一定是 `dmxapi_*`；Compose 项目名改变后，volume 前缀也会改变。
-
 ## 常见误区
 
 - `docker stop` 或删除容器不会自动删除 named volume，但 `docker compose down -v` 会删除 Compose 管理的 volume，执行前必须确认备份已完成。
