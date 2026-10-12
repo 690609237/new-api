@@ -67,7 +67,10 @@ import { useStatus } from '@/hooks/use-status'
 import { getUserModels } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { handleServerError } from '@/lib/handle-server-error'
-import { requireServerSuccess } from '@/lib/server-error-message'
+import {
+  requireServerSuccess,
+  translateServerText,
+} from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
 
 import {
@@ -162,16 +165,22 @@ export function ApiKeysMutateDrawer({
   const models = modelsData?.data || []
   const groups = useMemo<ApiKeyGroupOption[]>(
     () =>
-      Object.entries(groupsData?.data || {}).map(([key, info]) => ({
-        value: key,
-        label: key,
-        desc:
-          info.source === 'subscription'
-            ? `${t('Subscription group')}${info.plan_titles?.length ? ` · ${info.plan_titles.join(', ')}` : ''}`
-            : info.desc || key,
-        ratio: info.ratio,
-        source: info.source,
-      })),
+      Object.entries(groupsData?.data || {}).map(([key, info]) => {
+        let desc = info.desc ? translateServerText(t, info.desc) : key
+        if (info.source === 'subscription') {
+          desc = t('Subscription group')
+          if (info.plan_titles?.length) {
+            desc += ` · ${info.plan_titles.join(', ')}`
+          }
+        }
+        return {
+          value: key,
+          label: key,
+          desc,
+          ratio: info.ratio,
+          source: info.source,
+        }
+      }),
     [groupsData, t]
   )
   const backendHasAuto = groups.some((g) => g.value === 'auto')
