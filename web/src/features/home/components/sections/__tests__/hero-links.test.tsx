@@ -17,11 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { render, screen } from '@testing-library/react'
-import type { TFunction } from 'i18next'
 import React from 'react'
 import { describe, expect, test, vi } from 'vitest'
-
-import { getDefaultHomePageContent } from '@/features/home/default-home-page-content'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -56,28 +53,23 @@ vi.mock('@/features/home/components/hero-terminal-demo', () => ({
 
 const { Hero } = await import('../hero')
 
+const HOME_CONTENT = `
+<div class="home-feature-stack" role="list" aria-label="Platform pricing and channel source summary">
+  <article role="listitem">
+    <h2>1:1 platform recharge</h2>
+    <p>Model prices use the $ symbol.</p>
+    <span>$ USD</span>
+  </article>
+  <article role="listitem">
+    <h2>First-party token groups</h2>
+    <span>default</span>
+    <span>standard</span>
+  </article>
+</div>`
+
 describe('Hero documentation link', () => {
-  test('localizes and escapes the default information content', () => {
-    const translations: Record<string, string> = {
-      'Platform pricing and channel source summary': '摘要 <区域>',
-      '1:1 platform recharge': '充值 & 计费',
-      'Model prices use the $ symbol. Overseas models follow international pricing, while domestic models follow domestic pricing.':
-        '价格使用 "美元"',
-      'First-party token groups': "一手 token '分组'",
-    }
-    const t = ((key: string) => translations[key] ?? key) as TFunction
-
-    const content = getDefaultHomePageContent(t)
-
-    expect(content).toContain('aria-label="摘要 &lt;区域&gt;"')
-    expect(content).toContain('充值 &amp; 计费')
-    expect(content).toContain('价格使用 &quot;美元&quot;')
-    expect(content).toContain('一手 token &#39;分组&#39;')
-    expect(content).not.toContain('摘要 <区域>')
-  })
-
   test('opens the local help page', () => {
-    render(<Hero />)
+    render(<Hero homePageContent={HOME_CONTENT} />)
 
     expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute(
       'href',
@@ -86,7 +78,7 @@ describe('Hero documentation link', () => {
   })
 
   test('shows the responsible-use notice above the hero content', () => {
-    const { container } = render(<Hero />)
+    const { container } = render(<Hero homePageContent={HOME_CONTENT} />)
 
     const notice = screen.getByRole('note')
     const informationArea = screen.getByRole('region', {
@@ -114,7 +106,7 @@ describe('Hero documentation link', () => {
   })
 
   test('explains platform pricing and channel sources', () => {
-    render(<Hero />)
+    render(<Hero homePageContent={HOME_CONTENT} />)
 
     const summary = screen.getByRole('region', {
       name: 'Platform pricing and channel source summary',

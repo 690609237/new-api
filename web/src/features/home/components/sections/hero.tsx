@@ -26,7 +26,6 @@ import { Button } from '@/components/ui/button'
 import { IconBadge } from '@/components/ui/icon-badge'
 import { isLikelyHtml } from '@/lib/content-format'
 
-import { getDefaultHomePageContent } from '../../default-home-page-content'
 import { HeroTerminalDemo } from '../hero-terminal-demo'
 
 interface HeroProps {
@@ -51,8 +50,7 @@ const MoreIcon = () => (
 
 export function Hero(props: HeroProps) {
   const { t } = useTranslation()
-  const homePageContent =
-    props.homePageContent?.trim() || getDefaultHomePageContent(t)
+  const homePageContent = props.homePageContent?.trim() ?? ''
   const displayHomePageContent = homePageContent
     .replaceAll(
       'Supports one-click configuration and perfectly adapts to NewAPI multi-protocol configuration.',

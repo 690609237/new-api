@@ -16,22 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { api } from '@/lib/api'
 
-import type { HomePageContentResponse } from './types'
+package common
 
-// ============================================================================
-// Home Page APIs
-// ============================================================================
+import _ "embed"
 
-/**
- * Get the startup snapshot of the configurable home-page content.
- */
-export async function getHomePageContent(): Promise<HomePageContentResponse> {
-  // The public endpoint serves the startup snapshot. The ETag still avoids
-  // downloading the same snapshot again after a page refresh.
-  const res = await api.get('/api/home_page_content', {
-    headers: { 'Cache-Control': null },
-  })
-  return res.data
-}
+//go:embed home-page-content.html
+var HomePageContent string

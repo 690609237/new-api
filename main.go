@@ -212,7 +212,7 @@ func main() {
 	router.SetRouter(server, router.WebAssets{
 		BuildFS:         buildFS,
 		IndexPage:       indexPage,
-		HomePageContent: common.GetHomePageContentSnapshot(),
+		HomePageContent: common.HomePageContent,
 	})
 	var port = os.Getenv("PORT")
 	if port == "" {
@@ -342,14 +342,6 @@ func InitResources() error {
 		}
 	}
 	model.InitOptionMap()
-	// Capture the freshly loaded option map. Do not read through
-	// GetHomePageContentSnapshot here: that accessor intentionally prefers the
-	// existing startup snapshot, which would make a second initialization in
-	// the same process retain stale content.
-	common.OptionMapRWMutex.RLock()
-	homePageContent := common.OptionMap["HomePageContent"]
-	common.OptionMapRWMutex.RUnlock()
-	common.SetHomePageContentSnapshot(homePageContent)
 
 	// 清理旧的磁盘缓存文件
 	common.CleanupOldCacheFiles()

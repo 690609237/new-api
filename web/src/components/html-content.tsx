@@ -17,9 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import DOMPurify, { type Config } from 'dompurify'
-import { useEffect, useMemo, useRef } from 'react'
+import { useContext, useEffect, useMemo, useRef } from 'react'
 
 import { cn } from '@/lib/utils'
+
+import { HtmlContentPrerenderContext } from './html-content-prerender-context'
 
 export type HtmlContentVariant = 'inline' | 'isolated'
 
@@ -61,11 +63,11 @@ const isolatedContentBaseStyles = `
     .html-content-root span:not([aria-hidden='true']):not(.home-feature-tag),
     .html-content-root strong,
     .html-content-root div) {
-    color: inherit !important;
+    color: inherit;
   }
 
   :where(.html-content-root a) {
-    color: var(--primary) !important;
+    color: var(--primary);
   }
 
   *,
@@ -212,6 +214,7 @@ function IsolatedHtmlContent(props: {
 }
 
 export function HtmlContent(props: HtmlContentProps) {
+  const prerender = useContext(HtmlContentPrerenderContext)
   const variant = props.variant ?? 'inline'
   const html = useMemo(
     () => sanitizeHtmlContent(props.content, variant),
@@ -219,6 +222,22 @@ export function HtmlContent(props: HtmlContentProps) {
   )
 
   if (variant === 'isolated') {
+    if (prerender) {
+      const styles = [
+        ...document.head.querySelectorAll('link[rel="stylesheet"], style'),
+      ]
+        .map((node) => node.outerHTML)
+        .join('')
+      return (
+        <div
+          className={cn('block w-full', props.className)}
+          // eslint-disable-next-line react/no-danger -- sanitized content and trusted build styles
+          dangerouslySetInnerHTML={{
+            __html: `<template shadowrootmode="open">${styles}${isolatedContentBaseStyles}<div class="html-content-root">${html}</div></template>`,
+          }}
+        />
+      )
+    }
     return <IsolatedHtmlContent className={props.className} html={html} />
   }
 

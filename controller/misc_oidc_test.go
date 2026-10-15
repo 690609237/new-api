@@ -114,3 +114,20 @@ func TestGetStatusSupportsETagRevalidation(t *testing.T) {
 	assert.Equal(t, http.StatusNotModified, secondContext.Writer.Status())
 	assert.Empty(t, secondResponse.Body.String())
 }
+
+func TestGetHomePageContentUsesCompiledConfig(t *testing.T) {
+	response := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(response)
+	context.Request = httptest.NewRequest(http.MethodGet, "/api/home_page_content", nil)
+
+	GetHomePageContent(context)
+
+	require.Equal(t, http.StatusOK, response.Code)
+	var payload struct {
+		Success bool   `json:"success"`
+		Data    string `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &payload))
+	require.True(t, payload.Success)
+	assert.Equal(t, common.HomePageContent, payload.Data)
+}

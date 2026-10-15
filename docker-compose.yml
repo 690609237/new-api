@@ -20,7 +20,9 @@ services:
       args:
         DOCKER_REGISTRY: docker.1ms.run
         BUN_REGISTRY: https://registry.npmmirror.com
-        GO_MODULE_PROXY: https://goproxy.cn,direct
+        # Use pipe separators so transient proxy errors fall through to the
+        # official Go proxy instead of waiting on goproxy.cn indefinitely.
+        GO_MODULE_PROXY: 'https://goproxy.cn|https://proxy.golang.org|direct'
     image: new-api:local
     container_name: new-api
     restart: always

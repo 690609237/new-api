@@ -2,7 +2,10 @@ package router
 
 import (
 	"embed"
+	"errors"
+	"fmt"
 	stdhtml "html"
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -16,9 +19,76 @@ import (
 
 // WebAssets holds the embedded dashboard frontend assets.
 type WebAssets struct {
-	BuildFS         embed.FS
-	IndexPage       []byte
+	BuildFS   embed.FS
+	IndexPage []byte
+	// HomePage is the optional build-time rendered home fragment. When it is
+	// empty, SetWebRouter attempts to load web/dist/home-fragment.html from the
+	// embedded build and falls back to the regular SEO template when that file
+	// is not present (for example, in development builds).
+	HomePage        []byte
 	HomePageContent string
+	HomeBootstrap   string
+}
+
+// loadHomePage loads an optional build-time snapshot. Old and development
+// builds with neither artifact keep the startup SEO fallback; partial or
+// malformed artifacts are rejected before the server starts accepting traffic.
+func (assets *WebAssets) loadHomePage(buildFS fs.FS) error {
+	// Keep the marker valid for development/legacy builds that have no static
+	// bootstrap artifact. It is rendered as an empty JSON object, rather than an
+	// empty script body, so client bootstrap parsing remains deterministic.
+	if assets.HomeBootstrap == "" {
+		assets.HomeBootstrap = "{}"
+	}
+	fragment := assets.HomePage
+	var fragmentErr error
+	if len(fragment) == 0 {
+		fragment, fragmentErr = fs.ReadFile(buildFS, "web/dist/home-fragment.html")
+	}
+	bootstrap, bootstrapErr := fs.ReadFile(buildFS, "web/dist/home-bootstrap.json")
+	fragmentMissing := errors.Is(fragmentErr, fs.ErrNotExist)
+	bootstrapMissing := errors.Is(bootstrapErr, fs.ErrNotExist)
+	if fragmentErr != nil && !fragmentMissing {
+		return fmt.Errorf("read home-fragment.html: %w", fragmentErr)
+	}
+	if bootstrapErr != nil && !bootstrapMissing {
+		return fmt.Errorf("read home-bootstrap.json: %w", bootstrapErr)
+	}
+	if fragmentMissing && bootstrapMissing {
+		return nil
+	}
+	if fragmentMissing {
+		return errors.New("home-bootstrap.json exists but home-fragment.html is missing")
+	}
+	if bootstrapMissing {
+		// A directly supplied fragment already has a corresponding content
+		// snapshot in WebAssets (also useful for route tests).
+		if len(assets.HomePage) > 0 {
+			return nil
+		}
+		return errors.New("home-fragment.html exists but home-bootstrap.json is missing")
+	}
+	if strings.TrimSpace(string(fragment)) == "" {
+		return errors.New("home-fragment.html is empty")
+	}
+
+	var snapshot struct {
+		Version         int     `json:"version"`
+		HomePageContent *string `json:"homePageContent"`
+	}
+	if err := common.Unmarshal(bootstrap, &snapshot); err != nil {
+		return fmt.Errorf("invalid home-bootstrap.json: %w", err)
+	}
+	if snapshot.Version != 1 {
+		return fmt.Errorf("unsupported home-bootstrap.json version %d", snapshot.Version)
+	}
+	if snapshot.HomePageContent == nil {
+		return errors.New("home-bootstrap.json must include a homePageContent string")
+	}
+	assets.HomePage = fragment
+	assets.HomePageContent = *snapshot.HomePageContent
+	assets.HomeBootstrap = escapeScriptJSON(string(bootstrap))
+	return nil
 }
 
 type webSEOPage struct {
@@ -101,6 +171,15 @@ func renderWebPage(indexPage []byte, requestPath string) []byte {
 }
 
 func renderWebPageWithHomeContent(indexPage []byte, requestPath, homePageContent string) []byte {
+	return renderWebPageWithHomeFragment(indexPage, requestPath, homePageContent, nil, "{}")
+}
+
+// The fragment is inserted in the same pass as the metadata, so compiled
+// content containing marker-like text is never scanned for replacements.
+func renderWebPageWithHomeFragment(indexPage []byte, requestPath, homePageContent string, homeFragment []byte, homeBootstrap string) []byte {
+	if homeBootstrap == "" {
+		homeBootstrap = "{}"
+	}
 	path := strings.TrimSuffix(requestPath, "/")
 	if path == "" || path == "/index.html" {
 		path = "/"
@@ -121,11 +200,15 @@ func renderWebPageWithHomeContent(indexPage []byte, requestPath, homePageContent
 	content := string(indexPage)
 	seoContent := page.content
 	if path == "/" {
-		seoContent += renderConfiguredHomeContent(homePageContent)
+		if len(homeFragment) > 0 {
+			seoContent = string(homeFragment)
+		} else {
+			seoContent += renderConfiguredHomeContent(homePageContent)
+		}
 	}
-	homePageSnapshotJSON := marshalHomePageSnapshot(homePageContent)
+	homePageBootstrapJSON := marshalHomePageSnapshot(homePageContent)
 	// Replace all template markers in one pass. A loop of ReplaceAll calls can
-	// rescan administrator content inserted by an earlier replacement and
+	// rescan compiled content inserted by an earlier replacement and
 	// corrupt it when that content happens to contain a marker-like string.
 	return []byte(strings.NewReplacer(
 		"__SEO_TITLE__", page.title,
@@ -134,8 +217,17 @@ func renderWebPageWithHomeContent(indexPage []byte, requestPath, homePageContent
 		"__SEO_CANONICAL__", page.canonical,
 		"__SEO_ROBOTS__", robots,
 		"__SEO_CONTENT__", seoContent,
-		"__HOME_PAGE_CONTENT_JSON__", homePageSnapshotJSON,
+		"__HOME_PAGE_CONTENT_JSON__", homePageBootstrapJSON,
+		"__HOME_STATIC_BOOTSTRAP_JSON__", homeBootstrap,
 	).Replace(content))
+}
+
+func escapeScriptJSON(value string) string {
+	return strings.NewReplacer(
+		"<", `\u003c`,
+		">", `\u003e`,
+		"&", `\u0026`,
+	).Replace(value)
 }
 
 func marshalHomePageSnapshot(content string) string {
@@ -144,12 +236,8 @@ func marshalHomePageSnapshot(content string) string {
 		return `""`
 	}
 	// A JSON string inside a script element must not be allowed to terminate
-	// that element when an administrator enters "</script>" in the content.
-	return strings.NewReplacer(
-		"<", `\u003c`,
-		">", `\u003e`,
-		"&", `\u0026`,
-	).Replace(string(encoded))
+	// that element when the compiled content contains "</script>".
+	return escapeScriptJSON(string(encoded))
 }
 
 func renderConfiguredHomeContent(content string) string {
@@ -208,7 +296,10 @@ func isReservedWebPath(path string) bool {
 
 func SetWebRouter(router *gin.Engine, assets WebAssets, pluginDispatcher gin.HandlerFunc) {
 	frontendFS := common.EmbedFolder(assets.BuildFS, "web/dist")
-	homePage := renderWebPageWithHomeContent(assets.IndexPage, "/", assets.HomePageContent)
+	if err := assets.loadHomePage(assets.BuildFS); err != nil {
+		panic(fmt.Errorf("load prerendered home page: %w", err))
+	}
+	homePage := renderWebPageWithHomeFragment(assets.IndexPage, "/", assets.HomePageContent, assets.HomePage, assets.HomeBootstrap)
 	compress := gzip.Gzip(gzip.DefaultCompression)
 
 	router.NoRoute(

@@ -30,11 +30,15 @@ type PublicLayoutProps = {
   showNotifications?: boolean
   logo?: React.ReactNode
   siteName?: string
+  dataPage?: string
 }
 
 export function PublicLayout(props: PublicLayoutProps) {
   return (
-    <div className='bg-background text-foreground relative min-h-svh overflow-x-clip'>
+    <div
+      className='bg-background text-foreground relative min-h-svh overflow-x-clip'
+      data-page={props.dataPage}
+    >
       <PublicHeader
         navContent={props.navContent}
         navLinks={props.navLinks}

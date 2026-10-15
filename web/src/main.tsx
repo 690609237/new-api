@@ -26,6 +26,7 @@ import { DEFAULT_LOGO } from '@/lib/constants'
 import { applyFaviconToDom } from '@/lib/dom-utils'
 import '@/lib/dayjs'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
+import { installPrerenderHandoff } from '@/lib/prerender-handoff'
 import { createAppQueryClient } from '@/lib/query-client'
 import { isPublicSeoPath } from '@/lib/seo'
 import {
@@ -60,6 +61,7 @@ const router = createRouter({
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
 })
+installPrerenderHandoff(router)
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {
@@ -73,7 +75,6 @@ const rootElement = document.querySelector<HTMLElement>('#root')
 if (!rootElement) {
   throw new Error('Root element not found')
 }
-document.querySelector<HTMLElement>('#seo-content')?.remove()
 // Set document.title and favicon from cached status, then refresh from network
 ;(function initSystemBranding() {
   try {

@@ -9,7 +9,7 @@
 | 违规与封禁 | 违规次数按 24 小时窗口统计；达到用户设置的上限后自动 API 封禁。管理员可调整上限、重置违规次数并解除普通用户的审核封禁。 |
 | 用户输入日志 | 记录当前用户轮次和使用的令牌名称，不记录 system prompt、历史上下文或 assistant/tool continuation；自动化 Codex 请求不重复写入。 |
 | 平台额度与品牌 | 平台内部额度统一使用 `✦` 标识；默认站点 Logo、首页 Logo、Favicon 和桌面端图标保持一致，同时保留管理员自定义 Logo 的覆盖能力。 |
-| 首页信息区域 | 首页左侧信息卡支持在“系统管理 → 站点与品牌 → 系统信息”中使用 HTML 或 Markdown 运维；空配置时按当前界面语言显示默认内容，且不会替换首页其他区域。详细行为见 [首页信息区域配置说明](home-page-content-merge-guide.md)。 |
+| 首页信息区域 | 首页左侧信息卡由 `common/home-page-content.html` 维护，构建时预渲染并编译进服务；修改后重新构建部署才生效，且不会替换首页其他区域。详细行为见 [首页信息区域构建说明](home-page-content-merge-guide.md)。 |
 | 品牌与帮助 | 保留联系方式、关于页、帮助文档入口、帮助内容和截图资源。 |
 | 注册提示 | 注册页保留邮箱支持/用途说明，并以气泡提示方式展示。 |
 | 支付与订单 | 充值支付方式校验、额度安全保护和待处理订单清理保持启用。 |
@@ -29,30 +29,22 @@
 - 管理员在系统设置中配置的 Logo 仍优先于默认图标；未配置或状态数据不可用时才回退到 `/logo.svg?v=2`。
 - 前端启动时先应用本地缓存的系统名称和 Logo，再通过共享的 `/api/status` 查询刷新；该公开接口允许浏览器使用 ETag 重验证，同页多个消费者共用同一查询缓存。
 
-## 首页信息区域配置化
+## 首页信息区域构建化
 
-本节记录业务摘要；完整的当前行为、代码职责和验收清单见 [首页信息区域配置说明](home-page-content-merge-guide.md)。
+本节记录业务摘要；完整的当前行为、代码职责和验收清单见 [首页信息区域构建说明](home-page-content-merge-guide.md)。
 
 ### 当前功能
 
-- `HomePageContent` 的替换范围收敛为首页左侧、警示语下方的两张信息卡，不再替换整个首页。
+- `common/home-page-content.html` 的替换范围收敛为首页左侧、警示语下方的信息卡，不再替换整个首页。
 - “文明使用，严禁破限！”警示语、注册/定价/文档按钮、支持应用区域和右侧终端演示均保留在固定页面结构中，不受该配置影响。
-- 在“系统管理 → 站点与品牌 → 系统信息 → 首页内容”中可以直接维护 HTML 或 Markdown；内容在渲染前会经过净化，HTML 使用隔离的 Shadow DOM 渲染，配置中的样式不会污染首页其他组件。
-- 配置为空时显示内置默认模板。默认模板包含纵向排列的“平台 1:1 充值”和“一手token分组”两张卡片；模型价格使用 `$` 标识，`default`、`standard` 作为自有 token 来源标识保持原文。
-- 首页公开内容在服务启动时捕获为进程内快照；管理员修改后需重启服务才会进入公开首页，用户刷新页面即可看到新快照。浏览器首屏优先使用服务端注入的快照，`home_page_information_content_v2` 仅作为没有首屏数据时的兼容回退。
+- 内容在构建时经过净化，HTML 使用隔离的 Shadow DOM 渲染，配置中的样式不会污染首页其他组件。
+- 首页公开内容在构建时生成静态 HTML 并编译进服务；修改文件后需要重新构建和部署，用户刷新页面即可看到新版本。
 
 ### 多语言行为
 
-- 内置默认模板会使用当前界面语言动态生成，支持 `en`、`zh`、`zh-TW`、`fr`、`ja`、`ru`、`vi`。
-- 管理员保存的自定义 HTML 或 Markdown 属于运维内容，所有界面语言显示同一份配置，不进行自动机器翻译；需要分语言运营时应由管理员在内容或后续配置能力中显式维护。
+- 首页 HTML 是后端源码中的固定内容，不通过前端管理，也不依赖首页运行时 API。
 - `default`、`standard` 和 `$ USD` 是技术及币种标识，不参与翻译。
-- 本功能使用的主要翻译键包括：
-  - `Use responsibly; breaking limits is strictly prohibited!`
-  - `Platform pricing and channel source summary`
-  - `1:1 platform recharge`
-  - `Model prices use the $ symbol. Overseas models follow international pricing, while domestic models follow domestic pricing.`
-  - `First-party token groups`
-  - `Only replaces the home page information card area. Supports sanitized HTML and Markdown; leave empty to use the default template.`
+- 首页固定结构仍使用现有翻译键；`common/home-page-content.html` 中的运维内容按源码原文发布。
 
 ## 订阅与计费
 

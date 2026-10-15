@@ -302,8 +302,8 @@
     "/api/home_page_content": {
       "get": {
         "summary": "获取首页内容",
-        "deprecated": false,
-        "description": "🔓 无需鉴权",
+        "deprecated": true,
+        "description": "🔓 无需鉴权。兼容接口，返回编译进服务的首页内容；首页构建和运行时展示不依赖此接口。",
         "tags": [
           "系统"
         ],

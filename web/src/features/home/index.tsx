@@ -26,10 +26,10 @@ import { useHomePageContent } from './hooks'
 export function Home() {
   const { auth } = useAuthStore()
   const isAuthenticated = !!auth.user
-  const { content } = useHomePageContent()
+  const content = useHomePageContent()
 
   return (
-    <PublicLayout showMainContainer={false}>
+    <PublicLayout dataPage='home' showMainContainer={false}>
       <Hero homePageContent={content} isAuthenticated={isAuthenticated} />
       <Footer />
     </PublicLayout>

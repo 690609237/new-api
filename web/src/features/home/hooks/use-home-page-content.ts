@@ -16,17 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import i18next from 'i18next'
-import { useEffect, useState } from 'react'
-
-import { handleServerError } from '@/lib/handle-server-error'
-
-import { getHomePageContent } from '../api'
-import type { HomePageContentResult } from '../types'
-
-const STORAGE_KEY = 'home_page_information_content_v2'
-
-function readStartupHomePageContent(): string | null {
+function readBuildHomePageContent(): string | null {
   const bootstrap = document.querySelector<HTMLScriptElement>(
     '#home-page-bootstrap'
   )
@@ -42,60 +32,10 @@ function readStartupHomePageContent(): string | null {
   return null
 }
 
-function readLegacyCachedHomePageContent(): string | null {
-  return localStorage.getItem(STORAGE_KEY)
-}
-
 /**
- * Loads the configurable Markdown/HTML content for the home-page information
- * area. The surrounding home-page layout is always rendered by the app.
+ * Reads the source-controlled homepage content that the build placed in the
+ * HTML bootstrap. There is no runtime API or browser-admin override.
  */
-export function useHomePageContent(): HomePageContentResult {
-  const [content, setContent] = useState<string>(
-    () => readStartupHomePageContent() ?? readLegacyCachedHomePageContent() ?? ''
-  )
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
-    let mounted = true
-
-    if (readStartupHomePageContent() !== null) {
-      setIsLoaded(true)
-      return () => {
-        mounted = false
-      }
-    }
-
-    const loadContent = async () => {
-      try {
-        const response = await getHomePageContent()
-        const { success, data } = response
-
-        if (!mounted) return
-
-        if (success && data) {
-          setContent(data)
-          localStorage.setItem(STORAGE_KEY, data)
-        } else {
-          setContent('')
-          localStorage.removeItem(STORAGE_KEY)
-        }
-      } catch (error) {
-        if (!mounted) return
-        handleServerError(error, i18next.t('Failed to load home page content'))
-      } finally {
-        if (mounted) {
-          setIsLoaded(true)
-        }
-      }
-    }
-
-    loadContent()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
-
-  return { content, isLoaded }
+export function useHomePageContent(): string {
+  return readBuildHomePageContent() ?? ''
 }

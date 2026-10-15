@@ -68,7 +68,8 @@ export function useSystemConfig(options: UseSystemConfigOptions = {}) {
   // no second request and no second mapping path here.
   const loadConfig = useCallback(async () => {
     try {
-      setLoading(true)
+      // Keep an existing (including prerendered) brand visible while refreshing.
+      // The store already starts in the loading state on a cold client render.
       await ensureStatus(queryClient)
     } catch (error) {
       // eslint-disable-next-line no-console

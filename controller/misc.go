@@ -227,7 +227,9 @@ func GetMidjourney(c *gin.Context) {
 }
 
 func GetHomePageContent(c *gin.Context) {
-	serveRevalidatedJSON(c, common.GetHomePageContentSnapshot())
+	// Keep the legacy public endpoint compatible, but serve the same immutable
+	// source-controlled content that is compiled into the homepage.
+	serveRevalidatedJSON(c, common.HomePageContent)
 }
 
 func SendEmailVerification(c *gin.Context) {
