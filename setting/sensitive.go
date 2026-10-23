@@ -9,8 +9,8 @@ import (
 // MaxSensitiveWordsPerRule limits the number of required terms in one combined rule.
 const MaxSensitiveWordsPerRule = 5
 
-var CheckSensitiveEnabled = true
-var CheckSensitiveOnPromptEnabled = true
+var CheckSensitiveEnabled = false
+var CheckSensitiveOnPromptEnabled = false
 
 //var CheckSensitiveOnCompletionEnabled = true
 
@@ -21,10 +21,7 @@ var StopOnSensitiveEnabled = true
 var StreamCacheQueueLength = 0
 
 // SensitiveWords 敏感词
-// var SensitiveWords []string
-var SensitiveWords = []string{
-	"test_sensitive",
-}
+var SensitiveWords []string
 
 var sensitiveWordsVersion atomic.Uint64
 

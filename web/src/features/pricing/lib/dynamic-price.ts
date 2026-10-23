@@ -82,6 +82,7 @@ export type DynamicPriceEntry = {
 
 export type CardExamplePrice = {
   label: string
+  total: number
   formatted: string
 }
 
@@ -630,6 +631,7 @@ export function getCardExamplePrice(
 
   return {
     label: firstExample.label,
+    total: result.total,
     formatted: formatTaskUsageUnitPrice(result.total, options),
   }
 }
