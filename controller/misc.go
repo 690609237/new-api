@@ -48,7 +48,7 @@ func GetStatus(c *gin.Context) {
 	legalSetting := system_setting.GetLegalSettings()
 	logo := common.Logo
 	if logo == "" {
-		logo = "/logo.svg?v=2"
+		logo = "/logo.svg?v=3"
 	}
 
 	data := gin.H{

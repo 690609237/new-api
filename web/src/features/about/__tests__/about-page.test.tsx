@@ -46,7 +46,7 @@ function renderAboutPage() {
 }
 
 describe('About page', () => {
-  test('shows contact and agreement tabs with all four contact methods', () => {
+  test('shows contact and agreement tabs with all available contact methods', () => {
     renderAboutPage()
 
     expect(screen.getByRole('tab', { name: 'Contact us' })).toHaveAttribute(
@@ -58,16 +58,16 @@ describe('About page', () => {
     ).toBeInTheDocument()
 
     const contactList = screen.getByRole('list', { name: 'Author contacts' })
-    expect(within(contactList).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(contactList).getAllByRole('listitem')).toHaveLength(3)
 
     for (const value of [
       '1549277597',
-      'ModelPass',
       '1549277597@qq.com',
       '450997742',
     ]) {
       expect(within(contactList).getByText(value)).toBeInTheDocument()
     }
+    expect(within(contactList).queryByText('ModelPass')).not.toBeInTheDocument()
   })
 
   test('provides a direct email link', () => {

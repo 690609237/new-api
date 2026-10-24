@@ -4,29 +4,44 @@
 const fs = require('fs');
 const { createCanvas } = require('canvas');
 
+function drawModelPassMark(ctx, size) {
+  const radius = size * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(size - radius, 0);
+  ctx.quadraticCurveTo(size, 0, size, radius);
+  ctx.lineTo(size, size - radius);
+  ctx.quadraticCurveTo(size, size, size - radius, size);
+  ctx.lineTo(radius, size);
+  ctx.quadraticCurveTo(0, size, 0, size - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#000000';
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.round(size * 0.38)}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('MP', size / 2, size / 2);
+}
+
 function createTrayIcon() {
-  // For macOS, we'll use a Template image (black and white)
-  // Size should be 22x22 for Retina displays (@2x would be 44x44)
+  // macOS template icons use a monochrome ModelPass mark and adapt to the menu bar theme.
   const canvas = createCanvas(22, 22);
   const ctx = canvas.getContext('2d');
 
-  // Clear canvas
   ctx.clearRect(0, 0, 22, 22);
+  drawModelPassMark(ctx, 22);
 
-  // Draw a simple "API" icon
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 10px system-ui';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('API', 11, 11);
-
-  // Save as PNG
   const buffer = canvas.toBuffer('image/png');
   fs.writeFileSync('tray-icon.png', buffer);
 
-  // For Template images on macOS (will adapt to menu bar theme)
   fs.writeFileSync('tray-iconTemplate.png', buffer);
-  fs.writeFileSync('tray-iconTemplate@2x.png', buffer);
+  const retinaCanvas = createCanvas(44, 44);
+  drawModelPassMark(retinaCanvas.getContext('2d'), 44);
+  fs.writeFileSync('tray-iconTemplate@2x.png', retinaCanvas.toBuffer('image/png'));
 
   console.log('Tray icon created successfully!');
 }

@@ -81,13 +81,12 @@ await i18n.use(initReactI18next).init({
       translation: {
         'Contact the author': '联系作者交流',
         'QQ Group': 'QQ群',
-        WeChat: '微信',
       },
     },
   },
 })
 
-test('inline system brand shows all contact methods in the mobile app header', async () => {
+test('inline system brand shows available contacts without WeChat in the mobile app header', async () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
@@ -125,7 +124,7 @@ test('inline system brand shows all contact methods in the mobile app header', a
   )
   expect(mobileContact).not.toBeNull()
   expect(mobileContact?.textContent).toMatch(/QQ 1549277597/)
-  expect(mobileContact?.textContent).toMatch(/微信 ModelPass/)
+  expect(mobileContact?.textContent).not.toMatch(/微信|WeChat|ModelPass/)
   expect(mobileContact?.textContent).toMatch(/QQ群 450997742/)
   expect(mobileContact?.textContent).not.toMatch(/1549277597@qq\.com/)
   expect(mobileContact?.classList).toContain('absolute')

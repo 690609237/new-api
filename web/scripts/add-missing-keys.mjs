@@ -27,6 +27,8 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Join group 450997742 to claim free credits':
+      'Join group 450997742 to claim free credits',
     'Leave me a message': 'Leave me a message',
     'About ModelPass': 'About ModelPass',
     'Contact us': 'Contact us',
@@ -201,6 +203,7 @@ const newKeys = {
       'View the configured sensitive words matched by a request.',
   },
   zh: {
+    'Join group 450997742 to claim free credits': '加群450997742领免费额度',
     'Leave me a message': '给我留言',
     'About ModelPass': '关于 ModelPass',
     'Contact us': '联系我们',
@@ -371,6 +374,8 @@ const newKeys = {
       '查看请求命中的已配置敏感词。',
   },
   'zh-TW': {
+    'Join group 450997742 to claim free credits':
+      '加入群組 450997742 領取免費額度',
     'Leave me a message': '給我留言',
     'About ModelPass': '關於 ModelPass',
     'Contact us': '聯絡我們',
@@ -541,6 +546,8 @@ const newKeys = {
       '查看請求命中的已設定敏感詞。',
   },
   fr: {
+    'Join group 450997742 to claim free credits':
+      'Rejoignez le groupe 450997742 pour obtenir des crédits gratuits',
     'Leave me a message': 'Laissez-moi un message',
     'About ModelPass': 'À propos de ModelPass',
     'Contact us': 'Nous contacter',
@@ -717,6 +724,8 @@ const newKeys = {
       'Voir les mots sensibles configurés détectés dans une requête.',
   },
   ja: {
+    'Join group 450997742 to claim free credits':
+      'グループ 450997742 に参加して無料クレジットを受け取る',
     'Leave me a message': 'メッセージを残す',
     'About ModelPass': 'ModelPassについて',
     'Contact us': 'お問い合わせ',
@@ -892,6 +901,8 @@ const newKeys = {
       'リクエストで検出された設定済みの機密語を表示します。',
   },
   ru: {
+    'Join group 450997742 to claim free credits':
+      'Вступите в группу 450997742 и получите бесплатные кредиты',
     'Leave me a message': 'Оставьте мне сообщение',
     'About ModelPass': 'О ModelPass',
     'Contact us': 'Связаться с нами',
@@ -1068,6 +1079,8 @@ const newKeys = {
       'Просматривать настроенные чувствительные слова, совпавшие в запросе.',
   },
   vi: {
+    'Join group 450997742 to claim free credits':
+      'Tham gia nhóm 450997742 để nhận hạn mức miễn phí',
     'Leave me a message': 'Để lại lời nhắn',
     'About ModelPass': 'Về ModelPass',
     'Contact us': 'Liên hệ',

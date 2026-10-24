@@ -77,7 +77,7 @@ export type StaticHomeConfig = z.infer<typeof staticHomeConfigSchema>
 
 const DEFAULT_STATUS: Record<string, unknown> = {
   system_name: 'ModelPass',
-  logo: '/logo.svg?v=2',
+  logo: '/logo.svg?v=3',
   HeaderNavModules: JSON.stringify({
     home: true,
     console: true,
@@ -155,7 +155,7 @@ export async function renderHome(input: unknown = {}): Promise<{
     ...state,
     config: { ...state.config, ...systemConfig },
     loading: false,
-    loadedLogoUrl: systemConfig.logo ?? '/logo.svg?v=2',
+    loadedLogoUrl: systemConfig.logo ?? '/logo.svg?v=3',
   }))
   // Zustand's server snapshot reader retains the original state object. Pin
   // that build-only snapshot to the public configuration as well as the live

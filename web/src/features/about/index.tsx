@@ -23,7 +23,6 @@ import {
   Mail,
   MessageCircle,
   Send,
-  Smartphone,
   Users,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -53,7 +52,6 @@ import { sendContactEmail } from './api'
 
 const contacts = [
   { label: 'QQ', value: '1549277597', icon: MessageCircle },
-  { label: 'WeChat', value: 'ModelPass', icon: Smartphone },
   {
     label: 'Email',
     value: '1549277597@qq.com',

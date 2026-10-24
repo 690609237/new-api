@@ -36,6 +36,12 @@ export function SignUp() {
           <h2 className='text-center text-2xl font-semibold tracking-tight sm:text-left'>
             {t('Create an account')}
           </h2>
+          <p
+            role='note'
+            className='border-primary/30 bg-primary/10 text-primary rounded-lg border px-4 py-3 text-center text-sm font-semibold sm:text-left'
+          >
+            {t('Join group 450997742 to claim free credits')}
+          </p>
           <p className='text-muted-foreground text-left text-sm sm:text-base'>
             {t('Already have an account?')}{' '}
             <Link

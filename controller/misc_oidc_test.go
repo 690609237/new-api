@@ -81,7 +81,7 @@ func TestGetStatusUsesDefaultLogoWhenUnset(t *testing.T) {
 	}
 	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &payload))
 	require.True(t, payload.Success)
-	assert.Equal(t, "/logo.svg?v=2", payload.Data["logo"])
+	assert.Equal(t, "/logo.svg?v=3", payload.Data["logo"])
 }
 
 func TestGetStatusSupportsETagRevalidation(t *testing.T) {

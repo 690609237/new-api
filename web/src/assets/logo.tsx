@@ -16,28 +16,69 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type SVGProps } from 'react'
+import type { SVGProps } from 'react'
 
 import { cn } from '@/lib/utils'
 
 export function Logo({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
-      id='newapi-logo'
-      viewBox='0 0 24 24'
+      id='modelpass-logo'
+      viewBox='0 0 128 128'
       xmlns='http://www.w3.org/2000/svg'
-      height='24'
-      width='24'
-      fill='none'
-      stroke='currentColor'
-      strokeWidth='2'
-      strokeLinecap='round'
-      strokeLinejoin='round'
+      height='128'
+      width='128'
       className={cn('size-6', className)}
       {...props}
     >
-      <title>New API</title>
-      <path d='M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3' />
+      <title>ModelPass</title>
+      <defs>
+        <linearGradient
+          id='modelpass-logo-gradient'
+          x1='0'
+          y1='0'
+          x2='1'
+          y2='0'
+        >
+          <stop offset='0' stopColor='#008b8c' />
+          <stop offset='0.5' stopColor='#008b8c' />
+          <stop offset='0.5' stopColor='#e95d21' />
+          <stop offset='1' stopColor='#e95d21' />
+        </linearGradient>
+      </defs>
+      <rect
+        x='1'
+        y='1'
+        width='126'
+        height='126'
+        rx='29'
+        fill='url(#modelpass-logo-gradient)'
+        stroke='#fff'
+        strokeOpacity='.76'
+        strokeWidth='2'
+      />
+      <text
+        x='18'
+        y='83'
+        fill='#fff'
+        fontFamily='Inter, PingFang SC, Microsoft YaHei, system-ui, sans-serif'
+        fontSize='50'
+        fontWeight='900'
+        letterSpacing='-3'
+      >
+        M
+      </text>
+      <text
+        x='66'
+        y='83'
+        fill='#fff'
+        fontFamily='Inter, PingFang SC, Microsoft YaHei, system-ui, sans-serif'
+        fontSize='50'
+        fontWeight='900'
+        letterSpacing='-3'
+      >
+        P
+      </text>
     </svg>
   )
 }

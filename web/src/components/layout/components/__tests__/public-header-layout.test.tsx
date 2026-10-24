@@ -88,7 +88,6 @@ await i18n.use(initReactI18next).init({
         'Model Square': '模型广场',
         'QQ Group': 'QQ群',
         Rankings: '排行榜',
-        WeChat: '微信',
       },
     },
   },
@@ -190,7 +189,7 @@ describe('public header navigation layout', () => {
     await rendered.cleanup()
   })
 
-  test('shows all contact methods in a wrapping mobile brand line on public pages', async () => {
+  test('shows available contacts without WeChat in a wrapping mobile brand line on public pages', async () => {
     const rendered = await renderHeader('/pricing')
     const mobileContact = rendered.container.querySelector(
       '[data-slot="brand-contact-line"][data-variant="compact"]'
@@ -198,7 +197,7 @@ describe('public header navigation layout', () => {
 
     expect(mobileContact).not.toBeNull()
     expect(mobileContact?.textContent).toMatch(/QQ 1549277597/)
-    expect(mobileContact?.textContent).toMatch(/微信 ModelPass/)
+    expect(mobileContact?.textContent).not.toMatch(/微信|WeChat|ModelPass/)
     expect(mobileContact?.textContent).toMatch(/QQ群 450997742/)
     expect(mobileContact?.textContent).not.toMatch(/1549277597@qq\.com/)
     expect(mobileContact?.classList).toContain('flex-wrap')
