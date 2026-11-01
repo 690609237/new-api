@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type Column } from '@tanstack/react-table'
+import type { Column } from '@tanstack/react-table'
 import {
   ArrowDown as ArrowDownIcon,
   ArrowUp as ArrowUpIcon,
@@ -64,11 +64,13 @@ export function DataTableColumnHeader<TData, TValue>({
           }
         >
           <span>{title}</span>
-          {column.getIsSorted() === 'desc' ? (
+          {column.getIsSorted() === 'desc' && (
             <ArrowDownIcon className='ms-2 h-4 w-4' />
-          ) : column.getIsSorted() === 'asc' ? (
+          )}
+          {column.getIsSorted() === 'asc' && (
             <ArrowUpIcon className='ms-2 h-4 w-4' />
-          ) : (
+          )}
+          {!column.getIsSorted() && (
             <CaretSortIcon className='ms-2 h-4 w-4' />
           )}
         </DropdownMenuTrigger>

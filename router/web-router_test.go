@@ -45,6 +45,27 @@ func TestReservedWebPathUsesSegmentBoundaries(t *testing.T) {
 	}
 }
 
+func TestKnownWebAppPathControlsSPAFallback(t *testing.T) {
+	for path, wantKnown := range map[string]bool{
+		"/":                        true,
+		"/docs":                    true,
+		"/docs/":                   true,
+		"/pricing/model-id":        true,
+		"/pricing/model-id/detail": false,
+		"/oauth/github":            true,
+		"/oauth/github/callback":   false,
+		"/dashboard":               true,
+		"/dashboard/usage/detail":  false,
+		"/errors/network":          true,
+		"/errors/network/details":  false,
+		"/system-settings/content": true,
+		"/system-settings/content/unknown/detail": false,
+		"/random-not-found":                       false,
+	} {
+		assert.Equal(t, wantKnown, isKnownWebAppPath(path), path)
+	}
+}
+
 func TestRenderWebPageUsesRouteSpecificSEOContent(t *testing.T) {
 	indexPage := []byte(`<!doctype html><html><head><title>__SEO_TITLE__</title><meta name="description" content="__SEO_DESCRIPTION__"><link rel="canonical" href="__SEO_CANONICAL__"><script type="application/ld+json">{"@graph":[{"@type":"WebSite","url":"__SEO_CANONICAL__","description":"__SEO_DESCRIPTION__"}]}</script></head><body><main id="seo-content">__SEO_CONTENT__</main></body></html>`)
 
@@ -56,20 +77,21 @@ func TestRenderWebPageUsesRouteSpecificSEOContent(t *testing.T) {
 	assert.NotContains(t, docsPage, "__SEO_")
 
 	homePage := string(renderWebPage(indexPage, "/"))
-	require.Contains(t, homePage, "<h1>ModelPass 统一 AI API 网关与模型服务平台</h1>")
+	require.Contains(t, homePage, "<h1>ModelPass 统一 AI API 网关</h1>")
 	assert.Contains(t, homePage, "https://www.modelpass.work/")
-	assert.Contains(t, homePage, "统一接入主流 AI 模型")
+	assert.Contains(t, homePage, "统一接入 ChatGPT、Claude 与国产大模型")
+	assert.Contains(t, homePage, "实时与例行风控")
 	assert.Contains(t, homePage, "1:1 充值")
 	assert.Contains(t, homePage, "为生产环境设计的 API 管理能力")
 	assert.Contains(t, homePage, "常见问题")
 	assert.Contains(t, homePage, "ModelPass 是什么？")
 	assert.Contains(t, homePage, `href="/rankings"`)
 	assert.Contains(t, homePage, `"@type":"WebSite"`)
-	assert.Contains(t, homePage, `"description":"ModelPass 是统一的 AI API 网关与模型服务平台`)
+	assert.Contains(t, homePage, `"description":"ModelPass 提供统一的 AI API 中转与模型服务入口`)
 	assert.NotContains(t, homePage, "__SEO_")
 
 	indexHTMLPage := string(renderWebPage(indexPage, "/index.html"))
-	assert.Contains(t, indexHTMLPage, "<h1>ModelPass 统一 AI API 网关与模型服务平台</h1>")
+	assert.Contains(t, indexHTMLPage, "<h1>ModelPass 统一 AI API 网关</h1>")
 	assert.Contains(t, indexHTMLPage, `https://www.modelpass.work/`)
 	assert.NotContains(t, indexHTMLPage, "__SEO_")
 }
@@ -123,6 +145,22 @@ func TestSetWebRouterUsesBuildHomeFragmentOnlyForRoot(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSetWebRouterReturnsHTML404ForUnknownPath(t *testing.T) {
+	assets := WebAssets{
+		IndexPage: []byte(`<html><head><title>__SEO_TITLE__</title><meta name="description" content="__SEO_DESCRIPTION__"><meta name="robots" content="__SEO_ROBOTS__"><link rel="canonical" href="__SEO_CANONICAL__"><script id="home-page-bootstrap">__HOME_PAGE_CONTENT_JSON__</script><script id="home-static-bootstrap">__HOME_STATIC_BOOTSTRAP_JSON__</script></head><body><main id="seo-content">__SEO_CONTENT__</main></body></html>`),
+	}
+	outer := gin.New()
+	SetWebRouter(outer, assets, func(c *gin.Context) { c.Next() })
+
+	recorder := httptest.NewRecorder()
+	outer.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/random-not-found", nil))
+
+	assert.Equal(t, http.StatusNotFound, recorder.Code)
+	assert.Equal(t, "text/html; charset=utf-8", recorder.Header().Get("Content-Type"))
+	assert.Contains(t, recorder.Body.String(), "<h1>页面未找到</h1>")
+	assert.Contains(t, recorder.Body.String(), `noindex, nofollow`)
 }
 
 func TestLoadHomePageValidatesBuildSnapshot(t *testing.T) {

@@ -904,14 +904,14 @@ func TestWebFallbackDoesNotCacheMissingAPIOrAssets(t *testing.T) {
 	assert.Equal(t, "no-cache", page.Header().Get("Cache-Control"))
 }
 
-func TestWebLogoRequiresCacheRevalidation(t *testing.T) {
+func TestMissingWebLogoReturns404WithoutCaching(t *testing.T) {
 	outer := gin.New()
 	SetWebRouter(outer, WebAssets{IndexPage: []byte("dashboard")}, func(c *gin.Context) { c.Next() })
 
 	response := performPluginRequest(outer, http.MethodGet, "/logo.svg")
 
-	assert.Equal(t, http.StatusOK, response.Code)
-	assert.Equal(t, "no-cache", response.Header().Get("Cache-Control"))
+	assert.Equal(t, http.StatusNotFound, response.Code)
+	assert.Contains(t, response.Header().Get("Cache-Control"), "no-store")
 }
 
 func TestSecurityRoutesDisableCachingBeforeAuthentication(t *testing.T) {

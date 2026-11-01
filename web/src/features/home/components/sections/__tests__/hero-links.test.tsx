@@ -54,7 +54,7 @@ vi.mock('@/features/home/components/hero-terminal-demo', () => ({
 const { Hero } = await import('../hero')
 
 const HOME_CONTENT = `
-<div class="home-feature-stack" role="list" aria-label="Platform pricing and channel source summary">
+<div class="home-feature-stack" role="list" aria-label="Platform pricing and model groups">
   <article role="listitem">
     <h2>1:1 platform recharge</h2>
     <p>Model prices use the $ symbol.</p>
@@ -77,22 +77,22 @@ describe('Hero documentation link', () => {
     )
   })
 
-  test('shows the responsible-use notice above the hero content', () => {
+  test('shows the platform overview below the full-width hero title', () => {
     const { container } = render(<Hero homePageContent={HOME_CONTENT} />)
 
-    const notice = screen.getByRole('note')
-    const informationArea = screen.getByRole('region', {
-      name: 'Platform pricing and channel source summary',
+    const title = screen.getByRole('heading', { level: 1 })
+    const overview = screen.getByRole('region', {
+      name: 'ModelPass platform overview',
     })
 
-    expect(notice).toHaveTextContent(
-      'Use responsibly; breaking limits is strictly prohibited!'
-    )
+    expect(title).toHaveTextContent('ModelPass unified AI API gateway')
+    expect(overview).toHaveTextContent('First-party ChatGPT models')
+    expect(overview).toHaveTextContent('Channel and domestic models')
+    expect(overview).toHaveTextContent('Safety and compliance')
     expect(
-      notice.compareDocumentPosition(informationArea) &
-        Node.DOCUMENT_POSITION_FOLLOWING
+      title.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()
-    expect(notice.parentElement).toContainElement(
+    expect(container.querySelector('section')).toContainElement(
       screen.getByRole('link', { name: 'Docs' })
     )
     expect(container.querySelector('section')).toHaveClass(
@@ -109,7 +109,7 @@ describe('Hero documentation link', () => {
     render(<Hero homePageContent={HOME_CONTENT} />)
 
     const summary = screen.getByRole('region', {
-      name: 'Platform pricing and channel source summary',
+      name: 'Platform pricing and model groups',
     })
     const contentHost = summary.querySelector<HTMLElement>(
       '.home-feature-content'
@@ -131,7 +131,7 @@ describe('Hero documentation link', () => {
     )
 
     const summary = screen.getByRole('region', {
-      name: 'Platform pricing and channel source summary',
+      name: 'Platform pricing and model groups',
     })
     const contentRoot = summary.querySelector<HTMLElement>(
       '.home-feature-content'
@@ -139,7 +139,9 @@ describe('Hero documentation link', () => {
 
     expect(contentRoot?.textContent).toContain('自定义卡片')
     expect(contentRoot?.querySelector('script')).toBeNull()
-    expect(screen.getByRole('note')).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'ModelPass platform overview' })
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Docs' })).toBeInTheDocument()
   })
 
@@ -149,7 +151,7 @@ describe('Hero documentation link', () => {
     )
 
     const summary = screen.getByRole('region', {
-      name: 'Platform pricing and channel source summary',
+      name: 'Platform pricing and model groups',
     })
     const contentRoot = summary.querySelector<HTMLElement>(
       '.home-feature-content'

@@ -68,6 +68,10 @@ test('renders the source homepage with its brand, links and completed content', 
   assert.match(document.querySelector('footer').textContent, /ModelPass/)
   assert.equal(document.querySelector('[data-slot="skeleton"]'), null)
   assert.equal(document.querySelector('[data-page="home"]') !== null, true)
+  assert.equal(
+    document.querySelector('h1')?.textContent,
+    'ModelPass 统一 AI API 网关'
+  )
   assert.equal(document.querySelector('a[href="/sign-up"]') !== null, true)
   assert.equal(document.querySelector('a[href="/pricing"]') !== null, true)
   assert.equal(document.querySelector('a[href="/docs"]') !== null, true)
@@ -82,6 +86,10 @@ test('renders the source homepage with its brand, links and completed content', 
   assert.match(
     template.content.querySelector('.html-content-root').textContent,
     /平台 1:1 充值/
+  )
+  assert.match(
+    template.content.querySelector('.html-content-root').textContent,
+    /国产模型分组限时/
   )
   assert.match(
     template.content
