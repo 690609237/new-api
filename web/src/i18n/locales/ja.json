@@ -3862,7 +3862,7 @@
     "Model-scoped only": "モデル指定のみ",
     "model(s) selected out of": "選択されたモデル",
     "model(s)? This action cannot be undone.": "モデルを削除しますか？この操作は元に戻せません。",
-    "ModelPass unified AI API gateway": "ModelPass統合AI APIゲートウェイ",
+    "ModelPass unified AI API gateway": "ModelPass 大規模言語モデル API と統合 AI API ゲートウェイ",
     "ModelPass usage agreement": "ModelPass 利用規約",
     "models": "モデル",
     "Models": "モデル",

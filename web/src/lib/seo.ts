@@ -23,36 +23,39 @@ const defaultSeoPage: SeoPage = {
 
 const seoPages: Record<string, SeoPage> = {
   '/': {
-    title: 'ModelPass｜AI API 中转与 ChatGPT、Claude、国产模型',
+    title: 'ModelPass｜大模型 API 中转站与统一 AI API 网关',
     description:
-      'ModelPass 提供统一的 AI API 中转与模型服务入口，支持自营 ChatGPT 系列模型、渠道 ChatGPT 与 Claude，以及 Kimi、通义千问、DeepSeek 等国内模型。平台提供实时和例行风控，禁止将大模型用于违法违规用途。',
+      'ModelPass 提供国内外大模型 API 与 OpenAI 兼容接口，支持 GPT、Claude、DeepSeek、通义千问、Kimi 等模型，提供 API Key、价格和用量管理。',
     keywords:
-      'AI API 中转,统一 AI API 网关,ChatGPT API,Claude API,Kimi API,通义千问 API,DeepSeek API,OpenAI 兼容 API,大模型风控',
+      '大模型 API 中转站,国内外大模型 API,AI API 网关,AI 中转站,GPT API,ChatGPT API,Claude API,DeepSeek API,OpenAI 兼容 API',
   },
   '/docs': {
-    title: 'ModelPass API 开发者文档｜统一 AI API 网关',
+    title: '大模型 API 开发者文档｜OpenAI 兼容接口｜ModelPass',
     description:
-      '查看 ModelPass 的 OpenAI 兼容 API、API Key 配置、ChatGPT 与 Claude 接入方式，以及 Kimi、通义千问、DeepSeek 等模型的调用说明。',
+      'ModelPass 开发者文档介绍大模型 API 的 API Key 配置、OpenAI 兼容接口、Chat Completions、Responses、流式输出和常见错误排查。',
     keywords:
-      'ModelPass 文档,AI API 文档,OpenAI 兼容 API,ChatGPT API,Claude API,API Key',
+      '大模型 API 文档,OpenAI 兼容 API,GPT API,ChatGPT API,API Key,流式输出',
   },
   '/pricing': {
-    title: 'AI 模型价格与 API 计费｜ModelPass',
+    title: '大模型 API 价格与计费｜GPT、Claude、DeepSeek｜ModelPass',
     description:
-      '查看 ModelPass 的 ChatGPT、Claude、Kimi、通义千问和 DeepSeek 等模型价格、输入输出计费及渠道服务信息。',
+      '查看 ModelPass 公开的大模型 API 价格与计费规则，比较 GPT、Claude、DeepSeek、通义千问和 Kimi 的输入、输出及缓存用量。',
     keywords:
-      'AI 模型价格,ChatGPT API 价格,Claude API 价格,Kimi API 价格,DeepSeek API 价格,ModelPass 价格',
+      '大模型 API 价格,GPT API 价格,ChatGPT API 价格,Claude API 价格,DeepSeek API 价格,通义千问 API 价格',
   },
   '/rankings': {
-    title: 'AI 模型排行榜｜ModelPass',
-    description: '查看 ModelPass AI 模型使用趋势和公开排行榜。',
-    keywords: 'AI 模型排行榜,大模型排行,ModelPass 排行榜',
+    title: '大模型排行榜｜AI 模型使用趋势｜ModelPass',
+    description:
+      '查看 ModelPass 公开的 AI 模型排行榜和使用趋势，了解 GPT、Claude、DeepSeek、通义千问等模型在不同时间范围的调用热度。',
+    keywords:
+      '大模型排行榜,AI 模型排行榜,GPT 排行榜,模型使用趋势,ModelPass 排行榜',
   },
   '/about': {
-    title: '关于 ModelPass｜AI API 网关与模型服务平台',
+    title: '关于 ModelPass｜大模型 API 与 AI API 网关',
     description:
-      '了解 ModelPass 的自营与渠道模型服务、国内大模型接入、AI API 网关能力和实时风控规则。',
-    keywords: '关于 ModelPass,AI API 平台,ChatGPT Claude,Kimi Qwen DeepSeek,AI 风控',
+      '了解 ModelPass 如何为开发者提供统一的大模型 API、OpenAI 兼容接口和多模型聚合服务，以及平台的安全与合规规则。',
+    keywords:
+      '关于 ModelPass,大模型 API,AI API 网关,ChatGPT API,Claude API,DeepSeek API,AI 合规',
   },
   '/privacy-policy': {
     title: '隐私政策｜ModelPass',

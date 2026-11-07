@@ -7,6 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,10 +18,7 @@ func TestIndexTemplateIncludesStructuredDataGraph(t *testing.T) {
 	require.NoError(t, err)
 
 	template := string(indexPage)
-	assert.Contains(t, template, `"@type": "WebSite"`)
-	assert.Contains(t, template, `"@type": "Organization"`)
-	assert.Contains(t, template, `"@type": "WebApplication"`)
-	assert.Contains(t, template, `"applicationCategory": "DeveloperApplication"`)
+	assert.Contains(t, template, `type="application/ld+json">__SEO_JSONLD__</script>`)
 	assert.Contains(t, template, `id="home-page-bootstrap"`)
 	assert.Contains(t, template, `__HOME_PAGE_CONTENT_JSON__`)
 	assert.Contains(t, template, `id="home-static-bootstrap"`)
@@ -71,13 +69,13 @@ func TestRenderWebPageUsesRouteSpecificSEOContent(t *testing.T) {
 
 	docsPage := string(renderWebPage(indexPage, "/docs/"))
 
-	assert.Contains(t, docsPage, "ModelPass API 开发者文档｜统一 AI API 网关")
+	assert.Contains(t, docsPage, "大模型 API 开发者文档｜OpenAI 兼容接口｜ModelPass")
 	assert.Contains(t, docsPage, `https://www.modelpass.work/docs`)
-	assert.Contains(t, docsPage, "<h1>ModelPass API 开发者文档</h1>")
+	assert.Contains(t, docsPage, "<h1>大模型 API 开发者文档</h1>")
 	assert.NotContains(t, docsPage, "__SEO_")
 
 	homePage := string(renderWebPage(indexPage, "/"))
-	require.Contains(t, homePage, "<h1>ModelPass 统一 AI API 网关</h1>")
+	require.Contains(t, homePage, "<h1>ModelPass 统一大模型 API 网关</h1>")
 	assert.Contains(t, homePage, "https://www.modelpass.work/")
 	assert.Contains(t, homePage, "统一接入 ChatGPT、Claude 与国产大模型")
 	assert.Contains(t, homePage, "实时与例行风控")
@@ -87,13 +85,32 @@ func TestRenderWebPageUsesRouteSpecificSEOContent(t *testing.T) {
 	assert.Contains(t, homePage, "ModelPass 是什么？")
 	assert.Contains(t, homePage, `href="/rankings"`)
 	assert.Contains(t, homePage, `"@type":"WebSite"`)
-	assert.Contains(t, homePage, `"description":"ModelPass 提供统一的 AI API 中转与模型服务入口`)
+	assert.Contains(t, homePage, `"description":"ModelPass 提供国内外大模型 API 与 OpenAI 兼容接口`)
 	assert.NotContains(t, homePage, "__SEO_")
 
 	indexHTMLPage := string(renderWebPage(indexPage, "/index.html"))
-	assert.Contains(t, indexHTMLPage, "<h1>ModelPass 统一 AI API 网关</h1>")
+	assert.Contains(t, indexHTMLPage, "<h1>ModelPass 统一大模型 API 网关</h1>")
 	assert.Contains(t, indexHTMLPage, `https://www.modelpass.work/`)
 	assert.NotContains(t, indexHTMLPage, "__SEO_")
+}
+
+func TestMarshalWebStructuredDataAddsBreadcrumbsForPublicPages(t *testing.T) {
+	data := marshalWebStructuredData("/docs", publicWebSEOPages["/docs"])
+	var document map[string]any
+	require.NoError(t, common.Unmarshal([]byte(data), &document))
+	assert.Contains(t, data, `"@type":"BreadcrumbList"`)
+	assert.Contains(t, data, `"item":"https://www.modelpass.work/docs"`)
+	assert.NotContains(t, data, "<script")
+}
+
+func TestRenderWebPageInjectsStructuredDataIntoIndexTemplate(t *testing.T) {
+	indexPage, err := os.ReadFile("../web/index.html")
+	require.NoError(t, err)
+
+	page := string(renderWebPage(indexPage, "/docs"))
+	assert.NotContains(t, page, "__SEO_JSONLD__")
+	assert.Contains(t, page, `"@type":"BreadcrumbList"`)
+	assert.Contains(t, page, `"item":"https://www.modelpass.work/docs"`)
 }
 
 func TestRenderWebPageUsesCompiledHomeContentFallback(t *testing.T) {

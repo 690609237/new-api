@@ -51,6 +51,7 @@ func GetPasswordEncryptionKey(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
+	middleware.MarkAuthIPHandlerReached(c)
 	if !common.PasswordLoginEnabled {
 		common.ApiErrorT(c, "Password login has been disabled by administrator")
 		return
@@ -58,6 +59,7 @@ func Login(c *gin.Context) {
 	var loginRequest LoginRequest
 	err := common.DecodeJson(c.Request.Body, &loginRequest)
 	if err != nil {
+		middleware.MarkAuthIPFailure(c)
 		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
@@ -65,16 +67,19 @@ func Login(c *gin.Context) {
 	password := loginRequest.Password
 	if common.PasswordLoginEncryptionEnabled {
 		if loginRequest.PasswordEncrypted == "" || loginRequest.EncryptionKeyID == "" {
+			middleware.MarkAuthIPFailure(c)
 			common.ApiErrorT(c, "Invalid parameters")
 			return
 		}
 		password, err = common.DecryptPassword(loginRequest.PasswordEncrypted, loginRequest.EncryptionKeyID)
 		if err != nil {
+			middleware.MarkAuthIPFailure(c)
 			common.ApiErrorT(c, "Username or password is incorrect, or user has been banned")
 			return
 		}
 	}
 	if username == "" || password == "" {
+		middleware.MarkAuthIPFailure(c)
 		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
@@ -89,8 +94,12 @@ func Login(c *gin.Context) {
 			common.SysLog(common.LogText("Login database error for user %s: %v", username, err))
 			common.ApiErrorT(c, "Database error, please contact the administrator")
 		case errors.Is(err, model.ErrUserEmptyCredentials):
+			middleware.MarkAuthIPFailure(c)
 			common.ApiErrorT(c, "Invalid parameters")
 		default:
+			if errors.Is(err, model.ErrInvalidCredentials) {
+				middleware.MarkAuthIPFailure(c)
+			}
 			common.ApiErrorT(c, "Username or password is incorrect, or user has been banned")
 		}
 		return
@@ -196,6 +205,7 @@ func setupLoginAtAuthVersion(user *model.User, expectedAuthVersion int64, c *gin
 }
 
 func writeLoginResponse(c *gin.Context, user *model.User, bundle *service.AuthBundle) {
+	middleware.MarkAuthIPSuccess(c)
 	c.Set("login_method", bundle.Session.LoginMethod)
 	model.UpdateUserLastLoginAt(user.Id)
 	service.WriteRefreshCookie(c, bundle.RefreshToken)
@@ -215,6 +225,7 @@ func writeLoginResponse(c *gin.Context, user *model.User, bundle *service.AuthBu
 }
 
 func Register(c *gin.Context) {
+	middleware.MarkAuthIPHandlerReached(c)
 	if !common.RegisterEnabled {
 		common.ApiErrorT(c, "New user registration has been disabled by administrator")
 		return

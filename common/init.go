@@ -141,6 +141,11 @@ func InitEnv() {
 	SearchRateLimitEnable = GetEnvOrDefaultBool("SEARCH_RATE_LIMIT_ENABLE", true)
 	SearchRateLimitNum = GetEnvOrDefault("SEARCH_RATE_LIMIT", 10)
 	SearchRateLimitDuration = int64(GetEnvOrDefault("SEARCH_RATE_LIMIT_DURATION", 60))
+
+	AuthIPBlockEnable = GetEnvOrDefaultBool("AUTH_IP_BLOCK_ENABLE", true)
+	AuthIPBlockThreshold = GetEnvOrDefault("AUTH_IP_BLOCK_THRESHOLD", 10)
+	AuthIPBlockWindow = int64(GetEnvOrDefault("AUTH_IP_BLOCK_WINDOW", 15*60))
+	AuthIPBlockDuration = int64(GetEnvOrDefault("AUTH_IP_BLOCK_DURATION", 24*60*60))
 	initConstantEnv()
 }
 

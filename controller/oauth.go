@@ -157,6 +157,7 @@ func HandleOAuth(c *gin.Context) {
 		Provider: providerName,
 	})
 	if err != nil {
+		middleware.MarkAuthIPFailure(c)
 		writeAccountStatusError(c, http.StatusForbidden, "State parameter is empty or mismatched")
 		return
 	}

@@ -2,9 +2,11 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	passkeysvc "github.com/QuantumNous/new-api/service/passkey"
@@ -14,12 +16,14 @@ import (
 )
 
 func VerifyLogin(c *gin.Context) {
+	middleware.MarkAuthIPHandlerReached(c)
 	var request struct {
 		FlowToken string `json:"flow_token"`
 		Method    string `json:"method"`
 		Code      string `json:"code"`
 	}
 	if common.DecodeJson(c.Request.Body, &request) != nil || request.FlowToken == "" || request.Code == "" {
+		middleware.MarkAuthIPFailure(c)
 		common.ApiErrorT(c, "Invalid parameters")
 		return
 	}
@@ -32,6 +36,9 @@ func VerifyLogin(c *gin.Context) {
 	}
 	bundle, migration, err := service.VerifyLoginCode(request.FlowToken, request.Code, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
+		if errors.Is(err, service.ErrVerificationFailed) {
+			middleware.MarkAuthIPFailure(c)
+		}
 		writeSecurityOperationError(c, err)
 		return
 	}

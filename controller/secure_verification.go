@@ -35,6 +35,9 @@ func GetVerificationMethods(c *gin.Context) {
 // writeSecurityOperationError only exposes known, fixed business messages.
 // Unexpected errors retain their cause for the existing server-side auth logger.
 func writeSecurityOperationError(c *gin.Context, err error) {
+	if c.GetBool("auth_ip_guard") && isAuthIPFailure(err) {
+		middleware.MarkAuthIPFailure(c)
+	}
 	status := http.StatusOK
 	var code, message string
 	var protocolError *protocol.Error
@@ -133,6 +136,18 @@ func writeSecurityOperationError(c *gin.Context, err error) {
 	// Every message above is fixed English text, so it is also the key the web
 	// console translates.
 	common.ApiErrorStatus(c, status, common.NewMessage(message), gin.H{"code": code})
+}
+
+func isAuthIPFailure(err error) bool {
+	var protocolError *protocol.Error
+	return errors.Is(err, service.ErrVerificationFailed) ||
+		errors.Is(err, service.ErrVerificationLocked) ||
+		errors.Is(err, service.ErrProofMethod) ||
+		errors.Is(err, model.ErrTwoFACodeInvalid) ||
+		errors.Is(err, model.ErrAuthFlowInvalid) ||
+		errors.Is(err, model.ErrAuthFlowExpired) ||
+		errors.Is(err, model.ErrAuthFlowConsumed) ||
+		errors.As(err, &protocolError)
 }
 
 // writeAccountStatusError responds with a web console message under a non-200

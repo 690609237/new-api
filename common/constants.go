@@ -243,6 +243,15 @@ var (
 	SearchRateLimitDuration int64 = 60
 )
 
+// Authentication abuse protection. Registration attempts and explicit
+// authentication failures use separate handler paths and a shared block key.
+var (
+	AuthIPBlockEnable          = true
+	AuthIPBlockThreshold       = 10
+	AuthIPBlockWindow    int64 = 15 * 60
+	AuthIPBlockDuration  int64 = 24 * 60 * 60
+)
+
 var RateLimitKeyExpirationDuration = 20 * time.Minute
 
 const (

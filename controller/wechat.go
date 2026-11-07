@@ -63,6 +63,7 @@ func WeChatAuth(c *gin.Context) {
 	code := c.Query("code")
 	wechatId, err := getWeChatIdByCode(code)
 	if err != nil {
+		middleware.MarkAuthIPFailure(c)
 		common.ApiError(c, err)
 		return
 	}

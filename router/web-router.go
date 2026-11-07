@@ -101,12 +101,13 @@ type webSEOPage struct {
 
 var publicWebSEOPages = map[string]webSEOPage{
 	"/": {
-		title:       "ModelPass｜AI API 中转与 ChatGPT、Claude、国产模型",
-		description: "ModelPass 提供统一的 AI API 中转与模型服务入口，支持自营 ChatGPT 系列模型、渠道 ChatGPT 与 Claude，以及 Kimi、通义千问、DeepSeek 等国内模型。平台提供实时和例行风控，禁止将大模型用于违法违规用途。",
-		keywords:    "AI API 中转,统一 AI API 网关,ChatGPT API,Claude API,Kimi API,通义千问 API,DeepSeek API,OpenAI 兼容 API,大模型风控",
+		title:       "ModelPass｜大模型 API 中转站与统一 AI API 网关",
+		description: "ModelPass 提供国内外大模型 API 与 OpenAI 兼容接口，支持 GPT、Claude、DeepSeek、通义千问、Kimi 等模型，提供 API Key、价格和用量管理。",
+		keywords:    "大模型 API 中转站,国内外大模型 API,AI API 网关,AI 中转站,GPT API,ChatGPT API,Claude API,DeepSeek API,OpenAI 兼容 API",
 		canonical:   "https://www.modelpass.work/",
-		content: `<h1>ModelPass 统一 AI API 网关</h1>
-				<p>ModelPass 面向开发者和 AI 应用，提供统一的 OpenAI 兼容 API。平台自营 ChatGPT 系列模型，也支持通过渠道接入 ChatGPT、Claude，以及 Kimi、通义千问（Qwen）、DeepSeek 等国内模型。</p>
+		content: `<h1>ModelPass 统一大模型 API 网关</h1>
+				<p>ModelPass 面向开发者和 AI 应用，提供国内外大模型 API 与 OpenAI 兼容接口。平台自营 ChatGPT 系列模型，也支持通过渠道接入 ChatGPT、Claude，以及 Kimi、通义千问（Qwen）、DeepSeek 等国内模型。</p>
+			<p>作为大模型 API 中转站和统一 AI API 网关，ModelPass 提供 API Key、模型管理、用量统计和访问控制。可用模型、渠道能力和价格以平台当前公开配置为准，服务仅用于合法合规的模型调用。</p>
 			<p>平台按 1:1 充值展示模型价格，价格使用美元标识；自有 token 分组使用 <code>default</code> 和 <code>standard</code> 等固定技术标识。请合理使用服务，严禁破限。</p>
 			<section aria-labelledby="modelpass-models"><h2 id="modelpass-models">统一接入 ChatGPT、Claude 与国产大模型</h2>
 			<p>平台按实际配置提供 ChatGPT、Claude、Kimi、通义千问（Qwen）、DeepSeek 等模型服务，并提供 OpenAI Chat Completions、Responses、Anthropic Messages 等常用协议的兼容路由。你可以在客户端保持稳定的 API 地址，在后台按需切换模型和渠道。</p>
@@ -125,32 +126,32 @@ var publicWebSEOPages = map[string]webSEOPage{
 			<nav aria-label="主要页面"><a href="/docs">开发者文档</a><a href="/pricing">模型价格</a><a href="/rankings">AI 模型排行榜</a><a href="/about">关于 ModelPass</a></nav>`,
 	},
 	"/docs": {
-		title:       "ModelPass API 开发者文档｜统一 AI API 网关",
-		description: "查看 ModelPass 的 OpenAI 兼容 API、API Key 配置、ChatGPT 与 Claude 接入方式，以及 Kimi、通义千问、DeepSeek 等模型的调用说明。",
-		keywords:    "ModelPass 文档,AI API 文档,OpenAI 兼容 API,ChatGPT API,Claude API,API Key",
+		title:       "大模型 API 开发者文档｜OpenAI 兼容接口｜ModelPass",
+		description: "ModelPass 开发者文档介绍大模型 API 的 API Key 配置、OpenAI 兼容接口、Chat Completions、Responses、流式输出和常见错误排查。",
+		keywords:    "大模型 API 文档,OpenAI 兼容 API,GPT API,ChatGPT API,API Key,流式输出",
 		canonical:   "https://www.modelpass.work/docs",
-		content:     `<h1>ModelPass API 开发者文档</h1><p>本页面介绍如何创建 API Key、配置 Codex，并使用 ModelPass 提供的兼容 OpenAI API。</p><h2>快速开始</h2><ol><li>创建 ModelPass API Key。</li><li>将 API 地址和密钥配置到客户端。</li><li>选择模型并发送 API 请求。</li></ol><p><a href="/pricing">查看模型价格</a>，或<a href="/">返回 ModelPass 首页</a>。</p>`,
+		content:     `<h1>大模型 API 开发者文档</h1><p>本页面介绍如何创建 API Key、配置客户端，并使用 ModelPass 的 OpenAI 兼容接口接入 GPT、Claude、DeepSeek、通义千问和 Kimi 等模型。具体模型与协议能力以当前渠道配置为准。</p><section aria-labelledby="docs-quick-start"><h2 id="docs-quick-start">快速开始</h2><ol><li>注册 ModelPass 账号，在控制台创建 API Key。</li><li>把控制台显示的公共 API 地址填入客户端的 Base URL，并使用 API Key 进行 Bearer 鉴权。</li><li>选择模型名称，发送 Chat Completions 或 Responses 请求。</li></ol></section><section aria-labelledby="docs-compatible-api"><h2 id="docs-compatible-api">OpenAI 兼容 API</h2><p>支持 OpenAI 兼容客户端的应用通常只需要替换 Base URL 和 API Key。常见请求路径包括 <code>/v1/chat/completions</code> 与 <code>/v1/responses</code>；流式输出、工具调用和多模态能力取决于所选模型和渠道。</p><pre><code>curl https://your-api-host/v1/chat/completions \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"YOUR_MODEL","messages":[{"role":"user","content":"你好"}]}'</code></pre></section><section aria-labelledby="docs-troubleshooting"><h2 id="docs-troubleshooting">常见问题</h2><p>遇到 401 时检查 API Key 和请求头，遇到 429 时检查余额、限流和模型分组，遇到模型不可用时先查看模型列表和渠道状态。</p></section><p><a href="/pricing">查看大模型 API 价格</a>，或<a href="/">返回 ModelPass 首页</a>。</p>`,
 	},
 	"/pricing": {
-		title:       "AI 模型价格与 API 计费｜ModelPass",
-		description: "查看 ModelPass 的 ChatGPT、Claude、Kimi、通义千问和 DeepSeek 等模型价格、输入输出计费及渠道服务信息。",
-		keywords:    "AI 模型价格,ChatGPT API 价格,Claude API 价格,Kimi API 价格,DeepSeek API 价格,ModelPass 价格",
+		title:       "大模型 API 价格与计费｜GPT、Claude、DeepSeek｜ModelPass",
+		description: "查看 ModelPass 公开的大模型 API 价格与计费规则，比较 GPT、Claude、DeepSeek、通义千问和 Kimi 的输入、输出及缓存用量。",
+		keywords:    "大模型 API 价格,GPT API 价格,ChatGPT API 价格,Claude API 价格,DeepSeek API 价格,通义千问 API 价格",
 		canonical:   "https://www.modelpass.work/pricing",
-		content:     `<h1>AI 模型价格与 API 计费</h1><p>ModelPass 提供多家 AI 模型的价格和 API 用量信息，支持按模型查看输入、输出及缓存等计费项目。</p><p><a href="/docs">查看 API 开发者文档</a>，了解如何接入模型服务。</p>`,
+		content:     `<h1>大模型 API 价格与计费</h1><p>ModelPass 模型广场公开展示 GPT、Claude、DeepSeek、通义千问（Qwen）、Kimi 等模型的 API 价格和可用渠道。价格列表会随模型、渠道和平台配置变化，请以页面当前显示值为准。</p><section aria-labelledby="pricing-items"><h2 id="pricing-items">输入、输出与缓存用量</h2><p>文本模型通常按输入 token、输出 token 和缓存 token 等项目计费；不同模型可能使用不同的计价单位或倍率。查看模型详情时，请同时确认模型名称、协议支持、上下文限制和渠道状态。</p></section><section aria-labelledby="pricing-choice"><h2 id="pricing-choice">如何选择模型</h2><ul><li>需要通用对话和代码能力时，比较 GPT、Claude 与国产大模型的能力和价格。</li><li>需要中文内容或国内服务时，可查看 DeepSeek、通义千问和 Kimi 等模型。</li><li>正式接入前，先用小额请求验证模型、渠道和计费结果。</li></ul></section><section aria-labelledby="pricing-update"><h2 id="pricing-update">价格更新时间与用量核对</h2><p>平台用量记录和结算结果以服务端日志为准。价格或倍率调整时，请以站内公告和模型价格页为准。</p></section><p><a href="/docs">查看大模型 API 开发者文档</a>，或<a href="/">返回 ModelPass 首页</a>。</p>`,
 	},
 	"/rankings": {
-		title:       "AI 模型排行榜｜ModelPass",
-		description: "查看 ModelPass AI 模型使用趋势和公开排行榜。",
-		keywords:    "AI 模型排行榜,大模型排行,ModelPass 排行榜",
+		title:       "大模型排行榜｜AI 模型使用趋势｜ModelPass",
+		description: "查看 ModelPass 公开的 AI 模型排行榜和使用趋势，了解 GPT、Claude、DeepSeek、通义千问等模型在不同时间范围的调用热度。",
+		keywords:    "大模型排行榜,AI 模型排行榜,GPT 排行榜,模型使用趋势,ModelPass 排行榜",
 		canonical:   "https://www.modelpass.work/rankings",
-		content:     `<h1>AI 模型排行榜</h1><p>查看 ModelPass 平台上的公开模型使用趋势和排行榜信息。</p>`,
+		content:     `<h1>大模型排行榜与使用趋势</h1><p>ModelPass 排行榜按公开的模型调用数据展示不同时间范围内的使用趋势，帮助开发者了解 GPT、Claude、DeepSeek、通义千问（Qwen）和 Kimi 等模型的热门程度。</p><section aria-labelledby="ranking-periods"><h2 id="ranking-periods">按时间范围查看模型热度</h2><p>你可以切换今日、本周、本月和年度等时间范围。排行反映平台内的调用趋势，不等同于模型能力评测，也不代表所有用户或全部市场的使用情况。</p></section><section aria-labelledby="ranking-interpretation"><h2 id="ranking-interpretation">如何理解排行榜</h2><ul><li>热门程度会受到价格、渠道可用性、模型更新和活动流量影响。</li><li>同一模型在不同渠道的响应速度、上下文限制和协议能力可能不同。</li><li>生产环境选型应结合任务质量、延迟、价格、稳定性和合规要求。</li></ul></section><p><a href="/pricing">比较大模型 API 价格</a>，或<a href="/docs">查看 API 接入文档</a>。</p>`,
 	},
 	"/about": {
-		title:       "关于 ModelPass｜AI API 网关与模型服务平台",
-		description: "了解 ModelPass 的自营与渠道模型服务、国内大模型接入、AI API 网关能力和实时风控规则。",
-		keywords:    "关于 ModelPass,AI API 平台,ChatGPT Claude,Kimi Qwen DeepSeek,AI 风控",
+		title:       "关于 ModelPass｜大模型 API 与 AI API 网关",
+		description: "了解 ModelPass 如何为开发者提供统一的大模型 API、OpenAI 兼容接口和多模型聚合服务，以及平台的安全与合规规则。",
+		keywords:    "关于 ModelPass,大模型 API,AI API 网关,ChatGPT API,Claude API,DeepSeek API,AI 合规",
 		canonical:   "https://www.modelpass.work/about",
-		content:     `<h1>关于 ModelPass</h1><p>ModelPass 是面向开发者和 AI 应用的统一 AI API 网关与模型中转站，提供自营 ChatGPT 系列模型、渠道 ChatGPT 与 Claude，以及 Kimi、通义千问（Qwen）、DeepSeek 等国内模型服务。</p><p>平台通过实时和例行风控识别异常调用与违规场景，禁止使用大模型从事违法违规活动、侵害他人权益或规避平台安全措施。模型可用性和具体渠道以平台当前配置为准。</p><p><a href="/docs">查看开发者文档</a>，或<a href="/pricing">查看模型价格</a>。</p>`,
+		content:     `<h1>关于 ModelPass：统一的大模型 API 网关</h1><p>ModelPass 是面向开发者、团队和 AI 应用的统一 AI API 网关与模型聚合服务。平台通过一个 API 入口管理 GPT、Claude、DeepSeek、通义千问（Qwen）、Kimi 等模型，帮助应用减少多家模型接口之间的重复配置。</p><section aria-labelledby="about-capabilities"><h2 id="about-capabilities">我们提供什么</h2><ul><li>OpenAI 兼容的 Chat Completions、Responses 等常用接口。</li><li>模型名称映射、渠道调度、失败重试、限流和用量统计。</li><li>API Key、用户分组、访问权限和模型价格管理。</li><li>适用于个人项目、团队应用和自托管部署的控制台。</li></ul></section><section aria-labelledby="about-models"><h2 id="about-models">模型与渠道</h2><p>模型和渠道以平台当前配置为准。不同模型可能在上下文长度、流式输出、工具调用、多模态能力、速度和价格方面存在差异，接入前请查看<a href="/pricing">模型价格页</a>与<a href="/docs">开发者文档</a>。</p></section><section aria-labelledby="about-safety"><h2 id="about-safety">安全与合规</h2><p>平台执行实时和例行风险控制，禁止使用服务从事违法违规活动、侵害他人权益、攻击第三方或规避模型提供方的安全措施。请妥善保管 API Key，并遵守适用法律、模型提供方条款和平台用户协议。</p></section><section aria-labelledby="about-contact"><h2 id="about-contact">联系与支持</h2><p>你可以在关于页面查看公开联系方式，反馈接入问题、计费疑问或合作需求。平台不会在公开页面展示用户的 API Key 或其他敏感凭据。</p></section>`,
 	},
 	"/privacy-policy": {
 		title:       "隐私政策｜ModelPass",
@@ -218,10 +219,60 @@ func renderWebPageWithHomeFragment(indexPage []byte, requestPath, homePageConten
 		"__SEO_KEYWORDS__", page.keywords,
 		"__SEO_CANONICAL__", page.canonical,
 		"__SEO_ROBOTS__", robots,
+		"__SEO_JSONLD__", marshalWebStructuredData(path, page),
 		"__SEO_CONTENT__", seoContent,
 		"__HOME_PAGE_CONTENT_JSON__", homePageBootstrapJSON,
 		"__HOME_STATIC_BOOTSTRAP_JSON__", homeBootstrap,
 	).Replace(content))
+}
+
+func marshalWebStructuredData(path string, page webSEOPage) string {
+	graph := []any{
+		map[string]any{
+			"@type":       "WebSite",
+			"@id":         "https://www.modelpass.work/#website",
+			"name":        "ModelPass",
+			"url":         "https://www.modelpass.work/",
+			"description": page.description,
+			"inLanguage":  "zh-CN",
+		},
+		map[string]any{
+			"@type":       "WebPage",
+			"@id":         page.canonical + "#webpage",
+			"url":         page.canonical,
+			"name":        page.title,
+			"description": page.description,
+			"isPartOf":    map[string]any{"@id": "https://www.modelpass.work/#website"},
+			"inLanguage":  "zh-CN",
+		},
+		map[string]any{
+			"@type":       "Organization",
+			"@id":         "https://www.modelpass.work/#organization",
+			"name":        "ModelPass",
+			"url":         "https://www.modelpass.work/",
+			"logo":        "https://www.modelpass.work/logo.png?v=3",
+			"description": page.description,
+		},
+		map[string]any{
+			"@type":               "WebApplication",
+			"name":                "ModelPass AI API Gateway",
+			"url":                 page.canonical,
+			"applicationCategory": "DeveloperApplication",
+			"operatingSystem":     "Web",
+			"description":         page.description,
+		},
+	}
+	if path != "/" {
+		graph = append(graph, map[string]any{
+			"@type":           "BreadcrumbList",
+			"itemListElement": []any{map[string]any{"@type": "ListItem", "position": 1, "name": "ModelPass", "item": "https://www.modelpass.work/"}, map[string]any{"@type": "ListItem", "position": 2, "name": page.title, "item": page.canonical}},
+		})
+	}
+	data, err := common.Marshal(map[string]any{"@context": "https://schema.org", "@graph": graph})
+	if err != nil {
+		return "{}"
+	}
+	return escapeScriptJSON(string(data))
 }
 
 func escapeScriptJSON(value string) string {
@@ -447,6 +498,7 @@ func renderWebNotFoundPage(indexPage []byte) []byte {
 		"__SEO_KEYWORDS__", page.keywords,
 		"__SEO_CANONICAL__", page.canonical,
 		"__SEO_ROBOTS__", "noindex, nofollow",
+		"__SEO_JSONLD__", `{}`,
 		"__SEO_CONTENT__", page.content,
 		"__HOME_PAGE_CONTENT_JSON__", `""`,
 		"__HOME_STATIC_BOOTSTRAP_JSON__", "{}",
