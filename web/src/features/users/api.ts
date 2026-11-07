@@ -146,6 +146,21 @@ export async function deleteUser(
 }
 
 /**
+ * Batch delete users (hard delete); requires an `admin.user.bulk_delete` proof
+ */
+export async function batchDeleteUsers(
+  ids: number[],
+  proofToken: string
+): Promise<ApiResponse<{ deleted: number; revoked_access_tokens: number }>> {
+  const res = await api.post(
+    '/api/user/batch-delete',
+    { ids },
+    securityProofConfig(proofToken)
+  )
+  return res.data
+}
+
+/**
  * Manage user (promote, demote, enable, disable, delete); requires an
  * `admin.user.manage` proof (`admin.user.delete` for deletion)
  */

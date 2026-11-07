@@ -141,6 +141,17 @@ Redis 限流使用原子 Lua 固定窗口，替代旧的近似滑动窗口 List 
 
 开放注册除了 Critical IP 限流，还会分别累计同一 IP 的注册尝试和明确认证失败；任一计数达到阈值都会使用共享封禁键临时封禁 24 小时。默认值为 10 次/15 分钟，可通过 `AUTH_IP_BLOCK_ENABLE`、`AUTH_IP_BLOCK_THRESHOLD`、`AUTH_IP_BLOCK_WINDOW` 和 `AUTH_IP_BLOCK_DURATION` 调整。封禁依赖 Redis 在多节点间共享，Redis 不可用时退回单进程内存保护。分布式 IP 多账号攻击不能仅靠 IP 限流阻止；公网开放注册的部署仍应同时启用 Turnstile 和邮箱验证。
 
+认证 IP 保护默认已启用。线上可以在 `.env` 中显式保留以下配置，便于核对和调整：
+
+```env
+AUTH_IP_BLOCK_ENABLE=true
+AUTH_IP_BLOCK_THRESHOLD=10
+AUTH_IP_BLOCK_WINDOW=900
+AUTH_IP_BLOCK_DURATION=86400
+```
+
+`AUTH_IP_BLOCK_WINDOW` 和 `AUTH_IP_BLOCK_DURATION` 的单位都是秒。多节点部署必须让所有节点连接同一个 Redis，才能共享失败计数和 24 小时封禁状态；不使用 Redis 时，保护只在当前进程内生效。共享出口 IP 用户较多时，可适当提高 `AUTH_IP_BLOCK_THRESHOLD`，避免误封正常用户。
+
 ## PAT 调用契约
 
 面板 PAT（个人访问令牌）通过 `Authorization: Bearer <pat>` 发送，也兼容单值 `Authorization: <pat>`；不接受 URL 参数。`New-Api-User` 不参与鉴权。
@@ -170,6 +181,7 @@ OAuth state、2FA pending、Passkey ceremony、Telegram bind 等临时状态存�
 管理员对其他用户执行的高风险操作同样要求 Proof，且 scope 的 context 绑定被操作用户，签发给某个用户的 Proof 不能改用于另一个用户或另一种动作：
 
 - `admin.user.delete`（`{"user_id"}`）：`DELETE /api/user/:id` 与 `POST /api/user/manage` 的 `delete`；
+- `admin.user.bulk_delete`（`{"user_ids":[...]}`）：`POST /api/user/batch-delete`，一次最多删除 100 个可管理的非 Root 用户；
 - `admin.user.manage`（`{"user_id","action"}`，action 为 `disable` / `enable` / `promote` / `demote`）：`POST /api/user/manage`；额度调整 `add_quota` 不要求 Proof；
 - `admin.user.update`（`{"user_id"}`）：`PUT /api/user/` 在请求包含新密码或 `admin_permissions` 时要求；仅修改显示名、分组、备注不要求；
 - `admin.user.create`（`{"role"}`）：`POST /api/user/` 创建管理员角色时要求；创建普通用户不要求；

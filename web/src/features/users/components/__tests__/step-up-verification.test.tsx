@@ -18,14 +18,22 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Row } from '@tanstack/react-table'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 
+import { useDataTable } from '@/components/data-table'
 import { api } from '@/lib/api'
 
 import type { User } from '../../types'
+import { DataTableBulkActions } from '../data-table-bulk-actions'
 import { DataTableRowActions } from '../data-table-row-actions'
 import { UsersDeleteDialog } from '../users-delete-dialog'
 import { UsersProvider, useUsers } from '../users-provider'
@@ -81,6 +89,36 @@ function OpenDeleteDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return null
+}
+
+function BulkUsersHarness() {
+  const users = [
+    target,
+    { ...target, id: 3, username: 'second-user', display_name: 'Second user' },
+  ]
+  const { table } = useDataTable({
+    data: users,
+    columns: [{ accessorKey: 'username' }],
+    enableRowSelection: true,
+    getRowId: (row) => String(row.id),
+  })
+
+  return (
+    <>
+      {table.getRowModel().rows.map((row) => (
+        <label key={row.id}>
+          <input
+            type='checkbox'
+            aria-label={row.original.username}
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+          />
+          {row.original.username}
+        </label>
+      ))}
+      <DataTableBulkActions table={table} />
+    </>
+  )
 }
 
 function renderInProvider(children: React.ReactNode) {
@@ -194,6 +232,49 @@ it('disabling a user from the row menu binds the proof to the user and action', 
     expect.objectContaining({
       scope: 'admin.user.manage',
       context: { user_id: 2, action: 'disable' },
+    }),
+    expect.anything()
+  )
+})
+
+it('batch deleting selected users binds the proof to sorted user IDs', async () => {
+  const proof = mockVerification('admin.user.bulk_delete', 'bulk-delete-proof')
+  const post = vi.spyOn(api, 'post').mockImplementation(async (url) => {
+    if (url === '/api/verify') return proof
+    if (url === '/api/user/batch-delete') {
+      return { data: { success: true, data: { deleted: 2 } } }
+    }
+    throw new Error(`Unexpected POST ${url}`)
+  })
+  renderInProvider(<BulkUsersHarness />)
+
+  await userEvent.click(
+    await screen.findByRole('checkbox', { name: 'managed-user' })
+  )
+  await userEvent.click(screen.getByRole('checkbox', { name: 'second-user' }))
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Delete selected users' })
+  )
+  const dialog = await screen.findByRole('alertdialog')
+  expect(dialog).toHaveAccessibleName('Delete 2 users?')
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }))
+  await completeTwoFactorVerification()
+
+  await waitFor(() =>
+    expect(post).toHaveBeenCalledWith(
+      '/api/user/batch-delete',
+      { ids: [2, 3] },
+      expect.objectContaining({
+        headers: { 'X-Security-Proof': 'bulk-delete-proof' },
+        singleUseAuthorization: true,
+      })
+    )
+  )
+  expect(post).toHaveBeenCalledWith(
+    '/api/verify',
+    expect.objectContaining({
+      scope: 'admin.user.bulk_delete',
+      context: { user_ids: [2, 3] },
     }),
     expect.anything()
   )

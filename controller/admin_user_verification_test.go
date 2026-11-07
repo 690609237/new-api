@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 // setupAdminUserTest promotes the enrolled operator to root and creates a
@@ -291,6 +292,48 @@ func TestAdminUserProofIsBoundToTargetAndActionAndConsumedOnce(t *testing.T) {
 	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
 	assert.Equal(t, http.StatusForbidden, response.Code)
 	assert.Equal(t, "SECURITY_PROOF_CONSUMED", result.Code)
+}
+
+func TestBatchDeleteUsersDeletesAllTargetsAtomically(t *testing.T) {
+	_, identity, target := setupAdminUserTest(t)
+	require.NoError(t, model.DB.AutoMigrate(&model.ExternalIdentityClaim{}, &model.Token{}))
+	other := &model.User{Username: "other-batch-user", Password: target.Password, Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AffCode: "other-batch-aff"}
+	require.NoError(t, model.DB.Create(other).Error)
+
+	operation := service.VerificationOperation{
+		Scope:   service.VerificationScopeAdminUserBulkDelete,
+		Context: []byte(fmt.Sprintf(`{"user_ids":[%d,%d]}`, other.Id, target.Id)),
+	}
+	proof := issueSecurityEnrollmentProof(t, identity, operation, service.VerificationMethodPassword)
+	response := adminUserRequest(http.MethodPost, "/api/user/batch-delete", fmt.Sprintf(`{"ids":[%d,%d]}`, target.Id, other.Id), proof, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	body := decodeSecurityEnrollmentResponse(t, response)
+	require.Equal(t, http.StatusOK, response.Code, body.Message)
+	require.True(t, body.Success, body.Message)
+	for _, id := range []int{target.Id, other.Id} {
+		_, err := model.GetUserById(id, false)
+		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	}
+	var audit model.AuditLog
+	require.NoError(t, model.LOG_DB.Where("action = ?", "user.delete_batch").Last(&audit).Error)
+	require.NotNil(t, audit.Other.Op)
+	count, err := common.Marshal(audit.Other.Op.Params["count"])
+	require.NoError(t, err)
+	assert.JSONEq(t, "2", string(count))
+}
+
+func TestBatchDeleteUsersRejectsInvalidSelectionBeforeProof(t *testing.T) {
+	_, identity, target := setupAdminUserTest(t)
+	operation := service.VerificationOperation{
+		Scope:   service.VerificationScopeAdminUserBulkDelete,
+		Context: []byte(fmt.Sprintf(`{"user_ids":[%d,999999999]}`, target.Id)),
+	}
+	proof := issueSecurityEnrollmentProof(t, identity, operation, service.VerificationMethodPassword)
+	response := adminUserRequest(http.MethodPost, "/api/user/batch-delete", fmt.Sprintf(`{"ids":[%d,999999999]}`, target.Id), proof, identity, common.RoleRootUser, nil, BatchDeleteUsers)
+	body := decodeSecurityEnrollmentResponse(t, response)
+	assert.False(t, body.Success)
+	assert.Contains(t, body.Message, "User does not exist")
+	_, err := model.GetUserById(target.Id, false)
+	assert.NoError(t, err)
 }
 
 func TestAdminUserBindingProofDistinguishesBuiltInAndCustomBindings(t *testing.T) {

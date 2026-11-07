@@ -59,6 +59,9 @@ export function useUsersColumns(): ColumnDef<User>[] {
           <Checkbox
             checked={table.getIsAllPageRowsSelected()}
             indeterminate={table.getIsSomePageRowsSelected()}
+            disabled={
+              !table.getRowModel().rows.some((row) => row.getCanSelect())
+            }
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
             }
@@ -69,6 +72,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
+            disabled={!row.getCanSelect()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label={t('Select row')}
             className='translate-y-[2px]'

@@ -52,7 +52,22 @@ afterEach(() => {
   useAuthStore.getState().auth.reset()
 })
 
-async function renderUsers(initialEntry = '/users/') {
+async function renderUsers(
+  initialEntry = '/users/',
+  items = [
+    {
+      id: 2,
+      username: 'premium-user',
+      display_name: '',
+      role: 1,
+      status: 1,
+      quota: 0,
+      used_quota: 0,
+      request_count: 0,
+      group: 'premium',
+    },
+  ]
+) {
   const get = vi.spyOn(api, 'get').mockImplementation(async (url) => {
     if (url === '/api/group/') {
       return { data: { success: true, data: ['default', 'premium'] } }
@@ -61,20 +76,8 @@ async function renderUsers(initialEntry = '/users/') {
       data: {
         success: true,
         data: {
-          items: [
-            {
-              id: 2,
-              username: 'premium-user',
-              display_name: '',
-              role: 1,
-              status: 1,
-              quota: 0,
-              used_quota: 0,
-              request_count: 0,
-              group: 'premium',
-            },
-          ],
-          total: 1,
+          items,
+          total: items.length,
         },
       },
     }
@@ -107,7 +110,7 @@ async function renderUsers(initialEntry = '/users/') {
       <RouterProvider router={router} />
     </QueryClientProvider>
   )
-  await screen.findByText('premium-user')
+  await screen.findByText(items[0].username)
   return { get, router }
 }
 
@@ -151,4 +154,43 @@ it('restores the user group filter from the page URL on load', async () => {
   expect(get).toHaveBeenCalledWith(premiumSearchUrl)
   expect(get).not.toHaveBeenCalledWith('/api/user/', expect.anything())
   expect(getGroupFilterTrigger()).toHaveTextContent('premium')
+})
+
+it('disables selection for users at or above the current administrator role', async () => {
+  await renderUsers('/users/', [
+    {
+      id: 2,
+      username: 'common-user',
+      display_name: '',
+      role: 1,
+      status: 1,
+      quota: 0,
+      used_quota: 0,
+      request_count: 0,
+      group: 'default',
+    },
+    {
+      id: 3,
+      username: 'root-user',
+      display_name: '',
+      role: 100,
+      status: 1,
+      quota: 0,
+      used_quota: 0,
+      request_count: 0,
+      group: 'default',
+    },
+  ])
+
+  const rowCheckboxes = screen.getAllByRole('checkbox', { name: 'Select row' })
+  expect(
+    rowCheckboxes.some(
+      (checkbox) => checkbox.getAttribute('aria-disabled') === null
+    )
+  ).toBe(true)
+  expect(
+    rowCheckboxes.some(
+      (checkbox) => checkbox.getAttribute('aria-disabled') === 'true'
+    )
+  ).toBe(true)
 })

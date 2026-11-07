@@ -34,9 +34,11 @@ import {
   createServerError,
   requireServerSuccess,
 } from '@/lib/server-error-message'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { getGroups, getUsers, searchUsers } from '../api'
 import {
+  USER_ROLE,
   USER_STATUS,
   getUserStatusOptions,
   getUserRoleOptions,
@@ -66,6 +68,7 @@ export function UsersTable() {
   const { t } = useTranslation()
   const columns = useUsersColumns()
   const { refreshTrigger } = useUsers()
+  const currentUser = useAuthStore((state) => state.auth.user)
   const isMobile = useMediaQuery('(max-width: 640px)')
   const [sorting, setSorting] = useState<SortingState>([])
 
@@ -182,10 +185,17 @@ export function UsersTable() {
 
   const users = data?.items || []
 
+  const canSelectUser = (user: User) => {
+    if (isUserDeleted(user) || !currentUser) return false
+    if (user.role === USER_ROLE.ROOT) return false
+    return currentUser.role > user.role
+  }
+
   const { table } = useDataTable({
     data: users,
     columns,
-    enableRowSelection: true,
+    enableRowSelection: (row) => canSelectUser(row.original),
+    getRowId: (row) => String(row.id),
     columnFilters,
     globalFilter,
     pagination,
@@ -216,6 +226,8 @@ export function UsersTable() {
 
   return (
     <DataTablePage
+      showMobileBulkActions
+      mobileProps={{ enableRowSelection: true }}
       table={table}
       columns={columns}
       isLoading={isLoading}

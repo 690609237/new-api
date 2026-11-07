@@ -1074,6 +1074,77 @@ func (user *User) HardDelete() (int64, error) {
 	return revokedAccessTokens, nil
 }
 
+// HardDeleteUsersByIds permanently deletes a set of users in one transaction.
+// The operator role is checked again under the transaction so a concurrent
+// role/status change cannot turn a previously validated selection into a
+// partial or unauthorized deletion.
+func HardDeleteUsersByIds(ids []int, operatorRole int) (int64, error) {
+	if len(ids) == 0 {
+		return 0, common.NewMessage("User IDs cannot be empty")
+	}
+	type deletedUser struct {
+		id          int
+		authVersion int64
+		tokens      []Token
+	}
+	deleted := make([]deletedUser, 0, len(ids))
+	var revokedAccessTokens int64
+	if err := DB.Transaction(func(tx *gorm.DB) error {
+		for _, id := range ids {
+			if id <= 0 {
+				return common.NewMessage("Invalid user ID")
+			}
+			var user User
+			if err := lockForUpdate(tx).Where("id = ?", id).First(&user).Error; err != nil {
+				return err
+			}
+			if user.Role == common.RoleRootUser {
+				return common.NewMessage("Cannot delete super administrator account")
+			}
+			if operatorRole != common.RoleRootUser && operatorRole <= user.Role {
+				return common.NewMessage("No permission to update users of same or higher permission level")
+			}
+			nextAuthVersion, err := IncrementUserAuthVersionWithTx(tx, id)
+			if err != nil {
+				return err
+			}
+			revoked, err := DeleteUserAccessTokensWithTx(tx, id)
+			if err != nil {
+				return err
+			}
+			var tokens []Token
+			if common.RedisEnabled {
+				if err := tx.Unscoped().Select("id", commonKeyCol).Where("user_id = ?", id).Find(&tokens).Error; err != nil {
+					return err
+				}
+			}
+			if err := deleteUserAuthenticationData(tx, id); err != nil {
+				return err
+			}
+			if err := tx.Unscoped().Delete(&user).Error; err != nil {
+				return err
+			}
+			deleted = append(deleted, deletedUser{id: id, authVersion: nextAuthVersion, tokens: tokens})
+			revokedAccessTokens += revoked
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	for _, user := range deleted {
+		if err := publishCommittedUserAuthVersion(user.id, user.authVersion); err != nil {
+			common.SysError(common.LogText("failed to publish auth tombstone after hard deleting user %d: %v", user.id, err))
+		}
+		if err := invalidateTokensCache(user.tokens); err != nil {
+			common.SysError(common.LogText("failed to invalidate token cache after hard deleting user %d: %v", user.id, err))
+		}
+		if err := invalidateUserCache(user.id); err != nil {
+			common.SysError(common.LogText("failed to invalidate user cache after hard deleting user %d: %v", user.id, err))
+		}
+	}
+	return revokedAccessTokens, nil
+}
+
 func deleteUserAuthenticationData(tx *gorm.DB, userId int) error {
 	if err := releaseAllExternalIdentitiesWithTx(tx, userId); err != nil {
 		return err

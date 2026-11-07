@@ -982,6 +982,71 @@ func DeleteUser(c *gin.Context) {
 	return
 }
 
+type BatchDeleteUsersRequest struct {
+	IDs []int `json:"ids"`
+}
+
+// BatchDeleteUsers permanently deletes the selected users as one operation.
+// Authorization is checked for every target before the destructive proof is
+// consumed, so an invalid selection cannot produce a partial deletion.
+func BatchDeleteUsers(c *gin.Context) {
+	var request BatchDeleteUsersRequest
+	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
+		common.ApiErrorT(c, "Invalid parameters")
+		return
+	}
+	ids, ok := service.NormalizeAdminUserBulkDeleteIDs(request.IDs)
+	if !ok {
+		common.ApiErrorT(c, "Invalid parameters")
+		return
+	}
+
+	myRole := c.GetInt("role")
+	for _, id := range ids {
+		user, err := model.GetUserById(id, false)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				common.ApiErrorT(c, "User does not exist")
+			} else {
+				common.ApiError(c, err)
+			}
+			return
+		}
+		if user.Role == common.RoleRootUser {
+			common.ApiErrorT(c, "Cannot delete super administrator account")
+			return
+		}
+		if !canManageTargetRole(myRole, user.Role) {
+			common.ApiErrorT(c, "No permission to update users of same or higher permission level")
+			return
+		}
+	}
+
+	authorization := requireAdminUserProof(c, service.VerificationScopeAdminUserBulkDelete, service.AdminUserBulkDeleteContext{UserIDs: ids})
+	if authorization == nil {
+		return
+	}
+	revokedAccessTokens, err := model.HardDeleteUsersByIds(ids, myRole)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	recordManageAuditFor(c, c.GetInt("id"), "user.delete_batch", map[string]any{
+		"count":                 len(ids),
+		"user_ids":              ids,
+		"verification_method":   authorization.Method,
+		"revoked_access_tokens": revokedAccessTokens,
+	})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"deleted":               len(ids),
+			"revoked_access_tokens": revokedAccessTokens,
+		},
+	})
+}
+
 func DeleteSelf(c *gin.Context) {
 	setAuthNoStore(c)
 	succeeded := false
