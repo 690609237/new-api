@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useAuthStore } from '@/stores/auth-store'
 
-import { MESSAGE_STATUS, STORAGE_KEYS } from '../../constants'
+import { DEFAULT_CONFIG, MESSAGE_STATUS, STORAGE_KEYS } from '../../constants'
 import type { PlaygroundConfig, ParameterEnabled, Message } from '../../types'
 import {
   finalizeMessage,
@@ -58,12 +58,29 @@ function getUserStorageKey(key: string): string | null {
 }
 
 function readStoredValue(baseKey: string): unknown | null {
+  return readStoredEnvelope(baseKey)?.data ?? null
+}
+
+function readStoredEnvelope(baseKey: string): StoredEnvelope<unknown> | null {
   const key = getUserStorageKey(baseKey)
   if (!key) return null
   const saved = localStorage.getItem(key)
   if (!saved) return null
 
-  return JSON.parse(saved) as unknown
+  const parsed = JSON.parse(saved) as unknown
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'version' in parsed &&
+    'data' in parsed &&
+    typeof parsed.version === 'number'
+  ) {
+    return parsed as StoredEnvelope<unknown>
+  }
+
+  // Accept the pre-envelope format used by early Playground builds and treat
+  // it as the oldest version so config migrations still run once.
+  return { version: 0, data: parsed }
 }
 
 function readStoredMessagesValue(): unknown | null {
@@ -302,10 +319,35 @@ function trimMessagesByContentSize(messages: Message[]): Message[] {
  */
 export function loadConfig(): Partial<PlaygroundConfig> {
   try {
-    const saved = readStoredValue(STORAGE_KEYS.CONFIG)
-    if (!saved) return {}
+    const envelope = readStoredEnvelope(STORAGE_KEYS.CONFIG)
+    if (!envelope?.data) return {}
 
-    return playgroundConfigSchema.parse(unwrapStoredValue(saved))
+    const config = playgroundConfigSchema.parse(
+      unwrapStoredValue(envelope.data)
+    )
+
+    // Before gpt-6-luna became the default, a missing gpt-4o in a user's
+    // model list caused the first available model (often codex-auto-review)
+    // to be persisted as the effective default. Migrate that one-time value
+    // while preserving any other model explicitly selected by the user.
+    if (envelope.version < STORAGE_VERSION) {
+      const legacyDefaultModels = new Set([
+        '',
+        'gpt-4o',
+        'code-auto-review',
+        'codex-auto-review',
+      ])
+      const migrated = {
+        ...config,
+        model: legacyDefaultModels.has(config.model ?? '')
+          ? DEFAULT_CONFIG.model
+          : config.model,
+      }
+      saveConfig(migrated)
+      return migrated
+    }
+
+    return config
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to load config:', error)

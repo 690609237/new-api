@@ -18,7 +18,9 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { z } from 'zod'
 
-export const STORAGE_VERSION = 1
+// Bump this when persisted playground defaults or data semantics change. The
+// config loader uses the version to migrate values written by older builds.
+export const STORAGE_VERSION = 2
 export const MAX_STORED_MESSAGES = 100
 export const MAX_STORED_MESSAGES_BYTES = 1024 * 1024
 export const MAX_LOADED_MESSAGES_CHARS = 120_000

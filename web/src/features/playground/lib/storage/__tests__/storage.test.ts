@@ -31,6 +31,7 @@ import {
   saveMessages,
   saveParameterEnabled,
 } from '../storage'
+import { STORAGE_VERSION } from '../storage-schema'
 
 const messages: Message[] = [
   {
@@ -106,4 +107,44 @@ test('storage calls without a signed-in user do not persist shared data', () => 
   expect(loadMessages()).toBeNull()
   expect(loadParameterEnabled()).toEqual({})
   expect(localStorage.length).toBe(0)
+})
+
+test('migrates the old auto-selected model once after the default changes', () => {
+  useAuthStore.getState().auth.setUser({ id: 3, username: 'C', role: 1 })
+  localStorage.setItem(
+    `${STORAGE_KEYS.CONFIG}:3`,
+    JSON.stringify({
+      version: STORAGE_VERSION - 1,
+      data: { model: 'codex-auto-review' },
+    })
+  )
+
+  expect(loadConfig()).toEqual({ model: 'gpt-6-luna' })
+
+  const migrated = JSON.parse(
+    localStorage.getItem(`${STORAGE_KEYS.CONFIG}:3`) ?? '{}'
+  ) as { version?: number; data?: { model?: string } }
+  expect(migrated.version).toBe(STORAGE_VERSION)
+  expect(migrated.data?.model).toBe('gpt-6-luna')
+
+  localStorage.setItem(
+    `${STORAGE_KEYS.CONFIG}:3`,
+    JSON.stringify({
+      version: STORAGE_VERSION - 1,
+      data: { model: 'code-auto-review' },
+    })
+  )
+  expect(loadConfig()).toEqual({ model: 'gpt-6-luna' })
+
+  saveConfig({ model: 'codex-auto-review' })
+  expect(loadConfig()).toEqual({ model: 'codex-auto-review' })
+
+  localStorage.setItem(
+    `${STORAGE_KEYS.CONFIG}:3`,
+    JSON.stringify({
+      version: STORAGE_VERSION - 1,
+      data: { model: 'my-model' },
+    })
+  )
+  expect(loadConfig()).toEqual({ model: 'my-model' })
 })
