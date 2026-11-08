@@ -17,7 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import {
-  CameraIcon,
   FileIcon,
   ImageIcon,
   ScreenShareIcon,
@@ -43,15 +42,7 @@ export const ATTACHMENT_ACTIONS = [
     icon: ScreenShareIcon,
     label: 'Take screenshot',
   },
-  { action: 'take-photo', icon: CameraIcon, label: 'Take photo' },
 ] satisfies AttachmentAction[]
-
-export function getAttachmentActionNotice(action: string): InputToolNotice {
-  return {
-    description: action,
-    title: 'Feature in development',
-  }
-}
 
 export function getSearchActionNotice(): InputToolNotice {
   return {

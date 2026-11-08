@@ -46,6 +46,9 @@
       background: rgba(249, 252, 249, .86);
       backdrop-filter: blur(14px);
     }
+    body.embedded .topbar { display: none; }
+    body.embedded .hero { padding-top: 38px; }
+    body.embedded footer { display: none; }
     .topbar-inner {
       max-width: 1120px;
       margin: auto;
@@ -62,17 +65,13 @@
     .topnav a:hover { color: var(--green); }
 
     main { max-width: 1120px; margin: auto; padding: 0 24px 64px; }
-    .hero { padding: 72px 0 42px; display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+    .hero { padding: 72px 0 42px; display: flex; flex-direction: column; gap: 28px; align-items: stretch; }
     .eyebrow { color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
     h1, h2, h3 { color: var(--green-dark); line-height: 1.28; }
     h1 { max-width: 700px; margin: 12px 0 18px; font-size: clamp(35px, 5vw, 58px); letter-spacing: -.045em; }
     h1 span { color: var(--green); }
     .hero-lead { max-width: 650px; margin: 0; color: var(--muted); font-size: 18px; }
-    .hero-actions { margin-top: 25px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--green); border-radius: 8px; padding: 9px 15px; text-decoration: none; font-weight: 650; font-size: 14px; }
-    .button.primary { color: white; background: var(--green); box-shadow: 0 6px 18px rgba(15, 90, 77, .18); }
-    .button.secondary { color: var(--green); background: rgba(255,255,255,.6); }
-    .hero-card { padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, #fff, #edf6f0); box-shadow: var(--shadow); }
+    .hero-card { width: min(100%, 650px); padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, #fff, #edf6f0); box-shadow: var(--shadow); }
     .hero-card-label { color: var(--muted); font-size: 12px; }
     .endpoint { display: block; margin: 8px 0 17px; color: var(--green-dark); font-size: clamp(16px, 2.2vw, 23px); font-weight: 700; overflow-wrap: anywhere; }
     .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -109,8 +108,17 @@
     .code-caption { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
     .platform-title { display: flex; align-items: center; gap: 10px; }
     .platform-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--green); background: var(--mint); font-size: 13px; font-weight: 800; }
-    .platform-card { display: flex; flex-direction: column; gap: 15px; }
-    .platform-card .code-card { margin-top: auto; }
+    .platform-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: rgba(233,244,239,.62); }
+    .platform-tab { display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: 8px; padding: 9px 13px; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-size: 13px; font-weight: 650; }
+    .platform-tab:hover { color: var(--green); background: rgba(255,255,255,.75); }
+    .platform-tab[aria-selected="true"] { border-color: #b9d4c7; color: var(--green-dark); background: white; box-shadow: 0 4px 12px rgba(20,61,49,.08); }
+    .platform-tab .platform-icon { width: 24px; height: 24px; border-radius: 6px; font-size: 10px; }
+    .platform-panel { margin-top: 14px; }
+    .platform-panel[hidden] { display: none; }
+    .platform-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 15px; }
+    .platform-panel-head h3 { margin: 0; }
+    .platform-panel-head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .platform-commands { display: grid; gap: 15px; }
 
     .api-table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: white; }
     .api-table th, .api-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
@@ -125,9 +133,11 @@
     footer { max-width: 1120px; margin: 0 auto; padding: 24px 24px 44px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 
     @media (max-width: 820px) {
-      .hero { grid-template-columns: 1fr; gap: 28px; padding-top: 52px; }
+      .hero { gap: 28px; padding-top: 52px; }
       .grid-3 { grid-template-columns: 1fr; }
       .grid-2 { grid-template-columns: 1fr; }
+      .platform-panel-head { display: block; }
+      .platform-panel-head p { margin-top: 5px; }
     }
     @media (max-width: 560px) {
       body { font-size: 14px; }
@@ -149,16 +159,18 @@
     }
     @media print {
       .topbar { position: static; }
-      .topnav, .hero-actions, .copy { display: none; }
+      .topnav, .copy, .platform-tabs { display: none; }
       body { background: white; }
       main { padding-bottom: 0; }
       .hero { padding-top: 28px; }
       .card, .code-card, details { break-inside: avoid; box-shadow: none; }
       .section { break-inside: avoid; }
+      .platform-panel[hidden] { display: block; }
     }
   </style>
 </head>
 <body>
+  <script>if (window.location.hash === '#embedded') document.body.classList.add('embedded');</script>
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="#top"><span class="brand-mark">MP</span><span>ModelPass API 教程</span></a>
@@ -176,10 +188,6 @@
         <div class="eyebrow">OpenAI-compatible gateway · CLI guide</div>
         <h1>用命令行调用<br><span>中转站 API</span></h1>
         <p class="hero-lead">这份教程使用当前站点的 OpenAI 兼容接口，带你从 API Key 配置开始，完成模型列表检查和第一条 Responses 请求。</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#quick-start">开始调用 <span aria-hidden="true">↓</span></a>
-          <a class="button secondary" href="#platforms">选择操作系统</a>
-        </div>
       </div>
       <aside class="hero-card" aria-label="当前接口信息">
         <div class="hero-card-label">当前 Base URL</div>
@@ -202,9 +210,9 @@
       <div class="grid-3">
         <article class="card"><span class="number">01</span><h3>创建 API Key</h3><p>在站点控制台创建并复制可用密钥。示例中的密钥只使用占位符，不要把真实密钥提交到 Git。</p></article>
         <article class="card"><span class="number">02</span><h3>确认模型权限</h3><p>本教程默认使用 <code>gpt6-sol</code>。如果你的账户未开通该模型，请先在模型列表中选择可用模型。</p></article>
-        <article class="card"><span class="number">03</span><h3>准备终端</h3><p>Windows 使用 PowerShell 或 CMD；Linux 使用 Bash；macOS 使用 Terminal 中的 zsh。</p></article>
+        <article class="card"><span class="number">03</span><h3>准备终端</h3><p>Linux 使用 Bash；macOS 使用 Terminal 中的 zsh；Windows 使用 PowerShell 或 CMD。</p></article>
       </div>
-      <div class="note"><strong>阅读代码块的方式：</strong>黄色高亮内容是你需要替换的值；蓝色高亮内容是可按需调整的默认值。复制按钮复制的是可直接执行的纯文本命令。</div>
+      <div class="note"><strong>阅读代码块的方式：</strong>黄色高亮内容是你需要替换的值；蓝色高亮内容是本教程提供的可直接执行示例或默认值。复制按钮复制的是可直接执行的纯文本命令。</div>
     </section>
 
     <section class="section" id="platforms">
@@ -216,13 +224,86 @@
       </div>
       <div class="legend" aria-label="代码高亮说明">
         <span><i class="replace-key"></i>需要替换</span>
-        <span><i class="default-key"></i>可按需调整，当前默认值</span>
+        <span><i class="default-key"></i>示例值或默认值</span>
       </div>
 
-      <div class="grid-2">
-        <article class="card platform-card">
-          <div class="platform-title"><span class="platform-icon">PS</span><h3>Windows · PowerShell</h3></div>
-          <p class="code-caption">推荐给 Windows 10/11。变量只在当前 PowerShell 窗口生效。</p>
+      <div class="platform-tabs" role="tablist" aria-label="选择操作系统">
+        <button class="platform-tab" type="button" role="tab" aria-selected="true" aria-controls="panel-bash" data-platform="bash">
+          <span class="platform-icon">$</span>Linux Bash
+        </button>
+        <button class="platform-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-zsh" data-platform="zsh">
+          <span class="platform-icon">zsh</span>macOS Terminal
+        </button>
+        <button class="platform-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-powershell" data-platform="powershell">
+          <span class="platform-icon">PS</span>Windows PowerShell
+        </button>
+        <button class="platform-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-cmd" data-platform="cmd">
+          <span class="platform-icon">CMD</span>Windows CMD
+        </button>
+      </div>
+
+      <article class="card platform-panel" id="panel-bash" role="tabpanel" data-platform-panel="bash">
+        <div class="platform-panel-head">
+          <h3><span class="platform-icon">$</span> Linux · Bash</h3>
+          <p>适用于常见 Linux 发行版；关闭终端后变量会失效。</p>
+        </div>
+        <div class="platform-commands">
+          <div class="code-card">
+            <div class="code-head"><strong>1 · 设置 Key 并查看模型</strong><button class="copy" type="button">复制</button></div>
+            <pre><span class="comment"># 把黄色内容替换成你的真实 API Key</span>
+export MODEL_PASS_API_KEY="<span class="replace">YOUR_API_KEY</span>"
+export MODEL_PASS_BASE_URL="https://api.modelpass.work/v1"
+
+curl --fail-with-body "$MODEL_PASS_BASE_URL/models" \
+  -H "Authorization: Bearer $MODEL_PASS_API_KEY"</pre>
+          </div>
+          <div class="code-card">
+            <div class="code-head"><strong>2 · 发送一条 Responses 请求</strong><button class="copy" type="button">复制</button></div>
+            <pre>curl --fail-with-body "$MODEL_PASS_BASE_URL/responses" \
+  -H "Authorization: Bearer $MODEL_PASS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<span class="default">gpt6-sol</span>",
+    "input": "<span class="default">测试是否连通，只回复OK</span>"
+  }'</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="card platform-panel" id="panel-zsh" role="tabpanel" data-platform-panel="zsh" hidden>
+        <div class="platform-panel-head">
+          <h3><span class="platform-icon">zsh</span> macOS · Terminal</h3>
+          <p>macOS 默认使用 zsh，命令格式与 Linux Bash 基本一致。</p>
+        </div>
+        <div class="platform-commands">
+          <div class="code-card">
+            <div class="code-head"><strong>1 · 设置 Key 并查看模型</strong><button class="copy" type="button">复制</button></div>
+            <pre><span class="comment"># 把黄色内容替换成你的真实 API Key</span>
+export MODEL_PASS_API_KEY="<span class="replace">YOUR_API_KEY</span>"
+export MODEL_PASS_BASE_URL="https://api.modelpass.work/v1"
+
+curl --fail-with-body "$MODEL_PASS_BASE_URL/models" \
+  -H "Authorization: Bearer $MODEL_PASS_API_KEY"</pre>
+          </div>
+          <div class="code-card">
+            <div class="code-head"><strong>2 · 发送一条 Responses 请求</strong><button class="copy" type="button">复制</button></div>
+            <pre>curl --fail-with-body "$MODEL_PASS_BASE_URL/responses" \
+  -H "Authorization: Bearer $MODEL_PASS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<span class="default">gpt6-sol</span>",
+    "input": "<span class="default">测试是否连通，只回复OK</span>"
+  }'</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="card platform-panel" id="panel-powershell" role="tabpanel" data-platform-panel="powershell" hidden>
+        <div class="platform-panel-head">
+          <h3><span class="platform-icon">PS</span> Windows · PowerShell</h3>
+          <p>推荐给 Windows 10/11。变量只在当前 PowerShell 窗口生效。</p>
+        </div>
+        <div class="platform-commands">
           <div class="code-card">
             <div class="code-head"><strong>1 · 设置 Key 并查看模型</strong><button class="copy" type="button">复制</button></div>
             <pre><span class="comment"># 把黄色内容替换成你的真实 API Key</span>
@@ -237,7 +318,7 @@ curl.exe --fail-with-body `
             <div class="code-head"><strong>2 · 发送一条 Responses 请求</strong><button class="copy" type="button">复制</button></div>
             <pre>$body = @{
   model = "<span class="default">gpt6-sol</span>"
-  input = "<span class="replace">YOUR_PROMPT</span>"
+  input = "<span class="default">测试是否连通，只回复OK</span>"
 } | ConvertTo-Json
 
 Invoke-RestMethod `
@@ -247,11 +328,15 @@ Invoke-RestMethod `
   -ContentType "application/json" `
   -Body $body</pre>
           </div>
-        </article>
+        </div>
+      </article>
 
-        <article class="card platform-card">
-          <div class="platform-title"><span class="platform-icon">CMD</span><h3>Windows · CMD</h3></div>
-          <p class="code-caption">CMD 中使用 <code>curl.exe</code>，避免与 PowerShell 的命令别名混淆。</p>
+      <article class="card platform-panel" id="panel-cmd" role="tabpanel" data-platform-panel="cmd" hidden>
+        <div class="platform-panel-head">
+          <h3><span class="platform-icon">CMD</span> Windows · CMD</h3>
+          <p>CMD 中使用 <code>curl.exe</code>，避免与 PowerShell 的命令别名混淆。</p>
+        </div>
+        <div class="platform-commands">
           <div class="code-card">
             <div class="code-head"><strong>1 · 设置 Key 并查看模型</strong><button class="copy" type="button">复制</button></div>
             <pre>set "MODEL_PASS_API_KEY=<span class="replace">YOUR_API_KEY</span>"
@@ -265,58 +350,10 @@ curl.exe --fail-with-body "%MODEL_PASS_BASE_URL%/models" ^
             <pre>curl.exe --fail-with-body "%MODEL_PASS_BASE_URL%/responses" ^
   -H "Authorization: Bearer %MODEL_PASS_API_KEY%" ^
   -H "Content-Type: application/json" ^
-  -d "{\"model\":\"<span class="default">gpt6-sol</span>\",\"input\":\"<span class="replace">YOUR_PROMPT</span>\"}"</pre>
+  -d "{\"model\":\"<span class="default">gpt6-sol</span>\",\"input\":\"<span class="default">测试是否连通，只回复OK</span>\"}"</pre>
           </div>
-        </article>
-
-        <article class="card platform-card">
-          <div class="platform-title"><span class="platform-icon">$</span><h3>Linux · Bash</h3></div>
-          <p class="code-caption">适用于常见 Linux 发行版；关闭终端后变量会失效。</p>
-          <div class="code-card">
-            <div class="code-head"><strong>1 · 设置 Key 并查看模型</strong><button class="copy" type="button">复制</button></div>
-            <pre><span class="comment"># 把黄色内容替换成你的真实 API Key</span>
-export MODEL_PASS_API_KEY="<span class="replace">YOUR_API_KEY</span>"
-export MODEL_PASS_BASE_URL="https://api.modelpass.work/v1"
-
-curl --fail-with-body "$MODEL_PASS_BASE_URL/models" \
-  -H "Authorization: Bearer $MODEL_PASS_API_KEY"</pre>
-          </div>
-          <div class="code-card">
-            <div class="code-head"><strong>2 · 发送一条 Responses 请求</strong><button class="copy" type="button">复制</button></div>
-            <pre>curl --fail-with-body "$MODEL_PASS_BASE_URL/responses" \
-  -H "Authorization: Bearer $MODEL_PASS_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "<span class="default">gpt6-sol</span>",
-    "input": "<span class="replace">YOUR_PROMPT</span>"
-  }'</pre>
-          </div>
-        </article>
-
-        <article class="card platform-card">
-          <div class="platform-title"><span class="platform-icon">zsh</span><h3>macOS · Terminal</h3></div>
-          <p class="code-caption">macOS 默认使用 zsh，命令格式与 Linux Bash 基本一致。</p>
-          <div class="code-card">
-            <div class="code-head"><strong>1 · 设置 Key 并查看模型</strong><button class="copy" type="button">复制</button></div>
-            <pre><span class="comment"># 把黄色内容替换成你的真实 API Key</span>
-export MODEL_PASS_API_KEY="<span class="replace">YOUR_API_KEY</span>"
-export MODEL_PASS_BASE_URL="https://api.modelpass.work/v1"
-
-curl --fail-with-body "$MODEL_PASS_BASE_URL/models" \
-  -H "Authorization: Bearer $MODEL_PASS_API_KEY"</pre>
-          </div>
-          <div class="code-card">
-            <div class="code-head"><strong>2 · 发送一条 Responses 请求</strong><button class="copy" type="button">复制</button></div>
-            <pre>curl --fail-with-body "$MODEL_PASS_BASE_URL/responses" \
-  -H "Authorization: Bearer $MODEL_PASS_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "<span class="default">gpt6-sol</span>",
-    "input": "<span class="replace">YOUR_PROMPT</span>"
-  }'</pre>
-          </div>
-        </article>
-      </div>
+        </div>
+      </article>
     </section>
 
     <section class="section" id="reference">
@@ -358,7 +395,7 @@ curl --fail-with-body "$MODEL_PASS_BASE_URL/models" \
       "type": "message",
       "role": "assistant",
       "content": [
-        {"type": "output_text", "text": "这里是模型返回的文本。"}
+        {"type": "output_text", "text": "OK"}
       ]
     }
   ]
@@ -386,12 +423,68 @@ curl --fail-with-body "$MODEL_PASS_BASE_URL/models" \
   <footer>ModelPass 中转站 API 命令行教程 · 接口地址以当前站点实际配置为准</footer>
 
   <script>
+    function reportHeight() {
+      if (window.parent === window) return;
+      window.parent.postMessage({
+        type: 'api-cli-height',
+        height: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+      }, '*');
+    }
+
+    window.addEventListener('load', reportHeight);
+    if ('ResizeObserver' in window) new ResizeObserver(reportHeight).observe(document.body);
+
+    const platformTabs = Array.from(document.querySelectorAll('.platform-tab'));
+    const platformPanels = Array.from(document.querySelectorAll('.platform-panel'));
+
+    function selectPlatform(platform, moveFocus) {
+      platformTabs.forEach(function (tab) {
+        const isSelected = tab.dataset.platform === platform;
+        tab.setAttribute('aria-selected', String(isSelected));
+        if (isSelected && moveFocus) tab.focus();
+      });
+      platformPanels.forEach(function (panel) {
+        panel.hidden = panel.dataset.platformPanel !== platform;
+      });
+    }
+
+    platformTabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () {
+        selectPlatform(tab.dataset.platform, false);
+      });
+      tab.addEventListener('keydown', function (event) {
+        const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+        if (!direction) return;
+        event.preventDefault();
+        const nextIndex = (index + direction + platformTabs.length) % platformTabs.length;
+        selectPlatform(platformTabs[nextIndex].dataset.platform, true);
+      });
+    });
+
+    function copyText(text) {
+      const fallback = function () {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        textarea.remove();
+        return copied ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+      };
+
+      if (!navigator.clipboard || !navigator.clipboard.writeText) return fallback();
+      return navigator.clipboard.writeText(text).catch(fallback);
+    }
+
     document.querySelectorAll('.copy').forEach(function (button) {
       button.addEventListener('click', async function () {
         const pre = button.closest('.code-card').querySelector('pre');
         const original = button.textContent;
         try {
-          await navigator.clipboard.writeText(pre.textContent);
+          await copyText(pre.textContent);
           button.textContent = '已复制';
           setTimeout(function () { button.textContent = original; }, 1400);
         } catch (error) {

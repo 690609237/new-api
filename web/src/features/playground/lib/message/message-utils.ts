@@ -24,6 +24,7 @@ import type {
   MessageVersion,
   ChatCompletionMessage,
   ContentPart,
+  MessageAttachment,
 } from '../../types'
 
 /**
@@ -76,12 +77,14 @@ export function updateCurrentVersionContent(
  */
 export function createUserMessage(
   content: string,
-  createdAt: number = Date.now()
+  createdAt: number = Date.now(),
+  attachments: MessageAttachment[] = []
 ): Message {
   return {
     key: nanoid(),
     from: MESSAGE_ROLES.USER,
     versions: [createMessageVersion(content)],
+    ...(attachments.length > 0 ? { attachments } : {}),
     createdAt,
   }
 }
@@ -107,15 +110,27 @@ export function createLoadingAssistantMessage(
 }
 
 /**
- * Build message content with optional images
+ * Build message content with optional image and file attachments
  */
 export function buildMessageContent(
   text: string,
-  imageUrls: string[] = []
+  attachments: MessageAttachment[] | string[] = []
 ): string | ContentPart[] {
-  const validImages = imageUrls.filter((url) => url.trim() !== '')
+  const normalizedAttachments: MessageAttachment[] = attachments.map(
+    (attachment, index) =>
+      typeof attachment === 'string'
+        ? {
+            id: `image-${index}`,
+            mediaType: 'image/*',
+            url: attachment,
+          }
+        : attachment
+  )
+  const validAttachments = normalizedAttachments.filter(
+    (attachment) => attachment.url.trim() !== ''
+  )
 
-  if (validImages.length === 0) {
+  if (validAttachments.length === 0) {
     return text
   }
 
@@ -124,10 +139,21 @@ export function buildMessageContent(
       type: 'text',
       text: text || '',
     },
-    ...validImages.map((url) => ({
-      type: 'image_url' as const,
-      image_url: { url: url.trim() },
-    })),
+    ...validAttachments.map((attachment) =>
+      attachment.mediaType?.startsWith('image/') ||
+      attachment.url.trim().startsWith('data:image/')
+        ? {
+            type: 'image_url' as const,
+            image_url: { url: attachment.url.trim() },
+          }
+        : {
+            type: 'file' as const,
+            file: {
+              filename: attachment.filename,
+              file_data: attachment.url.trim(),
+            },
+          }
+    ),
   ]
 
   return parts
@@ -156,7 +182,7 @@ export function formatMessageForAPI(message: Message): ChatCompletionMessage {
   const currentVersion = getCurrentVersion(message)
   return {
     role: message.from,
-    content: currentVersion.content,
+    content: buildMessageContent(currentVersion.content, message.attachments),
   }
 }
 

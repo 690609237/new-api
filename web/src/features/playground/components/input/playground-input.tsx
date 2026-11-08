@@ -18,11 +18,16 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import {
   PromptInput,
+  PromptInputAttachment,
+  PromptInputAttachments,
   PromptInputFooter,
+  PromptInputHeader,
   PromptInputTextarea,
+  usePromptInputAttachments,
   type PromptInputMessage,
 } from '@/components/ai-elements/prompt-input'
 
@@ -30,6 +35,7 @@ import { getSubmittableInputText } from '../../lib'
 import type {
   ModelOption,
   GroupOption,
+  MessageAttachment,
   ParameterEnabled,
   PlaygroundConfig,
 } from '../../types'
@@ -38,7 +44,7 @@ import { PlaygroundInputTools } from './playground-input-tools'
 
 interface PlaygroundInputProps {
   config: PlaygroundConfig
-  onSubmit: (text: string) => void
+  onSubmit: (text: string, attachments?: MessageAttachment[]) => void
   onStop?: () => void
   disabled?: boolean
   isGenerating?: boolean
@@ -60,6 +66,20 @@ interface PlaygroundInputProps {
     value: boolean
   ) => void
   parameterEnabled: ParameterEnabled
+}
+
+function PlaygroundInputAttachments() {
+  const attachments = usePromptInputAttachments()
+
+  if (attachments.files.length === 0) return null
+
+  return (
+    <PromptInputHeader className='border-border/50 border-b px-3 py-2'>
+      <PromptInputAttachments>
+        {(attachment) => <PromptInputAttachment data={attachment} />}
+      </PromptInputAttachments>
+    </PromptInputHeader>
+  )
 }
 
 export function PlaygroundInput({
@@ -86,19 +106,32 @@ export function PlaygroundInput({
 
   const handleSubmit = (message: PromptInputMessage) => {
     const submittableText = getSubmittableInputText(message, disabled)
+    const attachments = (message.files ?? [])
+      .filter((file) => Boolean(file.url))
+      .map((file, index) => ({
+        id: `${file.filename ?? 'attachment'}-${index}-${Date.now()}`,
+        filename: file.filename,
+        mediaType: file.mediaType,
+        url: file.url,
+      }))
 
-    if (!submittableText) return
-    onSubmit(submittableText)
+    if (disabled || (!submittableText && attachments.length === 0)) return
+    onSubmit(submittableText ?? '', attachments)
     setText('')
   }
 
   return (
     <div className='grid shrink-0 gap-4 px-1 md:pb-4'>
       <PromptInput
+        maxFileSize={10 * 1024 * 1024}
+        maxFiles={5}
+        multiple
+        onError={(error) => toast.error(error.message)}
         className='relative'
         groupClassName='bg-background/95 dark:bg-background/80 border-border/70 shadow-[0_18px_60px_-32px_rgba(0,0,0,0.65)] ring-1 ring-foreground/5 rounded-xl overflow-hidden transition-all duration-200 focus-within:border-primary/45 focus-within:ring-primary/15 focus-within:shadow-[0_22px_70px_-34px_rgba(0,0,0,0.75)]'
         onSubmit={handleSubmit}
       >
+        <PlaygroundInputAttachments />
         <PromptInputTextarea
           autoComplete='off'
           autoCorrect='off'

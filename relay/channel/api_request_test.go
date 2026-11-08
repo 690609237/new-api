@@ -2,15 +2,121 @@ package channel
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/QuantumNous/new-api/i18n"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/relaykit/types"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDescribeUpstreamRequestError(t *testing.T) {
+	require.NoError(t, i18n.Init())
+
+	tests := []struct {
+		name       string
+		err        error
+		want       string
+		mustNotSee string
+	}{
+		{
+			name: "dns",
+			err:  &net.DNSError{Err: "no such host", Name: "provider.example"},
+			want: "The upstream host could not be resolved. Check the API Base URL and DNS settings.",
+		},
+		{
+			name: "dns timeout",
+			err:  &net.DNSError{Err: "i/o timeout", Name: "provider.example", IsTimeout: true},
+			want: "The upstream DNS lookup timed out. Check the provider host, DNS, and network settings.",
+		},
+		{
+			name: "request timeout",
+			err:  context.DeadlineExceeded,
+			want: "The upstream request timed out. Check the provider availability, network, and proxy settings.",
+		},
+		{
+			name: "proxy",
+			err:  errors.New("proxyconnect tcp: dial tcp 127.0.0.1:7890: connect: connection refused"),
+			want: "The upstream proxy connection failed. Check the channel proxy URL and credentials.",
+		},
+		{
+			name: "tls",
+			err:  errors.New("tls: failed to verify certificate: x509: certificate signed by unknown authority"),
+			want: "Upstream TLS verification failed. Check the HTTPS certificate and API Base URL.",
+		},
+		{
+			name: "connection refused",
+			err:  errors.New("dial tcp 127.0.0.1:8080: connect: connection refused"),
+			want: "Cannot connect to the upstream service. Check the API Base URL, network, firewall, and proxy settings.",
+		},
+		{
+			name:       "fallback does not expose details",
+			err:        errors.New("request failed with /srv/new-api/channel-secret.pem and api_key=sk-test"),
+			want:       "The upstream request failed. Check the API Base URL, API key, network, and proxy settings.",
+			mustNotSee: "sk-test",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := i18n.Translate(i18n.LangEn, upstreamRequestErrorMessageID(test.err))
+			assert.Equal(t, test.want, got)
+			if test.mustNotSee != "" {
+				assert.NotContains(t, got, test.mustNotSee)
+			}
+		})
+	}
+}
+
+func TestDoRequestReturnsActionableTransportError(t *testing.T) {
+	require.NoError(t, i18n.Init())
+	service.InitHttpClient()
+	upstream := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	upstreamURL := upstream.URL
+	upstream.Close()
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodPost, upstreamURL, nil)
+	require.NoError(t, err)
+
+	_, err = doRequest(c, req, &relaycommon.RelayInfo{ChannelMeta: &relaycommon.ChannelMeta{}})
+	var apiErr *types.NewAPIError
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, types.ErrorCodeDoRequestFailed, apiErr.GetErrorCode())
+	assert.Contains(t, apiErr.Error(), "Cannot connect to the upstream service")
+	assert.NotContains(t, apiErr.Error(), upstreamURL)
+}
+
+func TestDoRequestHidesProxyConfigurationDetails(t *testing.T) {
+	require.NoError(t, i18n.Init())
+	service.InitHttpClient()
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodPost, "https://provider.example/v1/chat/completions", nil)
+	require.NoError(t, err)
+
+	_, err = doRequest(c, req, &relaycommon.RelayInfo{
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelSetting: dto.ChannelSettings{Proxy: "file:///proxy-secret"},
+		},
+	})
+	var apiErr *types.NewAPIError
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, types.ErrorCodeDoRequestFailed, apiErr.GetErrorCode())
+	assert.Equal(t, i18n.Translate(i18n.LangEn, i18n.MsgRelayUpstreamProxyConfigInvalid), apiErr.Error())
+	assert.NotContains(t, apiErr.Error(), "proxy-secret")
+}
 
 func TestNewTaskAPIRequestInheritsClientCancellation(t *testing.T) {
 	recorder := httptest.NewRecorder()

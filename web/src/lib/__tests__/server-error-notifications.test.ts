@@ -242,6 +242,33 @@ it.each([
   expect(getServerErrorMessage(error, 'Operation failed')).toBe(expected)
 })
 
+it('explains HTTP 429 as a temporary rate limit', () => {
+  expect(
+    getServerErrorMessage({
+      message: 'Request failed with status code 429',
+      response: { status: 429, data: {} },
+    })
+  ).toBe('Too many requests. Please wait a moment before trying again.')
+})
+
+it('uses the server-provided retry window for a structured rate-limit response', () => {
+  expect(
+    getServerErrorMessage({
+      message: 'Request failed with status code 429',
+      response: {
+        status: 429,
+        data: {
+          code: 'RATE_LIMITED',
+          retry_after: 37,
+          message_key:
+            'Too many requests. Please wait {{seconds}} seconds before trying again.',
+          message_params: { seconds: 37 },
+        },
+      },
+    })
+  ).toBe('Too many requests. Please wait 37 seconds before trying again.')
+})
+
 it('preserves safe authentication messages and recognizes their original failure without exposing its payload', () => {
   const notify = vi.spyOn(toast, 'error').mockReturnValue('error')
   const original = new AxiosError(

@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { PaperclipIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -83,6 +84,8 @@ export function PlaygroundMessageContent({
   const isMessageFinal =
     message.status !== MESSAGE_STATUS.LOADING &&
     message.status !== MESSAGE_STATUS.STREAMING
+  const attachments = message.attachments ?? []
+  const hasAttachments = attachments.length > 0
 
   return (
     <div
@@ -134,30 +137,59 @@ export function PlaygroundMessageContent({
         </>
       )}
 
-      {!isError && showMessageContent && (
+      {!isError && (showMessageContent || hasAttachments) && (
         <>
-          {isSourceVisible ? (
-            <CodeBlock
-              code={versionContent}
-              className='my-0 group-[.is-assistant]:w-full group-[.is-assistant]:max-w-[78ch]'
-              collapsedLines={24}
-              defaultCollapsed={false}
-              language='markdown'
-              maxExpandedLines={48}
-              showLineNumbers
-              showToolbar
-              title={t('Raw response')}
-            >
-              <CodeBlockCopyButton />
-            </CodeBlock>
-          ) : (
-            <MessageContent
-              variant='flat'
-              className={cn(getMessageContentStyles())}
-            >
-              <Response final={isMessageFinal}>{displayContent}</Response>
-            </MessageContent>
+          {hasAttachments && (
+            <div className='mb-2 flex flex-wrap gap-2'>
+              {attachments.map((attachment) => {
+                const isImage =
+                  attachment.mediaType?.startsWith('image/') ||
+                  attachment.url.startsWith('data:image/')
+
+                return isImage ? (
+                  <img
+                    alt={attachment.filename || t('Image')}
+                    className='max-h-56 max-w-72 rounded-lg border object-contain'
+                    key={attachment.id}
+                    src={attachment.url}
+                  />
+                ) : (
+                  <div
+                    className='bg-muted text-muted-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-sm'
+                    key={attachment.id}
+                  >
+                    <PaperclipIcon className='size-4 shrink-0' />
+                    <span className='max-w-56 truncate'>
+                      {attachment.filename || t('Upload file')}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           )}
+          {showMessageContent &&
+            (isSourceVisible ? (
+              <CodeBlock
+                code={versionContent}
+                className='my-0 group-[.is-assistant]:w-full group-[.is-assistant]:max-w-[78ch]'
+                collapsedLines={24}
+                defaultCollapsed={false}
+                language='markdown'
+                maxExpandedLines={48}
+                showLineNumbers
+                showToolbar
+                title={t('Raw response')}
+              >
+                <CodeBlockCopyButton />
+              </CodeBlock>
+            ) : (
+              <MessageContent
+                variant='flat'
+                className={cn(getMessageContentStyles())}
+              >
+                <Response final={isMessageFinal}>{displayContent}</Response>
+              </MessageContent>
+            ))}
           <MessageMetadata alignment={alignment} message={message} />
           {actions}
         </>

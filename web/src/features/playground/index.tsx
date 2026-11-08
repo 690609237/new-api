@@ -16,6 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { Link } from '@tanstack/react-router'
+import { AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/stores/auth-store'
+
 import { PlaygroundChat } from './components/chat/playground-chat'
 import { PlaygroundInput } from './components/input/playground-input'
 import {
@@ -26,6 +34,10 @@ import {
 } from './hooks'
 
 export function Playground() {
+  const { t } = useTranslation()
+  const user = useAuthStore((state) => state.auth.user)
+  const hasNoQuota = user?.quota !== undefined && user.quota <= 0
+
   const {
     config,
     parameterEnabled,
@@ -76,6 +88,28 @@ export function Playground() {
 
   return (
     <div className='relative flex size-full min-h-0 flex-col overflow-hidden'>
+      {hasNoQuota && (
+        <div className='mx-auto w-full max-w-4xl shrink-0 px-4 pt-3'>
+          <Alert variant='destructive'>
+            <AlertCircle />
+            <AlertTitle>{t('Insufficient quota')}</AlertTitle>
+            <AlertDescription className='flex flex-wrap items-center gap-2'>
+              <span>
+                {t(
+                  'No quota available. Please recharge or join group 450997742 to request trial quota.'
+                )}
+              </span>
+              <Button
+                render={<Link to='/wallet' />}
+                size='sm'
+                variant='outline'
+              >
+                {t('Wallet')}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
       {/* Full-width scroll container: scrolling works even over side whitespace */}
       <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
         <PlaygroundChat

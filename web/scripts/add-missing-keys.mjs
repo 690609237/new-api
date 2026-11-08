@@ -27,6 +27,21 @@ function stableStringify(obj) {
 
 const newKeys = {
   en: {
+    'Insufficient quota': 'Insufficient quota',
+    'Model request failed': 'Model request failed',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      'No quota available. Please recharge or join group 450997742 to request trial quota.',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      'The model request failed. Please contact an administrator to verify the channel configuration.',
+    'Too many requests. Please wait a moment before trying again.':
+      'Too many requests. Please wait a moment before trying again.',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      'Too many requests. Please wait {{seconds}} seconds before trying again.',
+    'Screenshot capture is not supported in this browser':
+      'Screenshot capture is not supported in this browser',
+    'Unable to capture screenshot': 'Unable to capture screenshot',
     'Join group 450997742 to claim free credits':
       'Join group 450997742 to claim free credits',
     'Leave me a message': 'Leave me a message',
@@ -203,6 +218,21 @@ const newKeys = {
       'View the configured sensitive words matched by a request.',
   },
   zh: {
+    'Insufficient quota': '额度不足',
+    'Model request failed': '模型请求失败',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      '当前没有可用额度，请先充值，或加群450997742联系管理员领取试用额度。',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      '模型请求失败，请检查是否有已启用的渠道，并确认 Base URL、API Key 和模型映射配置正确。',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      '模型请求失败，请联系管理员检查渠道配置。',
+    'Too many requests. Please wait a moment before trying again.':
+      '请求过于频繁，请稍候再试。',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      '请求过于频繁，请等待 {{seconds}} 秒后再试。',
+    'Screenshot capture is not supported in this browser':
+      '当前浏览器不支持截图',
+    'Unable to capture screenshot': '无法截取屏幕',
     'Join group 450997742 to claim free credits': '加群450997742领免费额度',
     'Leave me a message': '给我留言',
     'About ModelPass': '关于 ModelPass',
@@ -374,6 +404,21 @@ const newKeys = {
       '查看请求命中的已配置敏感词。',
   },
   'zh-TW': {
+    'Insufficient quota': '額度不足',
+    'Model request failed': '模型請求失敗',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      '目前沒有可用額度，請先儲值，或加入群組 450997742 聯絡管理員申請試用額度。',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      '模型請求失敗，請確認有已啟用的渠道，並檢查 Base URL、API Key 與模型映射設定。',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      '模型請求失敗，請聯絡管理員檢查渠道設定。',
+    'Too many requests. Please wait a moment before trying again.':
+      '請求過於頻繁，請稍候再試。',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      '請求過於頻繁，請等待 {{seconds}} 秒後再試。',
+    'Screenshot capture is not supported in this browser':
+      '目前瀏覽器不支援截圖',
+    'Unable to capture screenshot': '無法擷取螢幕畫面',
     'Join group 450997742 to claim free credits':
       '加入群組 450997742 領取免費額度',
     'Leave me a message': '給我留言',
@@ -546,6 +591,21 @@ const newKeys = {
       '查看請求命中的已設定敏感詞。',
   },
   fr: {
+    'Insufficient quota': 'Quota insuffisant',
+    'Model request failed': 'Échec de la requête du modèle',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      'Aucun quota disponible. Rechargez votre compte ou rejoignez le groupe 450997742 pour demander un quota d’essai.',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      'La requête du modèle a échoué. Vérifiez qu’un canal activé utilise la bonne URL de base, la clé API et le mappage du modèle.',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      'La requête du modèle a échoué. Contactez un administrateur pour vérifier la configuration du canal.',
+    'Too many requests. Please wait a moment before trying again.':
+      'Trop de requêtes. Veuillez patienter un instant avant de réessayer.',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      'Trop de requêtes. Veuillez patienter {{seconds}} secondes avant de réessayer.',
+    'Screenshot capture is not supported in this browser':
+      'La capture d’écran n’est pas prise en charge par ce navigateur',
+    'Unable to capture screenshot': 'Impossible de capturer l’écran',
     'Join group 450997742 to claim free credits':
       'Rejoignez le groupe 450997742 pour obtenir des crédits gratuits',
     'Leave me a message': 'Laissez-moi un message',
@@ -724,6 +784,21 @@ const newKeys = {
       'Voir les mots sensibles configurés détectés dans une requête.',
   },
   ja: {
+    'Insufficient quota': 'クォータ不足',
+    'Model request failed': 'モデルリクエストに失敗しました',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      '利用可能なクォータがありません。チャージするか、グループ 450997742 に参加して試用クォータを申請してください。',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      'モデルリクエストに失敗しました。有効なチャネルの Base URL、API キー、モデルマッピングを確認してください。',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      'モデルリクエストに失敗しました。管理者に連絡してチャネル設定を確認してください。',
+    'Too many requests. Please wait a moment before trying again.':
+      'リクエストが多すぎます。しばらく待ってからもう一度お試しください。',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      'リクエストが多すぎます。{{seconds}} 秒待ってからもう一度お試しください。',
+    'Screenshot capture is not supported in this browser':
+      'このブラウザはスクリーンショットに対応していません',
+    'Unable to capture screenshot': 'スクリーンショットを取得できません',
     'Join group 450997742 to claim free credits':
       'グループ 450997742 に参加して無料クレジットを受け取る',
     'Leave me a message': 'メッセージを残す',
@@ -901,6 +976,21 @@ const newKeys = {
       'リクエストで検出された設定済みの機密語を表示します。',
   },
   ru: {
+    'Insufficient quota': 'Недостаточно квоты',
+    'Model request failed': 'Не удалось выполнить запрос к модели',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      'Доступная квота отсутствует. Пополните баланс или вступите в группу 450997742, чтобы запросить пробную квоту.',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      'Не удалось выполнить запрос к модели. Проверьте, что включённый канал использует правильные базовый URL, API-ключ и сопоставление модели.',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      'Не удалось выполнить запрос к модели. Обратитесь к администратору для проверки конфигурации канала.',
+    'Too many requests. Please wait a moment before trying again.':
+      'Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      'Слишком много запросов. Подождите {{seconds}} секунд и попробуйте снова.',
+    'Screenshot capture is not supported in this browser':
+      'Этот браузер не поддерживает создание снимков экрана',
+    'Unable to capture screenshot': 'Не удалось сделать снимок экрана',
     'Join group 450997742 to claim free credits':
       'Вступите в группу 450997742 и получите бесплатные кредиты',
     'Leave me a message': 'Оставьте мне сообщение',
@@ -1079,6 +1169,21 @@ const newKeys = {
       'Просматривать настроенные чувствительные слова, совпавшие в запросе.',
   },
   vi: {
+    'Insufficient quota': 'Không đủ hạn ngạch',
+    'Model request failed': 'Yêu cầu mô hình thất bại',
+    'No quota available. Please recharge or join group 450997742 to request trial quota.':
+      'Không còn hạn ngạch. Vui lòng nạp tiền hoặc tham gia nhóm 450997742 để yêu cầu hạn ngạch dùng thử.',
+    'The model request failed. Check that an enabled channel has the correct Base URL, API key, and model mapping.':
+      'Yêu cầu mô hình thất bại. Hãy kiểm tra kênh đã bật có Base URL, API key và ánh xạ mô hình chính xác.',
+    'The model request failed. Please contact an administrator to verify the channel configuration.':
+      'Yêu cầu mô hình thất bại. Vui lòng liên hệ quản trị viên để kiểm tra cấu hình kênh.',
+    'Too many requests. Please wait a moment before trying again.':
+      'Quá nhiều yêu cầu. Vui lòng chờ một lát rồi thử lại.',
+    'Too many requests. Please wait {{seconds}} seconds before trying again.':
+      'Quá nhiều yêu cầu. Vui lòng chờ {{seconds}} giây rồi thử lại.',
+    'Screenshot capture is not supported in this browser':
+      'Trình duyệt này không hỗ trợ chụp màn hình',
+    'Unable to capture screenshot': 'Không thể chụp màn hình',
     'Join group 450997742 to claim free credits':
       'Tham gia nhóm 450997742 để nhận hạn mức miễn phí',
     'Leave me a message': 'Để lại lời nhắn',

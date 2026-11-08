@@ -117,8 +117,13 @@ function getMessageSize(message: Message): number {
     0
   )
   const reasoningSize = message.reasoning?.content.length ?? 0
+  const attachmentsSize =
+    message.attachments?.reduce(
+      (total, attachment) => total + attachment.url.length,
+      0
+    ) ?? 0
 
-  return versionsSize + reasoningSize
+  return versionsSize + reasoningSize + attachmentsSize
 }
 
 function truncateText(text: string, maxLength: number): string {

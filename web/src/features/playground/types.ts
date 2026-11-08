@@ -28,10 +28,19 @@ export interface MessageVersion {
   content: string
 }
 
+/** A file selected in the chat composer, persisted with the user message. */
+export interface MessageAttachment {
+  id: string
+  filename?: string
+  mediaType?: string
+  url: string
+}
+
 export interface Message {
   key: string
   from: MessageRole
   versions: MessageVersion[]
+  attachments?: MessageAttachment[]
   createdAt?: number
   startedAt?: number
   completedAt?: number
@@ -58,10 +67,14 @@ export interface ChatCompletionMessage {
 }
 
 export interface ContentPart {
-  type: 'text' | 'image_url'
+  type: 'text' | 'image_url' | 'file'
   text?: string
   image_url?: {
     url: string
+  }
+  file?: {
+    filename?: string
+    file_data: string
   }
 }
 

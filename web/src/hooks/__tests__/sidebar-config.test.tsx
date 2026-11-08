@@ -120,6 +120,22 @@ describe('security sidebar visibility', () => {
   })
 })
 
+describe('chat sidebar entry', () => {
+  it('shows the playground as Chat without a separate chat presets entry', () => {
+    const { result } = sidebarFor()
+    const chatGroup = result.current.find((group) => group.id === 'chat')
+
+    expect(chatGroup?.items).toHaveLength(1)
+    expect(chatGroup?.items[0]).toMatchObject({
+      title: 'Chat',
+      url: '/playground',
+    })
+    expect(chatGroup?.items.some((item) => item.title === 'Playground')).toBe(
+      false
+    )
+  })
+})
+
 describe('audit log sidebar entry', () => {
   it('admin settings default Audit Logs to visible and preserve its independent toggle when saved', () => {
     const config = parseSidebarModulesAdmin(

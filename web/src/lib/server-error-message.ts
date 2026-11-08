@@ -217,6 +217,11 @@ export function getServerErrorMessage(
     if (message) return message
   }
   const status = getServerErrorStatus(value)
+  if (status === 429) {
+    return i18next.t(
+      'Too many requests. Please wait a moment before trying again.'
+    )
+  }
   if (status === 304) return i18next.t('Content not modified!')
   if (status === 204) return i18next.t('Content not found.')
   for (const source of sources) {

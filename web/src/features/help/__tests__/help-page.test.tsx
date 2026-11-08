@@ -16,7 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type React from 'react'
 import { describe, expect, test, vi } from 'vitest'
 
@@ -35,6 +39,18 @@ await i18n.use(initReactI18next).init({
 })
 
 describe('CC Switch help page', () => {
+  test('opens the first document by default', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <Help />
+      </I18nextProvider>
+    )
+
+    expect(
+      screen.getByRole('tab', { name: 'Codex setup guide' })
+    ).toHaveAttribute('aria-selected', 'true')
+  })
+
   test('explains the configuration principle before presenting CC Switch as an example', () => {
     render(
       <I18nextProvider i18n={i18n}>
@@ -103,5 +119,68 @@ describe('CC Switch help page', () => {
     expect(downloadButton).toHaveAttribute('href', 'https://ccswitch.io/zh/')
     expect(downloadButton).toHaveAttribute('target', '_blank')
     expect(downloadButton).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  test('switches to the command-line API document', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <I18nextProvider i18n={i18n}>
+        <Help />
+      </I18nextProvider>
+    )
+
+    const cliTab = screen.getByRole('tab', {
+      name: '命令行调用中转站 API',
+    })
+    expect(cliTab).toHaveAttribute('aria-selected', 'false')
+
+    await user.click(cliTab)
+
+    expect(cliTab).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByTitle('命令行调用中转站 API 教程')).toHaveAttribute(
+      'src',
+      '/help/api-cli-tutorial.html#embedded'
+    )
+  })
+
+  test('stacks the command-line document hero and removes shortcut buttons', () => {
+    const source = readFileSync(
+      resolve(
+        import.meta.dirname,
+        '../../../../public/help/api-cli-tutorial.html'
+      ),
+      'utf8'
+    )
+    const document = new DOMParser().parseFromString(source, 'text/html')
+    const hero = document.querySelector('.hero')
+    const heroCard = hero?.querySelector('.hero-card')
+
+    expect(hero).not.toBeNull()
+    expect(hero?.querySelector('.hero-actions')).toBeNull()
+    expect(hero?.querySelector('a[href="#quick-start"]')).toBeNull()
+    expect(hero?.querySelector('a[href="#platforms"]')).toBeNull()
+    expect(heroCard?.previousElementSibling?.querySelector('h1')).not.toBeNull()
+    expect(
+      heroCard?.previousElementSibling?.querySelector('.hero-lead')
+    ).not.toBeNull()
+    expect(source).toMatch(
+      /\.hero \{[^}]*display: flex;[^}]*flex-direction: column;/
+    )
+  })
+
+  test('keeps the document collection below the fixed public header', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <Help />
+      </I18nextProvider>
+    )
+
+    expect(screen.getByRole('main')).toHaveClass('pt-20')
+    expect(
+      screen
+        .getByRole('tablist', { name: '文档类型' })
+        .closest('[data-slot="tabs"]')
+    ).toHaveClass('max-w-7xl')
   })
 })

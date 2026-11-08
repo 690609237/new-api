@@ -45,6 +45,16 @@ const (
 	MsgRelayGroupUpstreamSaturated       = "relay.group_upstream_saturated"
 	MsgRelayRetryGetChannelFailed        = "relay.retry_get_channel_failed"
 	MsgRelayRetryNoAvailableChannel      = "relay.retry_no_available_channel"
+	MsgRelayUpstreamRequestCancelled     = "relay.upstream_request_cancelled"
+	MsgRelayUpstreamRequestTimeout       = "relay.upstream_request_timeout"
+	MsgRelayUpstreamDNSTimeout           = "relay.upstream_dns_timeout"
+	MsgRelayUpstreamDNSFailed            = "relay.upstream_dns_failed"
+	MsgRelayUpstreamTLSFailed            = "relay.upstream_tls_failed"
+	MsgRelayUpstreamProxyFailed          = "relay.upstream_proxy_failed"
+	MsgRelayUpstreamProxyConfigInvalid   = "relay.upstream_proxy_config_invalid"
+	MsgRelayUpstreamURLInvalid           = "relay.upstream_url_invalid"
+	MsgRelayUpstreamConnectionFailed     = "relay.upstream_connection_failed"
+	MsgRelayUpstreamRequestFailed        = "relay.upstream_request_failed"
 	MsgRelayAccessTokenUnsupported       = "relay.access_token_unsupported"
 )
 

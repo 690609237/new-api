@@ -36,6 +36,16 @@ relay.group_saturated: "The current group is at capacity. Please try again later
 relay.group_upstream_saturated: "The upstream of the current group is at capacity. Please try again later"
 relay.retry_get_channel_failed: "Failed to get available channel for model {{.Model}} under group {{.Group}} (retry): {{.Error}}"
 relay.retry_no_available_channel: "No available channel for model {{.Model}} under group {{.Group}} (retry)"
+relay.upstream_request_cancelled: "The upstream request was cancelled. Please try again."
+relay.upstream_request_timeout: "The upstream request timed out. Check the provider availability, network, and proxy settings."
+relay.upstream_dns_timeout: "The upstream DNS lookup timed out. Check the provider host, DNS, and network settings."
+relay.upstream_dns_failed: "The upstream host could not be resolved. Check the API Base URL and DNS settings."
+relay.upstream_tls_failed: "Upstream TLS verification failed. Check the HTTPS certificate and API Base URL."
+relay.upstream_proxy_failed: "The upstream proxy connection failed. Check the channel proxy URL and credentials."
+relay.upstream_proxy_config_invalid: "The upstream proxy configuration is invalid. Check the channel proxy URL and credentials."
+relay.upstream_url_invalid: "The upstream API Base URL is missing or invalid. Configure a valid HTTP or HTTPS URL."
+relay.upstream_connection_failed: "Cannot connect to the upstream service. Check the API Base URL, network, firewall, and proxy settings."
+relay.upstream_request_failed: "The upstream request failed. Check the API Base URL, API key, network, and proxy settings."
 relay.access_token_unsupported: "Access tokens are not supported here"
 
 # Emails and the name of the token created at registration

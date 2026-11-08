@@ -37,6 +37,16 @@ relay.group_saturated: "目前分組負載已飽和，請稍後再試，或升�
 relay.group_upstream_saturated: "目前分組上游負載已飽和，請稍後再試"
 relay.retry_get_channel_failed: "獲取分組 {{.Group}} 下模型 {{.Model}} 的可用管道失敗（retry）：{{.Error}}"
 relay.retry_no_available_channel: "分組 {{.Group}} 下模型 {{.Model}} 的可用管道不存在（retry）"
+relay.upstream_request_cancelled: "上游請求已取消，請重試"
+relay.upstream_request_timeout: "上游請求逾時，請檢查服務商狀態、網路和代理設定"
+relay.upstream_dns_timeout: "上游 DNS 查詢逾時，請檢查服務商主機名稱、DNS 和網路設定"
+relay.upstream_dns_failed: "無法解析上游主機，請檢查 API Base URL 和 DNS 設定"
+relay.upstream_tls_failed: "上游 TLS 驗證失敗，請檢查 HTTPS 憑證和 API Base URL"
+relay.upstream_proxy_failed: "無法連接上游代理，請檢查管道代理位址和憑證"
+relay.upstream_proxy_config_invalid: "上游代理設定無效，請檢查管道代理位址和憑證"
+relay.upstream_url_invalid: "上游 API Base URL 缺失或無效，請設定有效的 HTTP 或 HTTPS 位址"
+relay.upstream_connection_failed: "無法連接上游服務，請檢查 API Base URL、網路、防火牆和代理設定"
+relay.upstream_request_failed: "上游請求失敗，請檢查 API Base URL、API Key、網路和代理設定"
 relay.access_token_unsupported: "暫不支援使用 access token"
 
 # Emails and the name of the token created at registration

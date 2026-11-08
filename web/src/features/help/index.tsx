@@ -17,12 +17,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { ArrowUpRight, CheckCircle2, Download, FileCog } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { PublicLayout } from '@/components/layout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
 type GuideStep = {
@@ -30,6 +32,42 @@ type GuideStep = {
   description: string
   image?: string
   imageAlt?: string
+}
+
+function ApiCliDocument() {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [height, setHeight] = useState(1600)
+
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== iframe.contentWindow) return
+      if (event.data?.type !== 'api-cli-height') return
+
+      const nextHeight = Number(event.data.height)
+      if (Number.isFinite(nextHeight)) setHeight(Math.max(1200, nextHeight))
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  return (
+    <Card className='overflow-hidden py-0 shadow-sm'>
+      <iframe
+        ref={iframeRef}
+        title='命令行调用中转站 API 教程'
+        src='/help/api-cli-tutorial.html#embedded'
+        loading='lazy'
+        sandbox='allow-scripts'
+        allow='clipboard-write'
+        className='block w-full border-0'
+        style={{ height }}
+      />
+    </Card>
+  )
 }
 
 export function Help() {
@@ -87,147 +125,182 @@ export function Help() {
 
   return (
     <PublicLayout showMainContainer={false}>
-      <main className='bg-background min-h-[calc(100vh-4rem)]'>
-        <section className='border-border/70 bg-muted/30 border-b'>
-          <div className='mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8'>
-            <div className='max-w-4xl'>
-              <p className='text-primary mb-3 text-sm font-semibold tracking-wide uppercase'>
-                {t('Codex setup guide')}
-              </p>
-              <h1 className='text-foreground text-3xl font-semibold tracking-tight sm:text-4xl'>
-                {t('Configure Codex to connect to this service')}
-              </h1>
-              <p className='text-muted-foreground mt-4 max-w-2xl text-base leading-7 sm:text-lg'>
-                {t(
-                  "Codex reads its API endpoint, credentials, and default model from a local configuration file. Connecting Codex to this service means updating that file with this site's API information."
-                )}
-              </p>
-              <Alert
-                role='note'
-                className='bg-background/80 mt-7 max-w-3xl px-5 py-4 shadow-xs'
+      <main className='bg-background min-h-[calc(100vh-4rem)] pt-20'>
+        <Tabs
+          defaultValue='codex'
+          orientation='vertical'
+          className='mx-auto min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:flex-row sm:gap-6 sm:px-6 sm:py-8 lg:px-8'
+        >
+          <div className='w-full shrink-0 sm:sticky sm:top-20 sm:w-56'>
+            <p className='text-muted-foreground mb-3 px-1 text-xs font-semibold tracking-wide uppercase'>
+              文档目录
+            </p>
+            <TabsList
+              aria-label='文档类型'
+              className='bg-muted/50 flex h-auto w-full flex-col items-stretch gap-1 rounded-xl p-1'
+            >
+              <TabsTrigger
+                value='codex'
+                className='h-auto justify-start px-3 py-2.5 text-left whitespace-normal'
               >
-                <FileCog
-                  className='text-primary mt-0.5 size-5'
-                  aria-hidden='true'
-                />
-                <AlertTitle className='text-base'>
-                  {t('How it works')}
-                </AlertTitle>
-                <AlertDescription className='mt-1 leading-6'>
-                  <p>
+                {t('Codex setup guide')}
+              </TabsTrigger>
+              <TabsTrigger
+                value='api-cli'
+                className='h-auto justify-start px-3 py-2.5 text-left whitespace-normal'
+              >
+                命令行调用中转站 API
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value='codex' className='mt-0 min-w-0 sm:flex-1'>
+            <section className='border-border/70 bg-muted/30 border-b'>
+              <div className='py-10 sm:py-14'>
+                <div className='max-w-4xl'>
+                  <p className='text-primary mb-3 text-sm font-semibold tracking-wide uppercase'>
+                    {t('Codex setup guide')}
+                  </p>
+                  <h1 className='text-foreground text-3xl font-semibold tracking-tight sm:text-4xl'>
+                    {t('Configure Codex to connect to this service')}
+                  </h1>
+                  <p className='text-muted-foreground mt-4 max-w-2xl text-base leading-7 sm:text-lg'>
                     {t(
-                      'You can edit the file manually or use a configuration manager. CC Switch is one example: it manages and updates the same Codex configuration file for you.'
+                      "Codex reads its API endpoint, credentials, and default model from a local configuration file. Connecting Codex to this service means updating that file with this site's API information."
                     )}
                   </p>
-                </AlertDescription>
-              </Alert>
-            </div>
-          </div>
-        </section>
+                  <Alert
+                    role='note'
+                    className='bg-background/80 mt-7 max-w-3xl px-5 py-4 shadow-xs'
+                  >
+                    <FileCog
+                      className='text-primary mt-0.5 size-5'
+                      aria-hidden='true'
+                    />
+                    <AlertTitle className='text-base'>
+                      {t('How it works')}
+                    </AlertTitle>
+                    <AlertDescription className='mt-1 leading-6'>
+                      <p>
+                        {t(
+                          'You can edit the file manually or use a configuration manager. CC Switch is one example: it manages and updates the same Codex configuration file for you.'
+                        )}
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </div>
+            </section>
 
-        <section
-          className='mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8'
-          aria-labelledby='cc-switch-example-title'
-        >
-          <div className='mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:items-end'>
-            <div className='max-w-3xl'>
-              <p className='text-primary mb-2 text-sm font-semibold tracking-wide uppercase'>
-                {t('Configuration example')}
-              </p>
-              <h2
-                id='cc-switch-example-title'
-                className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'
-              >
-                {t('Example: Connect Codex with CC Switch')}
-              </h2>
-              <p className='text-muted-foreground mt-3 max-w-2xl text-sm leading-6 sm:text-base'>
-                {t(
-                  'The following steps use CC Switch as a convenient example. CC Switch is not required; any method that correctly updates the Codex configuration file will work.'
-                )}
-              </p>
-            </div>
-            <Button
-              className='shrink-0'
-              nativeButton={false}
-              render={
-                <a
-                  href='https://ccswitch.io/zh/'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                />
-              }
+            <section
+              className='py-8 sm:py-12'
+              aria-labelledby='cc-switch-example-title'
             >
-              <Download aria-hidden='true' />
-              {t('Download CC Switch')}
-              <ArrowUpRight aria-hidden='true' />
-            </Button>
-          </div>
+              <div className='mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:items-end'>
+                <div className='max-w-3xl'>
+                  <p className='text-primary mb-2 text-sm font-semibold tracking-wide uppercase'>
+                    {t('Configuration example')}
+                  </p>
+                  <h2
+                    id='cc-switch-example-title'
+                    className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'
+                  >
+                    {t('Example: Connect Codex with CC Switch')}
+                  </h2>
+                  <p className='text-muted-foreground mt-3 max-w-2xl text-sm leading-6 sm:text-base'>
+                    {t(
+                      'The following steps use CC Switch as a convenient example. CC Switch is not required; any method that correctly updates the Codex configuration file will work.'
+                    )}
+                  </p>
+                </div>
+                <Button
+                  className='shrink-0'
+                  nativeButton={false}
+                  render={
+                    <a
+                      href='https://ccswitch.io/zh/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    />
+                  }
+                >
+                  <Download aria-hidden='true' />
+                  {t('Download CC Switch')}
+                  <ArrowUpRight aria-hidden='true' />
+                </Button>
+              </div>
 
-          <ol className='space-y-6 sm:space-y-8'>
-            {steps.map((step, index) => (
-              <li key={step.title}>
-                <Card className='overflow-hidden py-0 shadow-sm'>
-                  <CardContent className='p-0'>
-                    <div
-                      className={cn(
-                        step.image &&
-                          'grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]'
-                      )}
-                    >
-                      <div className='flex gap-4 p-6 sm:gap-5 sm:p-8'>
-                        <div className='bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold'>
-                          {index + 1}
-                        </div>
-                        <div className='min-w-0 pt-0.5'>
-                          <h3 className='text-foreground text-xl font-semibold'>
-                            {step.title}
-                          </h3>
-                          <p className='text-muted-foreground mt-2 text-sm leading-6 sm:text-base'>
-                            {step.description}
-                          </p>
-                          {index === 0 && (
-                            <a
-                              className='text-primary mt-4 inline-flex items-center gap-1 text-sm font-medium hover:underline'
-                              href='https://ccswitch.io/zh/'
-                              target='_blank'
-                              rel='noopener noreferrer'
-                            >
-                              ccswitch.io/zh
-                              <ArrowUpRight
-                                className='size-4'
-                                aria-hidden='true'
-                              />
-                            </a>
+              <ol className='space-y-6 sm:space-y-8'>
+                {steps.map((step, index) => (
+                  <li key={step.title}>
+                    <Card className='overflow-hidden py-0 shadow-sm'>
+                      <CardContent className='p-0'>
+                        <div
+                          className={cn(
+                            step.image &&
+                              'grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]'
                           )}
-                          {index === steps.length - 1 && (
-                            <div className='text-primary mt-4 flex items-center gap-2 text-sm font-medium'>
-                              <CheckCircle2
-                                className='size-4'
-                                aria-hidden='true'
+                        >
+                          <div className='flex gap-4 p-6 sm:gap-5 sm:p-8'>
+                            <div className='bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold'>
+                              {index + 1}
+                            </div>
+                            <div className='min-w-0 pt-0.5'>
+                              <h3 className='text-foreground text-xl font-semibold'>
+                                {step.title}
+                              </h3>
+                              <p className='text-muted-foreground mt-2 text-sm leading-6 sm:text-base'>
+                                {step.description}
+                              </p>
+                              {index === 0 && (
+                                <a
+                                  className='text-primary mt-4 inline-flex items-center gap-1 text-sm font-medium hover:underline'
+                                  href='https://ccswitch.io/zh/'
+                                  target='_blank'
+                                  rel='noopener noreferrer'
+                                >
+                                  ccswitch.io/zh
+                                  <ArrowUpRight
+                                    className='size-4'
+                                    aria-hidden='true'
+                                  />
+                                </a>
+                              )}
+                              {index === steps.length - 1 && (
+                                <div className='text-primary mt-4 flex items-center gap-2 text-sm font-medium'>
+                                  <CheckCircle2
+                                    className='size-4'
+                                    aria-hidden='true'
+                                  />
+                                  {t('Setup complete')}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {step.image && (
+                            <div className='border-border bg-muted/40 border-t p-3 sm:p-4 lg:border-t-0 lg:border-l'>
+                              <img
+                                src={step.image}
+                                alt={step.imageAlt}
+                                loading='lazy'
+                                className='border-border h-auto w-full rounded-lg border object-contain shadow-sm'
                               />
-                              {t('Setup complete')}
                             </div>
                           )}
                         </div>
-                      </div>
+                      </CardContent>
+                    </Card>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </TabsContent>
 
-                      {step.image && (
-                        <div className='border-border bg-muted/40 border-t p-3 sm:p-4 lg:border-t-0 lg:border-l'>
-                          <img
-                            src={step.image}
-                            alt={step.imageAlt}
-                            loading='lazy'
-                            className='border-border h-auto w-full rounded-lg border object-contain shadow-sm'
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ol>
-        </section>
+          <TabsContent value='api-cli' className='mt-0 min-w-0 sm:flex-1'>
+            <ApiCliDocument />
+          </TabsContent>
+        </Tabs>
       </main>
     </PublicLayout>
   )

@@ -58,6 +58,13 @@ const messageVersionSchema = z.object({
   content: z.string(),
 })
 
+const messageAttachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string().optional(),
+  mediaType: z.string().optional(),
+  url: z.string(),
+})
+
 const sourceSchema = z.object({
   href: z.string(),
   title: z.string(),
@@ -75,6 +82,7 @@ const messageSchema = z.object({
   key: z.string(),
   from: messageRoleSchema,
   versions: z.array(messageVersionSchema).min(1),
+  attachments: z.array(messageAttachmentSchema).optional(),
   createdAt: z.number().optional(),
   startedAt: z.number().optional(),
   completedAt: z.number().optional(),

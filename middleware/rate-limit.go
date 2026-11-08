@@ -138,10 +138,27 @@ func memoryRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark s
 // The in-memory limiter cannot report the remaining window, so callers
 // without a TTL pass the full window duration as a conservative upper bound.
 func writeRateLimited(c *gin.Context, retryAfterSeconds int64) {
-	if retryAfterSeconds > 0 {
-		c.Header("Retry-After", strconv.FormatInt(retryAfterSeconds, 10))
-	}
-	c.Status(http.StatusTooManyRequests)
+	// Redis can report a zero TTL when a fixed window is about to expire. A
+	// one-second floor keeps the response actionable and avoids telling clients
+	// to wait zero seconds while still rejecting the current request.
+	retryAfterSeconds = max(retryAfterSeconds, 1)
+	c.Header("Retry-After", strconv.FormatInt(retryAfterSeconds, 10))
+	// Return a structured error so web clients can explain why the request was
+	// rejected and use the server-provided retry window instead of showing a
+	// generic Axios status error. Keep the English message as the translation
+	// key used by the web console, while `message` remains useful to API clients.
+	common.ApiErrorStatus(
+		c,
+		http.StatusTooManyRequests,
+		common.NewMessage(
+			"Too many requests. Please wait {{seconds}} seconds before trying again.",
+			map[string]any{"seconds": retryAfterSeconds},
+		),
+		gin.H{
+			"code":        "RATE_LIMITED",
+			"retry_after": retryAfterSeconds,
+		},
+	)
 	c.Abort()
 }
 

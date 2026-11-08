@@ -37,6 +37,16 @@ relay.group_saturated: "当前分组负载已饱和，请稍后再试，或升�
 relay.group_upstream_saturated: "当前分组上游负载已饱和，请稍后再试"
 relay.retry_get_channel_failed: "获取分组 {{.Group}} 下模型 {{.Model}} 的可用渠道失败（retry）: {{.Error}}"
 relay.retry_no_available_channel: "分组 {{.Group}} 下模型 {{.Model}} 的可用渠道不存在（retry）"
+relay.upstream_request_cancelled: "上游请求已取消，请重试"
+relay.upstream_request_timeout: "上游请求超时，请检查服务商状态、网络和代理配置"
+relay.upstream_dns_timeout: "上游 DNS 查询超时，请检查服务商主机名、DNS 和网络配置"
+relay.upstream_dns_failed: "无法解析上游主机，请检查 API Base URL 和 DNS 配置"
+relay.upstream_tls_failed: "上游 TLS 校验失败，请检查 HTTPS 证书和 API Base URL"
+relay.upstream_proxy_failed: "无法连接上游代理，请检查渠道代理地址和凭证"
+relay.upstream_proxy_config_invalid: "上游代理配置无效，请检查渠道代理地址和凭证"
+relay.upstream_url_invalid: "上游 API Base URL 缺失或无效，请配置有效的 HTTP 或 HTTPS 地址"
+relay.upstream_connection_failed: "无法连接上游服务，请检查 API Base URL、网络、防火墙和代理配置"
+relay.upstream_request_failed: "上游请求失败，请检查 API Base URL、API Key、网络和代理配置"
 relay.access_token_unsupported: "暂不支持使用 access token"
 
 # Emails and the name of the token created at registration

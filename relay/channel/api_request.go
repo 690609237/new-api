@@ -2,11 +2,15 @@ package channel
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -14,6 +18,7 @@ import (
 
 	common2 "github.com/QuantumNous/new-api/common"
 	appconstant "github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/constant"
@@ -519,6 +524,88 @@ func DoRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 	return doRequest(c, req, info)
 }
 
+// upstreamRequestErrorMessageID classifies transport failures into an
+// actionable, localized message. The original error is still attached to the
+// server-side log by doRequest; returning it directly would expose proxy
+// credentials, internal URLs, or filesystem details in API responses.
+func upstreamRequestErrorMessageID(err error) string {
+	if err == nil {
+		return i18n.MsgRelayUpstreamRequestFailed
+	}
+
+	// url.Error is the wrapper used by net/http. Inspect the wrapped cause for
+	// typed errors while retaining the complete text for the small set of
+	// transport errors (for example proxyconnect) that do not have a type.
+	fullMessage := strings.ToLower(err.Error())
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) && urlErr.Err != nil {
+		err = urlErr.Err
+	}
+
+	if errors.Is(err, context.Canceled) {
+		return i18n.MsgRelayUpstreamRequestCancelled
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, os.ErrDeadlineExceeded) {
+		return i18n.MsgRelayUpstreamRequestTimeout
+	}
+
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		if dnsErr.IsTimeout {
+			return i18n.MsgRelayUpstreamDNSTimeout
+		}
+		return i18n.MsgRelayUpstreamDNSFailed
+	}
+
+	var certVerifyErr *tls.CertificateVerificationError
+	var unknownAuthorityErr x509.UnknownAuthorityError
+	var hostnameErr x509.HostnameError
+	var certInvalidErr x509.CertificateInvalidError
+	var recordHeaderErr tls.RecordHeaderError
+	if errors.As(err, &certVerifyErr) ||
+		errors.As(err, &unknownAuthorityErr) ||
+		errors.As(err, &hostnameErr) ||
+		errors.As(err, &certInvalidErr) ||
+		errors.As(err, &recordHeaderErr) {
+		return i18n.MsgRelayUpstreamTLSFailed
+	}
+
+	message := strings.ToLower(err.Error())
+	if strings.Contains(fullMessage, "proxyconnect") ||
+		strings.Contains(fullMessage, "proxy error") ||
+		strings.Contains(fullMessage, "proxy: cannot") ||
+		strings.Contains(message, "proxyconnect") ||
+		strings.Contains(message, "proxy error") ||
+		strings.Contains(message, "proxy: cannot") {
+		return i18n.MsgRelayUpstreamProxyFailed
+	}
+	if strings.Contains(message, "unsupported protocol scheme") ||
+		strings.Contains(message, "no protocol scheme") ||
+		strings.Contains(message, "missing protocol") ||
+		strings.Contains(message, "invalid url") {
+		return i18n.MsgRelayUpstreamURLInvalid
+	}
+	if strings.Contains(message, "tls handshake") || strings.Contains(message, "tls:") || strings.Contains(message, "certificate") {
+		return i18n.MsgRelayUpstreamTLSFailed
+	}
+	if strings.Contains(message, "no such host") || strings.Contains(message, "temporary failure in name resolution") {
+		return i18n.MsgRelayUpstreamDNSFailed
+	}
+	if strings.Contains(message, "connection refused") ||
+		strings.Contains(message, "connection reset") ||
+		strings.Contains(message, "network is unreachable") ||
+		strings.Contains(message, "no route to host") {
+		return i18n.MsgRelayUpstreamConnectionFailed
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return i18n.MsgRelayUpstreamRequestTimeout
+	}
+
+	return i18n.MsgRelayUpstreamRequestFailed
+}
+
 // keepUpstreamRedirectResponse stops net/http from following redirects while
 // returning the upstream 3xx response to the relay without an extra error.
 func keepUpstreamRedirectResponse(_ *http.Request, _ []*http.Request) error {
@@ -528,7 +615,8 @@ func keepUpstreamRedirectResponse(_ *http.Request, _ []*http.Request) error {
 func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http.Response, error) {
 	client, err := service.GetHttpClientWithProxySettings(info.ChannelSetting.Proxy, info.ChannelSetting)
 	if err != nil {
-		return nil, fmt.Errorf("new proxy http client failed: %w", err)
+		logger.LogError(c, common2.LogText("new proxy http client failed: %s", err.Error()))
+		return nil, types.NewError(err, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg(i18n.T(c, i18n.MsgRelayUpstreamProxyConfigInvalid)))
 	}
 	// Clients are cached and shared across channels, so override redirect
 	// behavior on a shallow copy instead of mutating the cached client. This
@@ -569,7 +657,7 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 	resp, err := relayClient.Do(req)
 	if err != nil {
 		logger.LogError(c, common2.LogText("do request failed: %s", err.Error()))
-		return nil, types.NewError(err, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg("upstream error: do request failed"))
+		return nil, types.NewError(err, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg(i18n.T(c, upstreamRequestErrorMessageID(err))))
 	}
 	if resp == nil {
 		return nil, errors.New("resp is nil")

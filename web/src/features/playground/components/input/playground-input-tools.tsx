@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import {
   PromptInputButton,
   PromptInputTools,
+  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
@@ -38,11 +39,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-import {
-  ATTACHMENT_ACTIONS,
-  getAttachmentActionNotice,
-  getSearchActionNotice,
-} from '../../lib'
+import { ATTACHMENT_ACTIONS, getSearchActionNotice } from '../../lib'
 import type { ParameterEnabled, PlaygroundConfig } from '../../types'
 import { PlaygroundParameterPanel } from './playground-parameter-panel'
 
@@ -73,12 +70,63 @@ export function PlaygroundInputTools({
 }: PlaygroundInputToolsProps) {
   const { t } = useTranslation()
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const attachments = usePromptInputAttachments()
+
+  const handleScreenshot = async () => {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      toast.error(t('Screenshot capture is not supported in this browser'))
+      return
+    }
+
+    let stream: MediaStream | undefined
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      })
+      const video = document.createElement('video')
+      video.srcObject = stream
+      video.muted = true
+      video.playsInline = true
+      await video.play()
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        await new Promise<void>((resolve) => {
+          video.addEventListener('loadedmetadata', () => resolve(), {
+            once: true,
+          })
+        })
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      canvas.getContext('2d')?.drawImage(video, 0, 0)
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/png')
+      )
+
+      if (!blob) {
+        toast.error(t('Unable to capture screenshot'))
+        return
+      }
+
+      attachments.add([
+        new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' }),
+      ])
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      toast.error(t('Unable to capture screenshot'))
+    } finally {
+      for (const track of stream?.getTracks() ?? []) track.stop()
+    }
+  }
 
   const handleFileAction = (action: string) => {
-    const notice = getAttachmentActionNotice(action)
-    toast.info(t(notice.title), {
-      description: notice.description,
-    })
+    if (action === 'take-screenshot') {
+      void handleScreenshot()
+      return
+    }
+
+    attachments.openFileDialog()
   }
 
   const handleSearchAction = () => {

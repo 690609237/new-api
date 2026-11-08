@@ -24,12 +24,16 @@ export const MODEL_PRICING_SETTINGS_PATH =
   '/system-settings/billing/model-pricing'
 
 const MODEL_PRICE_ERROR_CODE = 'model_price_error'
+const INSUFFICIENT_QUOTA_ERROR_CODE = 'insufficient_user_quota'
+const DO_REQUEST_FAILED_ERROR_CODE = 'do_request_failed'
+const GET_CHANNEL_FAILED_ERROR_CODE = 'get_channel_failed'
 export const FALLBACK_ERROR_CONTENT = 'An unknown error occurred'
 
 type MessageErrorState = {
   content: string
-  kind: 'generic' | 'model-price'
+  kind: 'generic' | 'model-price' | 'quota' | 'request-failed'
   showSettingsLink: boolean
+  showChannelsLink: boolean
 }
 
 export function isAdminRole(role?: number | null): boolean {
@@ -50,10 +54,25 @@ export function getMessageErrorState(
 
   const content = getMessageContent(message) || FALLBACK_ERROR_CONTENT
   const isModelPriceError = message.errorCode === MODEL_PRICE_ERROR_CODE
+  const isQuotaError = message.errorCode === INSUFFICIENT_QUOTA_ERROR_CODE
+  const isRequestFailedError = [
+    DO_REQUEST_FAILED_ERROR_CODE,
+    GET_CHANNEL_FAILED_ERROR_CODE,
+  ].includes(message.errorCode ?? '')
+  let kind: MessageErrorState['kind'] = 'generic'
+
+  if (isModelPriceError) {
+    kind = 'model-price'
+  } else if (isQuotaError) {
+    kind = 'quota'
+  } else if (isRequestFailedError) {
+    kind = 'request-failed'
+  }
 
   return {
     content,
-    kind: isModelPriceError ? 'model-price' : 'generic',
+    kind,
     showSettingsLink: isModelPriceError && isAdmin,
+    showChannelsLink: isRequestFailedError && isAdmin,
   }
 }
