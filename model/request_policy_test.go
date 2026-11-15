@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -84,14 +85,26 @@ func TestRequestPolicyDatabaseMatrix(t *testing.T) {
 			assert.Error(t, UpdateRequestPolicyOptions(map[string]string{"request_policy_setting.mode": "off"}), "the removed mode switch is not a policy option")
 			assert.False(t, CurrentRequestPolicy().Affinity.Rules[0].SkipRetryOnFailure)
 			assert.Equal(t, rules, CurrentRequestPolicy().Options["channel_affinity_setting.rules"])
-			loadOptionsFromDatabase()
-			loadOptionsFromDatabase()
+			LoadOptionsFromDatabase()
+			LoadOptionsFromDatabase()
 			assert.Equal(t, rules, CurrentRequestPolicy().Options["channel_affinity_setting.rules"], "legacy rule JSON survives reloads without dropping extension fields")
 			require.NoError(t, UpdateRequestPolicyOptions(map[string]string{"channel_affinity_setting.session_mode": "strict"}))
-			loadOptionsFromDatabase()
-			loadOptionsFromDatabase()
+			LoadOptionsFromDatabase()
+			LoadOptionsFromDatabase()
 			assert.Equal(t, "strict", CurrentRequestPolicy().Affinity.SessionMode)
 			assert.Equal(t, rules, CurrentRequestPolicy().Options["channel_affinity_setting.rules"], "a global mode never rewrites rule fields")
+			require.NoError(t, UpdateRequestPolicyOptions(map[string]string{
+				"CheckSensitiveEnabled":         "true",
+				"CheckSensitiveOnPromptEnabled": "true",
+				"SensitiveWords":                "alpha|beta\ngamma",
+			}))
+			for range 2 {
+				require.NoError(t, LoadOptionsFromDatabase())
+				assert.True(t, CurrentRequestPolicy().CheckText)
+				assert.Equal(t, []string{"alpha|beta", "gamma"}, CurrentRequestPolicy().TextKeywords)
+				assert.True(t, setting.ShouldCheckPromptSensitive())
+				assert.Equal(t, "alpha|beta\ngamma", setting.SensitiveWordsToString())
+			}
 			snapshot := CurrentRequestPolicy()
 			assert.Error(t, UpdateRequestPolicyOptions(map[string]string{"channel_affinity_setting.session_mode": "unknown"}))
 			assert.Same(t, snapshot, CurrentRequestPolicy())
@@ -115,7 +128,7 @@ func TestRequestPolicyDatabaseMatrix(t *testing.T) {
 			option = Option{}
 			require.NoError(t, db.Where(map[string]any{"key": "RetryTimes"}).First(&option).Error)
 			assert.Equal(t, "2", option.Value)
-			loadOptionsFromDatabase()
+			LoadOptionsFromDatabase()
 			assert.Equal(t, "strict", CurrentRequestPolicy().Affinity.SessionMode, "a failed save keeps the persisted global mode")
 		})
 	}

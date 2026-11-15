@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"maps"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/MoeForge/moego/regexp"
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/config"
@@ -248,6 +248,7 @@ func UpdateRequestPolicyOptions(values map[string]string) error {
 	}); err != nil {
 		return err
 	}
+	BumpSyncTopic(SyncTopicOptions)
 	for key, value := range values {
 		if err := updateOptionMap(key, value); err != nil {
 			return err

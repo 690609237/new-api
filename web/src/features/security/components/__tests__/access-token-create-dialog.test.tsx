@@ -28,7 +28,7 @@ import userEvent from '@testing-library/user-event'
 import { Toaster, toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { api } from '@/lib/api'
+import { api, type ApiRequestConfig } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type {
@@ -122,37 +122,34 @@ beforeEach(() => {
     default_expiry_days: 30,
   }
   list = { items: [], legacy: null }
-  vi.spyOn(api, 'get').mockImplementation(async (url, config) => {
-    if (url === '/api/verify/methods') {
-      const params = config?.params
-      if (
-        typeof params !== 'object' ||
-        params === null ||
-        !('scope' in params) ||
-        typeof params.scope !== 'string'
-      ) {
-        throw new Error('Verification scope is missing')
-      }
-      return {
-        data: {
-          success: true,
+  vi.spyOn(api, 'get').mockImplementation(
+    async (url, config?: ApiRequestConfig) => {
+      if (url === '/api/verify/methods') {
+        const scope = config?.params?.scope
+        if (typeof scope !== 'string') {
+          throw new Error('Verification scope is missing')
+        }
+        return {
           data: {
-            scope: params.scope,
-            methods: [{ method: 'password', available: true }],
-            oauth_providers: [],
-            password_encryption_enabled: false,
+            success: true,
+            data: {
+              scope,
+              methods: [{ method: 'password', available: true }],
+              oauth_providers: [],
+              password_encryption_enabled: false,
+            },
           },
-        },
+        }
       }
+      if (url === '/api/user/access_tokens/catalog') {
+        return { data: { success: true, data: catalog } }
+      }
+      if (url === '/api/user/access_tokens') {
+        return { data: { success: true, data: list } }
+      }
+      throw new Error(`Unexpected GET ${url}`)
     }
-    if (url === '/api/user/access_tokens/catalog') {
-      return { data: { success: true, data: catalog } }
-    }
-    if (url === '/api/user/access_tokens') {
-      return { data: { success: true, data: list } }
-    }
-    throw new Error(`Unexpected GET ${url}`)
-  })
+  )
   vi.spyOn(api, 'post').mockImplementation(async (url, data) => {
     if (url === '/api/verify') {
       return passwordProof((data as { scope: string }).scope)
